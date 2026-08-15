@@ -1,0 +1,6 @@
+@CricPulse.API_HostAddress = http://localhost:5221
+
+GET {{CricPulse.API_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
