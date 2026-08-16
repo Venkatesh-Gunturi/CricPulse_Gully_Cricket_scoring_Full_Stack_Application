@@ -16,12 +16,34 @@ namespace CricPulse.API.Controllers
             _userService = userService;
         }
 
+        //To create user Record
         [HttpPost]
         public async Task<ActionResult<UserResponseDto>> CreateUser(CreateUserDto dto)
         {
-            var user=await _userService.CreateUserAsync(dto);
+            var user = await _userService.CreateUserAsync(dto);
 
+            return CreatedAtAction(
+                nameof(GetUserById),
+                new { id = user.Id },
+                
+                user);
+        }
+
+        //To get user record by ID
+        [HttpGet("{id:int}")]
+        public async Task<ActionResult<UserResponseDto>> GetUserById(int id)
+        {
+            var user= await _userService.GetUserByIdAsync(id);
             return Ok(user);
+        }
+
+        //To get records of all users
+        [HttpGet]
+        public async Task<ActionResult<List<UserResponseDto>>> GetAllUsers()
+        {
+            var users= await _userService.GetAllUsersAsync();
+
+            return Ok(users);
         }
     }
 }

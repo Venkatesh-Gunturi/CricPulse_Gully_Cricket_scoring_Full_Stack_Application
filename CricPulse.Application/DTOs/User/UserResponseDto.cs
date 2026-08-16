@@ -9,7 +9,7 @@ namespace CricPulse.Application.DTOs.User
     public class UserResponseDto
     {
         public int Id { get; set; }
-        public string Firstname { get; set; }   =string.Empty;
+        public string FirstName { get; set; }   =string.Empty;
         public string? LastName { get; set; }
         public string Email { get; set; }=string.Empty;
         public string MobileNumber { get; set; } = string.Empty;

@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using CricPulse.Application.Interfaces.User;
 using CricPulse.Application.Services.User;
 using CricPulse.Infrastructure.Repositories;
+using CricPulse.API.Middleware;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -15,6 +16,8 @@ builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 builder.Services.AddDbContext<CricPulseDbContext>(options => options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 var app = builder.Build();
+
+app.UseMiddleware<ExceptionMiddleware>();
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())

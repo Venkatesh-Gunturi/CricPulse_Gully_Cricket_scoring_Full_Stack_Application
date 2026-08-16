@@ -9,6 +9,8 @@ namespace CricPulse.Application.Interfaces.User
 {
     public interface IUserService
     {
+        Task<UserResponseDto> GetUserByIdAsync(int id);
+        Task<List<UserResponseDto>> GetAllUsersAsync();
         Task<UserResponseDto> CreateUserAsync(CreateUserDto dto);
     }
 }
