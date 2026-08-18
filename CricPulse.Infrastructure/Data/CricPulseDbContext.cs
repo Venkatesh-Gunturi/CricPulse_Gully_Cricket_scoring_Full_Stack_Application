@@ -1,6 +1,7 @@
 ﻿using CricPulse.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
 
+
 namespace CricPulse.Infrastructure.Data;
 
 public class CricPulseDbContext : DbContext
@@ -19,5 +20,10 @@ public class CricPulseDbContext : DbContext
 
         modelBuilder.Entity<User>().HasIndex(u => u.MobileNumber).IsUnique();
 
+        modelBuilder.Entity<OtpVerification>()
+                    .HasOne(o => o.User)
+                    .WithMany(u => u.OtpVerifications)
+                    .HasForeignKey(o => o.UserId)
+                    .OnDelete(DeleteBehavior.Cascade);
     }
 }
