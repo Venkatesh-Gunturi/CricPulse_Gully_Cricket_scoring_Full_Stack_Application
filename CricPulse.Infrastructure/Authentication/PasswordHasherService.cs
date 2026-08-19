@@ -10,7 +10,7 @@ using UserEntity = CricPulse.Domain.Entities.User;
 
 namespace CricPulse.Infrastructure.Authentication
 {
-    public class PasswordHasherService
+    public class PasswordHasherService:IPasswordHasher
     {
         private readonly PasswordHasher<UserEntity> _passwordHasher;
 
