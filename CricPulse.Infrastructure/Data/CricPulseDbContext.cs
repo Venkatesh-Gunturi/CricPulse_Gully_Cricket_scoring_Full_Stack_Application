@@ -11,7 +11,7 @@ public class CricPulseDbContext : DbContext
 
     }
     public DbSet<User> Users   { get; set; }
-
+    public DbSet<OtpVerification> OtpVerification { get; set; }
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
