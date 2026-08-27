@@ -12,5 +12,6 @@ namespace CricPulse.Application.Interfaces.Auth
     public interface IAuthService
     {
         Task<UserResponseDto> RegisterPlayerAsync(RegisterPlayerDto dto);
+        Task<bool> VerifyOtpAsync(VerifyOtpDto dto);
     }
 }

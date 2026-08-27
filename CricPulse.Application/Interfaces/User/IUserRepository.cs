@@ -17,7 +17,9 @@ namespace CricPulse.Application.Interfaces.User
         Task<bool> MobileExistsAsync(string mobileNumber);
 
         Task<UserEntity> CreateAsync(UserEntity user);
+        Task UpdateAsync(UserEntity user);
 
-       
+
+
     }
 }

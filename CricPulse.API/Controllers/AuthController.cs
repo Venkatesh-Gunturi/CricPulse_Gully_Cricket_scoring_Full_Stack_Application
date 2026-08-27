@@ -4,7 +4,7 @@ using Microsoft.AspNetCore.Mvc;
 using CricPulse.Application.DTOs.Auth;
 using CricPulse.Application.DTOs.User;
 using CricPulse.Application.Interfaces.Auth;
-using Microsoft.AspNetCore.Mvc;
+
 
 namespace CricPulse.API.Controllers
 {
@@ -27,5 +27,23 @@ namespace CricPulse.API.Controllers
             return StatusCode(StatusCodes.Status201Created,user);
         }
 
+        [HttpPost("verify-otp")]
+        public async Task<IActionResult> VerifyOtp(VerifyOtpDto dto)
+        {
+            var result = await _authService.VerifyOtpAsync(dto);
+
+            if (!result)
+            {
+                return BadRequest(new
+                {
+                    message = "Invalid or expired OTP."
+                });
+            }
+
+            return Ok(new
+            {
+                message = "OTP verified successfully."
+            });
+        }
     }
 }

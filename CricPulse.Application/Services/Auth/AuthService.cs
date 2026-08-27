@@ -3,6 +3,7 @@ using CricPulse.Application.DTOs.User;
 using CricPulse.Application.Interfaces.Auth;
 using CricPulse.Application.Interfaces.User;
 using CricPulse.Domain.Exceptions;
+using CricPulse.Application.Interfaces.Otp;
 
 using UserEntity = CricPulse.Domain.Entities.User;
 
@@ -12,6 +13,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
+
 namespace CricPulse.Application.Services.Auth
 {
     public class AuthService : IAuthService
@@ -19,13 +21,15 @@ namespace CricPulse.Application.Services.Auth
         private readonly IUserRepository _userRepository;
         private readonly IPasswordHasher _passwordHasher;
         private readonly IOtpService _otpService;
+        private readonly IOtpRepository _otpRepository;
 
         //Constructor for DI(s)
-        public AuthService(IUserRepository userRepository, IPasswordHasher passwordHasher, IOtpService otpService)
+        public AuthService(IUserRepository userRepository, IPasswordHasher passwordHasher, IOtpService otpService,IOtpRepository otpRepository)
         {
             _userRepository = userRepository;
             _passwordHasher = passwordHasher;
             _otpService = otpService;
+            _otpRepository = otpRepository;
         }
 
         public async Task<UserResponseDto> RegisterPlayerAsync(RegisterPlayerDto dto)
@@ -80,10 +84,14 @@ namespace CricPulse.Application.Services.Auth
             var emailOtp = _otpService.GenerateOtp();
 
             var emailOtpVerification = _otpService.CreateOtpVerification(createdUser.Id, emailOtp, Domain.Enums.OtpType.Email);
+            await _otpRepository.CreateAsync(emailOtpVerification);
 
             //mobile number otp generation
             var mobileOtp = _otpService.GenerateOtp();
             var mobileOtpVerification = _otpService.CreateOtpVerification(createdUser.Id, mobileOtp, Domain.Enums.OtpType.Mobile);
+
+            await _otpRepository.CreateAsync(mobileOtpVerification);
+            
 
             return new UserResponseDto
             {
@@ -111,6 +119,14 @@ namespace CricPulse.Application.Services.Auth
                 return string.Join(" ", name.Trim().Split(' ', StringSplitOptions.RemoveEmptyEntries)
                              .Select(word => char.ToUpper(word[0]) + word.Substring(1).ToLower()));
             }
+        }
+
+        public async Task<bool> VerifyOtpAsync(VerifyOtpDto dto)
+        {
+            return await _otpService.VerifyOtpAsync(
+                dto.UserId,
+                dto.OtpCode,
+                dto.OtpType);
         }
     }
 }

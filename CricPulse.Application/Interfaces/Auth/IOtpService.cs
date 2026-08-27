@@ -11,5 +11,7 @@ namespace CricPulse.Application.Interfaces.Auth
             int userId,
             string otp,
             OtpType otpType);
+
+        Task<bool> VerifyOtpAsync(int userId, string otpCode, OtpType otpType);
     }
 }

@@ -13,7 +13,7 @@ namespace CricPulse.Domain.Entities
     {
         public int Id { get; set; }
         public int UserId { get; set; }
-        public string OtpCodeHash { get; set; }= string.Empty;
+        public string OtpCode { get; set; } = string.Empty;
         public OtpType OtpType { get; set; }
         public DateTime ExpiresAt { get; set; }
         public bool IsUsed { get; set; }
@@ -21,6 +21,6 @@ namespace CricPulse.Domain.Entities
         public DateTime CreatedAt { get; set; }
 
         //Navigation prop
-        public User User { get; set; }
+        public User? User { get; set; }
     }
 }
