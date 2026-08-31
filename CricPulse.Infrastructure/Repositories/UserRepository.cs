@@ -64,5 +64,18 @@ namespace CricPulse.Infrastructure.Repositories
             _context.Users.Update(user);
             await _context.SaveChangesAsync();
         }
+
+        public async Task<UserEntity?> GetByEmailAsync(string email)
+        {
+            return await _context.Users
+            .FirstOrDefaultAsync(u => u.Email == email);
+        }
+
+        public async Task<UserEntity?> GetByMobileNumberAsync(string mobileNumber)
+        {
+            return await _context.Users
+            .FirstOrDefaultAsync(u => u.MobileNumber == mobileNumber);
+        }
+
     }
 }

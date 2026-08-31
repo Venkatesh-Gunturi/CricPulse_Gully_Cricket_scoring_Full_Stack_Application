@@ -7,11 +7,13 @@ using System.Threading.Tasks;
 using CricPulse.Application.DTOs.Auth;
 using CricPulse.Application.DTOs.User;
 
+
 namespace CricPulse.Application.Interfaces.Auth
 {
     public interface IAuthService
     {
         Task<UserResponseDto> RegisterPlayerAsync(RegisterPlayerDto dto);
         Task<bool> VerifyOtpAsync(VerifyOtpDto dto);
+        Task<UserResponseDto?> LoginAsync(LoginDto dto);
     }
 }

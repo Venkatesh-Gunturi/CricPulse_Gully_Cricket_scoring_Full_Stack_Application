@@ -1,16 +1,52 @@
-import { BrowserRouter, Routes, Route } from "react-router-dom";
-
-import Register from "./pages/Register";
-import VerifyOtp from "./pages/VerifyOtp";
+import { useState } from "react";
+import MainPage from "./pages/MainPage";
+import RegisterModal from "./components/Auth/RegisterModal";
+import VerifyMobileModal from "./components/Auth/VerifyMobileModal";
+import LoginModal from "./components/Auth/LoginModal";
 
 function App() {
+
+  const [showLoginModal, setShowLoginModal] = useState(false);
+  const [showVerifyMobileModal, setShowVerifyMobileModal] = useState(false);
+const [registeredUserId, setRegisteredUserId] = useState(null);
+
+  const [showRegisterModal, setShowRegisterModal] = useState(false);
+
+ const handleRegistered = (userId) => {
+  console.log("Registered User ID:", userId);
+
+  setRegisteredUserId(userId);
+  setShowRegisterModal(false);
+  setShowVerifyMobileModal(true);
+};
+
   return (
-    <BrowserRouter>
-      <Routes>
-        <Route path="/register" element={<Register />} />
-        <Route path="/verify-otp" element={<VerifyOtp />} />
-      </Routes>
-    </BrowserRouter>
+    <>
+     <MainPage
+       onRegister={() => setShowRegisterModal(true)}
+       onLogin={() => setShowLoginModal(true)}
+     />
+
+      <RegisterModal
+        show={showRegisterModal}
+        onClose={() => setShowRegisterModal(false)}
+        onRegistered={handleRegistered}
+      />
+
+      <VerifyMobileModal
+        show={showVerifyMobileModal}
+        userId={registeredUserId}
+        onVerified={() => {
+          setShowVerifyMobileModal(false);
+          console.log("Registration completed successfully!");
+      }}
+      />
+
+      <LoginModal
+        show={showLoginModal}
+        onClose={() => setShowLoginModal(false)}
+      />
+    </>
   );
 }
 

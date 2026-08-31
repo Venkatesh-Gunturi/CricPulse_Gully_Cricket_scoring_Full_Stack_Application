@@ -18,6 +18,9 @@ namespace CricPulse.Application.Interfaces.User
 
         Task<UserEntity> CreateAsync(UserEntity user);
         Task UpdateAsync(UserEntity user);
+        Task<UserEntity?> GetByEmailAsync(string email);
+
+        Task<UserEntity?> GetByMobileNumberAsync(string mobileNumber);
 
 
 

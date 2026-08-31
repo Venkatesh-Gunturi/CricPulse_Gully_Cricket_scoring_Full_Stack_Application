@@ -1,17 +1,16 @@
 ﻿using CricPulse.Application.DTOs.Auth;
 using CricPulse.Application.DTOs.User;
 using CricPulse.Application.Interfaces.Auth;
+using CricPulse.Application.Interfaces.Otp;
 using CricPulse.Application.Interfaces.User;
 using CricPulse.Domain.Exceptions;
-using CricPulse.Application.Interfaces.Otp;
-
-using UserEntity = CricPulse.Domain.Entities.User;
-
+using Microsoft.AspNetCore.Identity;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using UserEntity = CricPulse.Domain.Entities.User;
 
 
 namespace CricPulse.Application.Services.Auth
@@ -38,21 +37,10 @@ namespace CricPulse.Application.Services.Auth
 
             var normalizedLastName = string.IsNullOrWhiteSpace(dto.LastName) ? null : FormatName(dto.LastName);
 
-            var normalizedEmail = dto.Email.Trim().ToLowerInvariant();
 
             var normalizedMobileNumber = dto.MobileNumber.Trim();
 
-            // Check whether email already exists
-
-            bool emailExists = await _userRepository.EmailExistsAsync(normalizedEmail);
-
-
-            if (emailExists)
-            {
-                throw new ConflictException("An account with this email already exists. Please log in.");
-
-            }
-
+            
             // Check whether mobile number already exists
             bool mobileExists = await _userRepository.MobileExistsAsync(normalizedMobileNumber);
 
@@ -67,12 +55,13 @@ namespace CricPulse.Application.Services.Auth
             {
                 FirstName = normalizedFirstName,
                 LastName = normalizedLastName,
-                Email = normalizedEmail,
+                Email = null,
                 MobileNumber = normalizedMobileNumber,
 
                 IsEmailVerified = false,
                 IsMobileVerified = false,
                 IsUmpire = false,
+                IsActive = false,
                 CreatedAt = DateTime.UtcNow
             };
 
@@ -80,18 +69,16 @@ namespace CricPulse.Application.Services.Auth
 
             var createdUser = await _userRepository.CreateAsync(user);
 
-            //email OTP generation
-            var emailOtp = _otpService.GenerateOtp();
-
-            var emailOtpVerification = _otpService.CreateOtpVerification(createdUser.Id, emailOtp, Domain.Enums.OtpType.Email);
-            await _otpRepository.CreateAsync(emailOtpVerification);
-
-            //mobile number otp generation
+            // Mobile OTP generation
             var mobileOtp = _otpService.GenerateOtp();
-            var mobileOtpVerification = _otpService.CreateOtpVerification(createdUser.Id, mobileOtp, Domain.Enums.OtpType.Mobile);
+
+            var mobileOtpVerification = _otpService.CreateOtpVerification(
+                createdUser.Id,
+                mobileOtp,
+                Domain.Enums.OtpType.Mobile);
 
             await _otpRepository.CreateAsync(mobileOtpVerification);
-            
+
 
             return new UserResponseDto
             {
@@ -123,10 +110,91 @@ namespace CricPulse.Application.Services.Auth
 
         public async Task<bool> VerifyOtpAsync(VerifyOtpDto dto)
         {
-            return await _otpService.VerifyOtpAsync(
-                dto.UserId,
-                dto.OtpCode,
-                dto.OtpType);
+            var isVerified = await _otpService.VerifyOtpAsync(
+            dto.UserId,
+            dto.OtpCode,
+            dto.OtpType);
+
+
+            if (!isVerified)
+            {
+                return false;
+            }
+
+            var user = await _userRepository.GetByIdAsync(dto.UserId);
+
+            if (user == null)
+            {
+                return false;
+            }
+
+            if (dto.OtpType == Domain.Enums.OtpType.Mobile)
+            {
+                user.IsMobileVerified = true;
+                user.IsActive = true;
+            }
+            else if (dto.OtpType == Domain.Enums.OtpType.Email)
+            {
+                user.IsEmailVerified = true;
+            }
+
+            await _userRepository.UpdateAsync(user);
+
+            return true;
+
+
+}
+
+
+
+        public async Task<UserResponseDto?> LoginAsync(LoginDto dto)
+        {
+            var identifier = dto.Identifier.Trim().ToLowerInvariant();
+
+            UserEntity? user;
+
+            if (identifier.Contains("@"))
+            {
+                user = await _userRepository.GetByEmailAsync(identifier);
+            }
+            else
+            {
+                user = await _userRepository.GetByMobileNumberAsync(dto.Identifier.Trim());
+            }
+
+            if (user == null)
+            {
+                return null;
+            }
+
+            if (!user.IsMobileVerified || !user.IsActive)
+            {
+                return null;
+            }
+
+            var passwordResult = _passwordHasher.VerifyPassword(
+                user,
+                user.PasswordHash,
+                dto.Password);
+
+            if (!passwordResult)
+            {
+                return null;
+            }
+
+            return new UserResponseDto
+            {
+                Id = user.Id,
+                FirstName = user.FirstName,
+                LastName = user.LastName,
+                Email = user.Email,
+                MobileNumber = user.MobileNumber,
+                IsEmailVerified = user.IsEmailVerified,
+                IsMobileVerified = user.IsMobileVerified,
+                ProfileImageUrl = user.ProfileImageUrl,
+                IsActive = user.IsActive,
+                CreatedAt = user.CreatedAt
+            };
         }
     }
 }

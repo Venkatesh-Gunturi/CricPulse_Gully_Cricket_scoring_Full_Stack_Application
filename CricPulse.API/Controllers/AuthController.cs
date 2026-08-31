@@ -45,5 +45,24 @@ namespace CricPulse.API.Controllers
                 message = "OTP verified successfully."
             });
         }
+
+        [HttpPost("login")]
+        public async Task<IActionResult> Login(LoginDto dto)
+        {
+            var result = await _authService.LoginAsync(dto);
+
+            if (result == null)
+            {
+                return Unauthorized(new
+                {
+                    message = "Invalid email/mobile number or password."
+                });
+            }
+
+            return Ok(result);
+
+
+        }
+
     }
 }

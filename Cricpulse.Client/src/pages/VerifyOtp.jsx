@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useLocation } from "react-router-dom";
+import { verifyOtp } from "../services/authService";
 
 function VerifyOtp() {
 
@@ -12,12 +13,20 @@ function VerifyOtp() {
   const [emailOtp, setEmailOtp] = useState("");
   const [mobileOtp, setMobileOtp] = useState("");
 
-  const handleSubmit = (event) => {
-    event.preventDefault();
+ const handleSubmit = async (event) => {
+  event.preventDefault();
 
-    console.log("Email OTP:", emailOtp);
-    console.log("Mobile OTP:", mobileOtp);
-  };
+  try {
+    await verifyOtp(userId, emailOtp, 1);
+
+    await verifyOtp(userId, mobileOtp, 2);
+
+    console.log("Both OTPs verified successfully!");
+
+  } catch (error) {
+    console.error("OTP verification failed:", error);
+  }
+};
 
   return (
     <div className="container min-vh-100 d-flex align-items-center justify-content-center py-4">

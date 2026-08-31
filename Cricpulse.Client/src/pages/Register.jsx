@@ -40,11 +40,11 @@ try {
 
   console.log("Registration successful:", response);
 
-  navigate("/verify-otp", {
-    state: {
-      userId: response.id
-    }
-  });
+ navigate("/verify-mobile", {
+  state: {
+    userId: response.id
+  }
+});
 
   } catch (error) {
     console.error("Registration failed:", error);
