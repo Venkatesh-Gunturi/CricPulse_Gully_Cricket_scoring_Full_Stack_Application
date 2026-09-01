@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { loginPlayer } from "../../services/authService";
 
+
 function LoginModal({ show, onClose }) {
   const [loginData, setLoginData] = useState({identifier: "", password: ""});
   
@@ -21,9 +22,12 @@ function LoginModal({ show, onClose }) {
  try {
  const response = await loginPlayer(loginData);
 
- console.log("Login successful:", response);
+console.log("Login successful:", response);
 
- onClose();
+localStorage.setItem("token", response.token);
+localStorage.setItem("user", JSON.stringify(response.user));
+
+onClose();
 
  } catch (error) {
     console.error("Login failed:", error);

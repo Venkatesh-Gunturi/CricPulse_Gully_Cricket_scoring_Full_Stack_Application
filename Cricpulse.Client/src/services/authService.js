@@ -32,3 +32,19 @@ loginData
 
 return response.data;
 };
+
+
+export const testAuth = async () => {
+const token = localStorage.getItem("token");
+
+const response = await axios.get(
+`${API_URL}/test-auth`,
+{
+headers: {
+Authorization: Bearer `${token}`
+}
+}
+);
+
+return response.data;
+};

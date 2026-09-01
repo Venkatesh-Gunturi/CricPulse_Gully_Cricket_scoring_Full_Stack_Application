@@ -12,6 +12,6 @@ namespace CricPulse.Application.Interfaces.Auth
     {
         string HashPassword(UserEntity user,string password);
 
-        bool VerifyPassword(UserEntity user,string password, string passwordHash);
+        bool VerifyPassword(UserEntity user, string passwordHash, string password);
     }
 }

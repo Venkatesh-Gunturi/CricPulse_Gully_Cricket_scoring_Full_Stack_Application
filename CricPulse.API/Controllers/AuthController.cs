@@ -1,9 +1,11 @@
-﻿using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Mvc;
-
-using CricPulse.Application.DTOs.Auth;
+﻿using CricPulse.Application.DTOs.Auth;
 using CricPulse.Application.DTOs.User;
 using CricPulse.Application.Interfaces.Auth;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
+using System.Security.Claims;
+
 
 
 namespace CricPulse.API.Controllers
@@ -46,6 +48,7 @@ namespace CricPulse.API.Controllers
             });
         }
 
+
         [HttpPost("login")]
         public async Task<IActionResult> Login(LoginDto dto)
         {
@@ -63,6 +66,18 @@ namespace CricPulse.API.Controllers
 
 
         }
+
+        ////JWT Authentication
+        //[Authorize]
+        //[HttpGet("test-auth")]
+        //public IActionResult TestAuth()
+        //{
+        //    return Ok(new
+        //    {
+        //        Message = "JWT authentication is working!",
+        //        UserId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value
+        //    });
+        //}
 
     }
 }

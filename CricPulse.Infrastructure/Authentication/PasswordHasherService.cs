@@ -24,9 +24,9 @@ namespace CricPulse.Infrastructure.Authentication
             return _passwordHasher.HashPassword(user,password);
         }
 
-        public bool VerifyPassword(UserEntity user,string password,string passwordHash)
+        public bool VerifyPassword(UserEntity user,string passwordHash, string password)
         {
-            var result= _passwordHasher.VerifyHashedPassword(user,password,passwordHash);
+            var result= _passwordHasher.VerifyHashedPassword(user,passwordHash, password);
 
             return result == PasswordVerificationResult.Success ||
                     result == PasswordVerificationResult.SuccessRehashNeeded;
