@@ -22,6 +22,7 @@ namespace CricPulse.Domain.Entities
         public DateTime CreatedAt { get; set; }
         public DateTime? UpdatedAt { get; set; }
 
+        public Player? Player { get; set; }
         public ICollection<OtpVerification> OtpVerifications { get; set; } = new List<OtpVerification>();
 
     }

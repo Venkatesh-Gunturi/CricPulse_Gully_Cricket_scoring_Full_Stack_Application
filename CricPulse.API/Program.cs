@@ -1,8 +1,11 @@
 using CricPulse.API.Middleware;
 using CricPulse.Application.Interfaces.Auth;
 using CricPulse.Application.Interfaces.Otp;
+using CricPulse.Application.Interfaces.player;
+using CricPulse.Application.Interfaces.Player;
 using CricPulse.Application.Interfaces.User;
 using CricPulse.Application.Services.Auth;
+using CricPulse.Application.Services.Player;
 using CricPulse.Application.Services.User;
 using CricPulse.Infrastructure.Authentication;
 using CricPulse.Infrastructure.Data;
@@ -12,6 +15,8 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using System.Text;
+
+
 
 
 var builder = WebApplication.CreateBuilder(args);
@@ -24,6 +29,8 @@ builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IOtpService, OtpService>();
 builder.Services.AddScoped<IOtpRepository, OtpRepository>();
 builder.Services.AddScoped<IJwtService, JwtService>();
+builder.Services.AddScoped<IPlayerService, PlayerService>();
+builder.Services.AddScoped<IPlayerRepository, PlayerRepository>();
 
 //JWT Authentication
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
@@ -59,7 +66,33 @@ builder.Services.AddCors(options =>
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
 
-builder.Services.AddSwaggerGen();
+builder.Services.AddSwaggerGen(options =>
+{
+    options.AddSecurityDefinition("Bearer", new Microsoft.OpenApi.Models.OpenApiSecurityScheme
+    {
+        Name = "Authorization",
+        Type = Microsoft.OpenApi.Models.SecuritySchemeType.Http,
+        Scheme = "bearer",
+        BearerFormat = "JWT",
+        In = Microsoft.OpenApi.Models.ParameterLocation.Header,
+        Description = "Enter JWT token"
+    });
+
+    options.AddSecurityRequirement(new Microsoft.OpenApi.Models.OpenApiSecurityRequirement
+    {
+        {
+            new Microsoft.OpenApi.Models.OpenApiSecurityScheme
+            {
+                Reference = new Microsoft.OpenApi.Models.OpenApiReference
+                {
+                    Type = Microsoft.OpenApi.Models.ReferenceType.SecurityScheme,
+                    Id = "Bearer"
+                }
+            },
+            Array.Empty<string>()
+        }
+    });
+});
 
 
 builder.Services.AddDbContext<CricPulseDbContext>(options => options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
