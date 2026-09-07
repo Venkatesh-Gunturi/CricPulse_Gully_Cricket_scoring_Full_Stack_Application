@@ -13,6 +13,8 @@ public class CricPulseDbContext : DbContext
     public DbSet<User> Users   { get; set; }
     public DbSet<OtpVerification> OtpVerification { get; set; }
     public DbSet<Player> Players { get; set; }
+    public DbSet<Match> Matches { get; set; }
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
@@ -32,5 +34,11 @@ public class CricPulseDbContext : DbContext
             .WithOne(u => u.Player)
             .HasForeignKey<Player>(p => p.UserId)
             .OnDelete(DeleteBehavior.Cascade);
+
+        modelBuilder.Entity<Match>()
+            .HasOne(m => m.Umpire)
+            .WithMany(u => u.MatchesAsUmpire)
+            .HasForeignKey(m => m.UmpireId)
+            .OnDelete(DeleteBehavior.Restrict);
     }
 }

@@ -23,8 +23,4 @@
     <ProjectReference Include="..\CricPulse.Domain\CricPulse.Domain.csproj" />
   </ItemGroup>
 
-  <ItemGroup>
-    <Folder Include="Services\" />
-  </ItemGroup>
-
 </Project>

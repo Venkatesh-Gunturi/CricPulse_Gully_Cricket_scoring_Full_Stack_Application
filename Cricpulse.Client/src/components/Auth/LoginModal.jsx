@@ -2,7 +2,9 @@ import { useState } from "react";
 import { loginPlayer } from "../../services/authService";
 
 
-function LoginModal({ show, onClose }) {
+function LoginModal({ show, onClose, onLoginSuccess }) {
+
+
   const [loginData, setLoginData] = useState({identifier: "", password: ""});
   
   const handleChange = (event) => {
@@ -26,6 +28,7 @@ console.log("Login successful:", response);
 
 localStorage.setItem("token", response.token);
 localStorage.setItem("user", JSON.stringify(response.user));
+onLoginSuccess(response.user);
 
 onClose();
 

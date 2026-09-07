@@ -1,15 +1,19 @@
 using CricPulse.API.Middleware;
 using CricPulse.Application.Interfaces.Auth;
+using CricPulse.Application.Interfaces.Location;
+using CricPulse.Application.Interfaces.Match;
 using CricPulse.Application.Interfaces.Otp;
 using CricPulse.Application.Interfaces.player;
 using CricPulse.Application.Interfaces.Player;
 using CricPulse.Application.Interfaces.User;
 using CricPulse.Application.Services.Auth;
+using CricPulse.Application.Services.Match;
 using CricPulse.Application.Services.Player;
 using CricPulse.Application.Services.User;
 using CricPulse.Infrastructure.Authentication;
 using CricPulse.Infrastructure.Data;
 using CricPulse.Infrastructure.Repositories;
+using CricPulse.Infrastructure.Services.Location;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
@@ -17,20 +21,34 @@ using Microsoft.OpenApi.Models;
 using System.Text;
 
 
-
-
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<IUserRepository, UserRepository>();
+
 builder.Services.AddScoped<IPasswordHasher, PasswordHasherService>();
+
 builder.Services.AddScoped<IAuthService, AuthService>();
+
 builder.Services.AddScoped<IOtpService, OtpService>();
 builder.Services.AddScoped<IOtpRepository, OtpRepository>();
+
 builder.Services.AddScoped<IJwtService, JwtService>();
+
 builder.Services.AddScoped<IPlayerService, PlayerService>();
 builder.Services.AddScoped<IPlayerRepository, PlayerRepository>();
+
+builder.Services.AddScoped<IMatchService, MatchService>();
+builder.Services.AddScoped<IMatchRepository, MatchRepository>();
+
+//External location service to get the match state
+builder.Services.AddHttpClient<ILocationService, LocationService>(client =>
+{
+    client.DefaultRequestHeaders.UserAgent.ParseAdd(
+        "CricPulse/1.0");
+});
+
 
 //JWT Authentication
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
