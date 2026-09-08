@@ -60,3 +60,69 @@ export const getMatchesByState = async (state) => {
 
   return response.data;
 };
+
+export const updateMatch = async (id, matchData) => {
+  const token = localStorage.getItem("token");
+
+  const response = await axios.put(
+    `${API_URL}/${id}`,
+    matchData,
+    {
+      headers: {
+        Authorization: `Bearer ${token}`
+      }
+    }
+  );
+
+  return response.data;
+};
+
+export const startMatch = async (id, latitude, longitude) => {
+  const token = localStorage.getItem("token");
+
+  const response = await axios.post(
+    `${API_URL}/${id}/start`,
+    {
+      latitude,
+      longitude
+    },
+    {
+      headers: {
+        Authorization: `Bearer ${token}`
+      }
+    }
+  );
+
+  return response.data;
+};
+
+export const cancelMatch = async (id) => {
+  const token = localStorage.getItem("token");
+
+  const response = await axios.post(
+    `${API_URL}/${id}/cancel`,
+    {},
+    {
+      headers: {
+        Authorization: `Bearer ${token}`
+      }
+    }
+  );
+
+  return response.data;
+};
+
+export const getMyMatches = async () => {
+  const token = localStorage.getItem("token");
+
+  const response = await axios.get(
+    `${API_URL}/my-matches`,
+    {
+      headers: {
+        Authorization: `Bearer ${token}`
+      }
+    }
+  );
+
+  return response.data;
+};

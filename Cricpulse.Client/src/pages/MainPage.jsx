@@ -1,10 +1,13 @@
 import { useEffect, useState } from "react";
+
 import MatchList from "../components/Match/MatchList";
-import { getCurrentLocation, getStateByLocation } from "../services/LocationService";
 
-function MainPage({ onRegister, onLogin }) {
+import {
+  getCurrentLocation,
+  getStateByLocation
+} from "../services/locationService";
 
-  const indianStates = [
+const indianStates = [
   "Andaman and Nicobar Islands",
   "Andhra Pradesh",
   "Arunachal Pradesh",
@@ -43,44 +46,65 @@ function MainPage({ onRegister, onLogin }) {
   "West Bengal"
 ];
 
-  const [selectedState, setSelectedState] = useState("Telangana");
-  const [selectedStatus, setSelectedStatus] = useState("Scheduled");
+function MainPage({
+  onLogin,
+  onRegister
+}) {
+  const [selectedStatus, setSelectedStatus] =
+    useState("Scheduled");
 
-  const [location, setLocation] = useState(null);
-const [locationError, setLocationError] = useState("");
+  const [selectedState, setSelectedState] =
+    useState("Telangana");
 
-useEffect(() => {
-  const loadLocation = async () => {
-    try {
-      const coordinates = await getCurrentLocation();
+  const [location, setLocation] =
+    useState(null);
 
-setLocation(coordinates);
-console.log("User location:", coordinates);
+  const [locationError, setLocationError] =
+    useState("");
 
-const detectedState = await getStateByLocation(
-  coordinates.latitude,
-  coordinates.longitude
-);
+  useEffect(() => {
+    const loadLocation = async () => {
+      try {
+        const coordinates =
+          await getCurrentLocation();
 
-setSelectedState(detectedState);
+        setLocation(coordinates);
 
-console.log("Detected state:", detectedState);
-    } catch (error) {
-      console.log("Location permission denied or unavailable.");
+        console.log(
+          "User location:",
+          coordinates
+        );
 
-      setLocationError("Location unavailable.");
-    }
-  };
+        const detectedState =
+          await getStateByLocation(
+            coordinates.latitude,
+            coordinates.longitude
+          );
 
-  loadLocation();
-}, []);
+        setSelectedState(detectedState);
+
+        console.log(
+          "Detected state:",
+          detectedState
+        );
+      } catch (error) {
+        console.log(
+          "Location permission denied or unavailable."
+        );
+
+        setLocationError(
+          "Location unavailable."
+        );
+      }
+    };
+
+    loadLocation();
+  }, []);
 
   return (
     <>
-      {/* Header */}
       <nav className="navbar navbar-dark bg-dark">
         <div className="container">
-
           <span className="navbar-brand mb-0 h1">
             CricPulse 🏏
           </span>
@@ -100,86 +124,108 @@ console.log("Detected state:", detectedState);
               Register
             </button>
           </div>
-
         </div>
       </nav>
 
-      {/* Hero / Application Motive */}
       <section className="container text-center mt-5">
-
-        <h1>Your Local Cricket. One Pulse. 🏏</h1>
+        <h1>
+          Your Local Cricket. One Pulse. 🏏
+        </h1>
 
         <p className="text-muted">
-          Discover nearby matches, follow live scores,
-          and stay connected with cricket around you.
+          Discover nearby matches, follow live
+          scores, and stay connected with cricket
+          around you.
         </p>
-
       </section>
 
-      {/* Match Status Navigation */}
       <section className="container mt-4">
+        <div className="d-flex justify-content-center gap-2 flex-wrap">
+          <button
+            className={
+              selectedStatus === "Live"
+                ? "btn btn-danger"
+                : "btn btn-outline-danger"
+            }
+            onClick={() =>
+              setSelectedStatus("Live")
+            }
+          >
+            Live
+          </button>
 
-       <div className="d-flex justify-content-center gap-2">
+          <button
+            className={
+              selectedStatus === "Scheduled"
+                ? "btn btn-primary"
+                : "btn btn-outline-primary"
+            }
+            onClick={() =>
+              setSelectedStatus("Scheduled")
+            }
+          >
+            Upcoming
+          </button>
 
-        <button
-          className={
-            selectedStatus === "Live"
-              ? "btn btn-danger"
-              : "btn btn-outline-danger"
-          }
-          onClick={() => setSelectedStatus("Live")}
-        >
-          Live
-        </button>
+          <button
+            className={
+              selectedStatus === "Completed"
+                ? "btn btn-secondary"
+                : "btn btn-outline-secondary"
+            }
+            onClick={() =>
+              setSelectedStatus("Completed")
+            }
+          >
+            Finished
+          </button>
 
-  <button
-    className={
-      selectedStatus === "Scheduled"
-        ? "btn btn-primary"
-        : "btn btn-outline-primary"
-    }
-    onClick={() => setSelectedStatus("Scheduled")}
-  >
-    Upcoming
-  </button>
-
-  <button
-    className={
-      selectedStatus === "Completed"
-        ? "btn btn-secondary"
-        : "btn btn-outline-secondary"
-    }
-    onClick={() => setSelectedStatus("Completed")}
-  >
-    Finished
-  </button>
-
-  <div className="mt-3 text-center">
-  <select
-    className="form-select d-inline-block"
-    style={{ width: "250px" }}
-    value={selectedState}
-    onChange={(e) => setSelectedState(e.target.value)}
-  >
-    {indianStates.map((state) => (
-  <option key={state} value={state}>
-    {state}
-  </option>
-))}
-  </select>
-  </div>
-
-</div>
-
+          <button
+            className={
+              selectedStatus === "Cancelled"
+                ? "btn btn-dark"
+                : "btn btn-outline-dark"
+            }
+            onClick={() =>
+              setSelectedStatus("Cancelled")
+            }
+          >
+            Cancelled
+          </button>
+        </div>
       </section>
 
-      {/* Matches */}
+      <section className="container mt-3 text-center">
+        <select
+          className="form-select d-inline-block"
+          style={{ width: "280px" }}
+          value={selectedState}
+          onChange={(event) =>
+            setSelectedState(event.target.value)
+          }
+        >
+          {indianStates.map((state) => (
+            <option
+              key={state}
+              value={state}
+            >
+              {state}
+            </option>
+          ))}
+        </select>
+
+        {locationError && (
+          <p className="text-muted mt-2">
+            {locationError}
+          </p>
+        )}
+      </section>
+
       <MatchList
         status={selectedStatus}
         location={location}
         state={selectedState}
       />
-
     </>
   );
 }

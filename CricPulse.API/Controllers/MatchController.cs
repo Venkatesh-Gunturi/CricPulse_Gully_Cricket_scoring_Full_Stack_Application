@@ -102,5 +102,142 @@ namespace CricPulse.API.Controllers
 
             return Ok(matches);
         }
+
+
+        [Authorize]
+        [HttpPut("{id}")]
+        public async Task<IActionResult> UpdateMatch(
+    int id,
+    UpdateMatchDto dto)
+        {
+            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
+
+            if (userIdClaim == null)
+            {
+                return Unauthorized();
+            }
+
+            var userId = int.Parse(userIdClaim.Value);
+
+            try
+            {
+                var match = await _matchService.UpdateMatchAsync(
+                    id,
+                    userId,
+                    dto);
+
+                if (match == null)
+                {
+                    return NotFound("Match not found.");
+                }
+
+                return Ok(match);
+            }
+            catch (UnauthorizedAccessException)
+            {
+                return Forbid();
+            }
+            catch (InvalidOperationException ex)
+            {
+                return BadRequest(ex.Message);
+            }
+        }
+
+        [Authorize]
+        [HttpPost("{id}/start")]
+        public async Task<IActionResult> StartMatch(
+    int id,
+    StartMatchDto dto)
+        {
+            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
+
+            if (userIdClaim == null)
+            {
+                return Unauthorized();
+            }
+
+            var userId = int.Parse(userIdClaim.Value);
+
+            try
+            {
+                var match = await _matchService.StartMatchAsync(
+                    id,
+                    userId,
+                    dto);
+
+                if (match == null)
+                {
+                    return NotFound("Match not found.");
+                }
+
+                return Ok(match);
+            }
+            catch (UnauthorizedAccessException)
+            {
+                return Forbid();
+            }
+            catch (InvalidOperationException ex)
+            {
+                return BadRequest(ex.Message);
+            }
+        }
+
+        [Authorize]
+        [HttpPost("{id}/cancel")]
+        public async Task<IActionResult> CancelMatch(int id)
+        {
+            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
+
+            if (userIdClaim == null)
+            {
+                return Unauthorized();
+            }
+
+            var userId = int.Parse(userIdClaim.Value);
+
+            try
+            {
+                var cancelled = await _matchService.CancelMatchAsync(
+                    id,
+                    userId);
+
+                if (!cancelled)
+                {
+                    return NotFound("Match not found.");
+                }
+
+                return Ok(new
+                {
+                    message = "Match cancelled successfully."
+                });
+            }
+            catch (UnauthorizedAccessException)
+            {
+                return Forbid();
+            }
+            catch (InvalidOperationException ex)
+            {
+                return BadRequest(ex.Message);
+            }
+        }
+
+
+        [Authorize]
+        [HttpGet("my-matches")]
+        public async Task<IActionResult> GetMyMatches()
+        {
+            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
+
+            if (userIdClaim == null)
+            {
+                return Unauthorized();
+            }
+
+            var userId = int.Parse(userIdClaim.Value);
+
+            var matches = await _matchService.GetMyMatchesAsync(userId);
+
+            return Ok(matches);
+        }
     }
 }

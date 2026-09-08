@@ -16,5 +16,12 @@ namespace CricPulse.Application.Interfaces.Match
             double radiusInKm);
 
         Task<List<MatchEntity>> GetMatchesByStateAsync(string state);
+
+        Task<MatchEntity?> UpdateAsync(MatchEntity match);
+
+        Task<bool> CancelAsync(int matchId);
+
+        Task<MatchEntity?> GetByIdForUpdateAsync(int matchId);
+        Task<List<MatchEntity>> GetMatchesByUmpireAsync(int umpireId);
     }
 }

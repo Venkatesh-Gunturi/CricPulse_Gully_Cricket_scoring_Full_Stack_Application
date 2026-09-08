@@ -1,17 +1,7 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace CricPulse.Domain.Entities
+﻿namespace CricPulse.Application.DTOs.Match
 {
-    public class Match
+    public class UpdateMatchDto
     {
-        public int Id { get; set; }
-
-        public int UmpireId { get; set; }
-
         public string Team1Name { get; set; } = string.Empty;
         public string Team1Logo { get; set; } = string.Empty;
 
@@ -24,22 +14,12 @@ namespace CricPulse.Domain.Entities
         public DateTime MatchDate { get; set; }
         public TimeSpan MatchTime { get; set; }
 
-        //Location details 
         public string VenueName { get; set; } = string.Empty;
         public string Address { get; set; } = string.Empty;
+
         public double Latitude { get; set; }
         public double Longitude { get; set; }
-        public string State { get; set; } = string.Empty;
-        public bool HasLocationBeenChanged { get; set; }
 
         public string? LiveStreamUrl { get; set; }
-
-        public string Status { get; set; } = "Scheduled";
-
-        public DateTime CreatedAt { get; set; }
-        public DateTime? UpdatedAt { get; set; }
-
-        public User Umpire { get; set; } = null!;
-        
     }
 }

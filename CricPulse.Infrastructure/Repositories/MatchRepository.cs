@@ -113,5 +113,46 @@ namespace CricPulse.Infrastructure.Repositories
                 .ThenBy(m => m.MatchTime)
                 .ToListAsync();
         }
+
+        public async Task<Match?> GetByIdForUpdateAsync(int matchId)
+        {
+            return await _context.Matches
+                .FirstOrDefaultAsync(m => m.Id == matchId);
+        }
+
+        public async Task<Match?> UpdateAsync(Match match)
+        {
+            _context.Matches.Update(match);
+            await _context.SaveChangesAsync();
+
+            return match;
+        }
+
+        public async Task<bool> CancelAsync(int matchId)
+        {
+            var match = await _context.Matches
+                .FirstOrDefaultAsync(m => m.Id == matchId);
+
+            if (match == null)
+            {
+                return false;
+            }
+
+            match.Status = "Cancelled";
+            match.UpdatedAt = DateTime.UtcNow;
+
+            await _context.SaveChangesAsync();
+
+            return true;
+        }
+
+        public async Task<List<Match>> GetMatchesByUmpireAsync(int umpireId)
+        {
+            return await _context.Matches
+                .Where(m => m.UmpireId == umpireId)
+                .OrderByDescending(m => m.MatchDate)
+                .ThenByDescending(m => m.MatchTime)
+                .ToListAsync();
+        }
     }
 }
