@@ -27,5 +27,7 @@ namespace CricPulse.Application.DTOs.Match
         public double Longitude { get; set; }
 
         public string? LiveStreamUrl { get; set; }
+
+        public List<MatchPlayerDto> Players { get; set; }= new List<MatchPlayerDto>();
     }
 }

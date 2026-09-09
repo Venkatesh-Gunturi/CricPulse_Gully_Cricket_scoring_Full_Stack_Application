@@ -239,5 +239,23 @@ namespace CricPulse.API.Controllers
 
             return Ok(matches);
         }
+
+
+        [Authorize]
+        [HttpGet("player-lookup")]
+        public async Task<IActionResult> LookupPlayer(
+    [FromQuery] string mobileNumber)
+        {
+            if (string.IsNullOrWhiteSpace(mobileNumber))
+            {
+                return BadRequest("Mobile number is required.");
+            }
+
+            var player =
+                await _matchService.LookupPlayerByMobileAsync(
+                    mobileNumber);
+
+            return Ok(player);
+        }
     }
 }

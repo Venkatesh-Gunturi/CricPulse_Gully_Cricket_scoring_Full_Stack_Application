@@ -34,6 +34,7 @@ namespace CricPulse.Application.DTOs.Match
         public string? LiveStreamUrl { get; set; }
 
         public string Status { get; set; } = string.Empty;
+      
 
         public DateTime CreatedAt { get; set; }
         public DateTime? UpdatedAt { get; set; }

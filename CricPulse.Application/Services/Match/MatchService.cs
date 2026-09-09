@@ -116,6 +116,7 @@ namespace CricPulse.Application.Services.Match
                 Latitude = match.Latitude,
                 Longitude = match.Longitude,
                 State = match.State,
+                
 
                 LiveStreamUrl = match.LiveStreamUrl,
 
@@ -172,7 +173,8 @@ namespace CricPulse.Application.Services.Match
     int userId,
     UpdateMatchDto dto)
         {
-            var match = await _matchRepository.GetByIdForUpdateAsync(matchId);
+            var match =
+                await _matchRepository.GetByIdForUpdateAsync(matchId);
 
             if (match == null)
             {
@@ -208,29 +210,15 @@ namespace CricPulse.Application.Services.Match
 
             match.LiveStreamUrl = dto.LiveStreamUrl;
 
-            if (!match.HasLocationBeenChanged)
-            {
-                match.Latitude = dto.Latitude;
-                match.Longitude = dto.Longitude;
-
-                var state = await _locationService.GetStateAsync(
-                    dto.Latitude,
-                    dto.Longitude);
-
-                match.State = state ?? match.State;
-
-                match.HasLocationBeenChanged = true;
-            }
-
             match.UpdatedAt = DateTime.UtcNow;
 
-            var updatedMatch = await _matchRepository.UpdateAsync(match);
+            var updatedMatch =
+                await _matchRepository.UpdateAsync(match);
 
             return updatedMatch == null
                 ? null
                 : MapToResponse(updatedMatch);
         }
-
 
         public async Task<MatchResponseDto?> StartMatchAsync(
     int matchId,
@@ -315,6 +303,53 @@ namespace CricPulse.Application.Services.Match
             return matches
                 .Select(MapToResponse)
                 .ToList();
+        }
+
+
+        public async Task<PlayerLookupResponseDto>
+    LookupPlayerByMobileAsync(string mobileNumber)
+        {
+            var normalizedMobile =
+                mobileNumber.Trim();
+
+            var user =
+                await _userRepository.GetByMobileNumberAsync(
+                    normalizedMobile);
+
+            if (user == null)
+            {
+                return new PlayerLookupResponseDto
+                {
+                    IsRegistered = false,
+                    DisplayName = string.Empty
+                };
+            }
+
+            if (user.Player == null)
+            {
+                return new PlayerLookupResponseDto
+                {
+                    IsRegistered = false,
+                    DisplayName = string.Empty
+                };
+            }
+
+            var displayName =
+                string.Join(
+                    " ",
+                    new[]
+                    {
+                user.FirstName,
+                user.LastName
+                    }
+                    .Where(x => !string.IsNullOrWhiteSpace(x)));
+
+            return new PlayerLookupResponseDto
+            {
+                IsRegistered = true,
+                PlayerId = user.Player.Id,
+                DisplayName = displayName
+            };
         }
     }
 }

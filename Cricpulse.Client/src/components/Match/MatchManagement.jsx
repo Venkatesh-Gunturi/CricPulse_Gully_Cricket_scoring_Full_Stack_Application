@@ -4,7 +4,7 @@ import {
   startMatch,
   cancelMatch
 } from "../../services/matchService";
-import { getCurrentLocation } from "../../services/LocationService";
+
 
 const MatchManagement = ({ match, onMatchUpdated }) => {
   const [editing, setEditing] = useState(false);
@@ -12,21 +12,19 @@ const MatchManagement = ({ match, onMatchUpdated }) => {
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
 
-  const [formData, setFormData] = useState({
-    team1Name: match.team1Name,
-    team1Logo: match.team1Logo,
-    team2Name: match.team2Name,
-    team2Logo: match.team2Logo,
-    playersPerTeam: match.playersPerTeam,
-    overs: match.overs,
-    matchDate: match.matchDate?.split("T")[0] || "",
-    matchTime: match.matchTime,
-    venueName: match.venueName,
-    address: match.address,
-    latitude: match.latitude,
-    longitude: match.longitude,
-    liveStreamUrl: match.liveStreamUrl || ""
-  });
+ const [formData, setFormData] = useState({
+  team1Name: match.team1Name,
+  team1Logo: match.team1Logo,
+  team2Name: match.team2Name,
+  team2Logo: match.team2Logo,
+  playersPerTeam: match.playersPerTeam,
+  overs: match.overs,
+  matchDate: match.matchDate?.split("T")[0] || "",
+  matchTime: match.matchTime,
+  venueName: match.venueName,
+  address: match.address,
+  liveStreamUrl: match.liveStreamUrl || ""
+});
 
   const handleChange = (event) => {
     const { name, value } = event.target;
@@ -44,15 +42,13 @@ const MatchManagement = ({ match, onMatchUpdated }) => {
       setMessage("");
 
       const updatedMatch = await updateMatch(
-        match.id,
-        {
-          ...formData,
-          playersPerTeam: Number(formData.playersPerTeam),
-          overs: Number(formData.overs),
-          latitude: Number(formData.latitude),
-          longitude: Number(formData.longitude)
-        }
-      );
+  match.id,
+  {
+    ...formData,
+    playersPerTeam: Number(formData.playersPerTeam),
+    overs: Number(formData.overs)
+  }
+);
 
       setEditing(false);
       setMessage("Match updated successfully.");
@@ -264,6 +260,21 @@ const MatchManagement = ({ match, onMatchUpdated }) => {
 
           <div className="mb-3">
             <label className="form-label">
+              Match Location
+            </label>
+
+            <div className="alert alert-light border mb-0">
+              <strong>📍 Location is locked</strong>
+
+              <p className="mb-0 mt-1 text-muted">
+                The exact match location will be captured
+                automatically when you start the match.
+              </p>
+            </div>
+        </div>
+
+          <div className="mb-3">
+            <label className="form-label">
               Live Stream URL
             </label>
 
@@ -275,38 +286,6 @@ const MatchManagement = ({ match, onMatchUpdated }) => {
               onChange={handleChange}
             />
           </div>
-
-          {!match.hasLocationBeenChanged && (
-            <div className="mb-3">
-              <p className="text-muted">
-                You can change the match location once before
-                starting the match.
-              </p>
-
-              <button
-                type="button"
-                className="btn btn-outline-primary"
-                onClick={async () => {
-                  try {
-                    const coordinates =
-                      await getCurrentLocation();
-
-                    setFormData((previousData) => ({
-                      ...previousData,
-                      latitude: coordinates.latitude,
-                      longitude: coordinates.longitude
-                    }));
-                  } catch {
-                    setError(
-                      "Unable to get your current location."
-                    );
-                  }
-                }}
-              >
-                📍 Use My Current Location
-              </button>
-            </div>
-          )}
 
           <button
             type="button"

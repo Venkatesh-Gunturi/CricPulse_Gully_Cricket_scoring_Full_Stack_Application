@@ -35,5 +35,8 @@ namespace CricPulse.Application.Interfaces.Match
             int userId);
 
         Task<List<MatchResponseDto>> GetMyMatchesAsync(int umpireId);
+
+        Task<PlayerLookupResponseDto> LookupPlayerByMobileAsync(string mobileNumber);
+
     }
 }

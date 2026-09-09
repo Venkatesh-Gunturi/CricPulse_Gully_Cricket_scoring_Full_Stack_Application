@@ -4,6 +4,7 @@ using CricPulse.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace CricPulse.Infrastructure.Migrations
 {
     [DbContext(typeof(CricPulseDbContext))]
-    partial class CricPulseDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260909092416_RemoveMatchLocationChangedFlag")]
+    partial class RemoveMatchLocationChangedFlag
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -97,37 +100,6 @@ namespace CricPulse.Infrastructure.Migrations
                     b.HasIndex("UmpireId");
 
                     b.ToTable("Matches");
-                });
-
-            modelBuilder.Entity("CricPulse.Domain.Entities.MatchPlayer", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<int>("MatchId")
-                        .HasColumnType("int");
-
-                    b.Property<int>("PlayerId")
-                        .HasColumnType("int");
-
-                    b.Property<string>("Team")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("PlayerId");
-
-                    b.HasIndex("MatchId", "PlayerId")
-                        .IsUnique();
-
-                    b.ToTable("MatchPlayer");
                 });
 
             modelBuilder.Entity("CricPulse.Domain.Entities.OtpVerification", b =>
@@ -282,25 +254,6 @@ namespace CricPulse.Infrastructure.Migrations
                     b.Navigation("Umpire");
                 });
 
-            modelBuilder.Entity("CricPulse.Domain.Entities.MatchPlayer", b =>
-                {
-                    b.HasOne("CricPulse.Domain.Entities.Match", "Match")
-                        .WithMany("MatchPlayers")
-                        .HasForeignKey("MatchId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("CricPulse.Domain.Entities.Player", "Player")
-                        .WithMany("MatchPlayers")
-                        .HasForeignKey("PlayerId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.Navigation("Match");
-
-                    b.Navigation("Player");
-                });
-
             modelBuilder.Entity("CricPulse.Domain.Entities.OtpVerification", b =>
                 {
                     b.HasOne("CricPulse.Domain.Entities.User", "User")
@@ -321,16 +274,6 @@ namespace CricPulse.Infrastructure.Migrations
                         .IsRequired();
 
                     b.Navigation("User");
-                });
-
-            modelBuilder.Entity("CricPulse.Domain.Entities.Match", b =>
-                {
-                    b.Navigation("MatchPlayers");
-                });
-
-            modelBuilder.Entity("CricPulse.Domain.Entities.Player", b =>
-                {
-                    b.Navigation("MatchPlayers");
                 });
 
             modelBuilder.Entity("CricPulse.Domain.Entities.User", b =>

@@ -224,5 +224,94 @@ namespace CricPulse.Application.Services.Auth
             };
 
         }
+
+        public async Task<UserResponseDto>
+    RegisterMatchPlayerAsync(string mobileNumber)
+        {
+            var normalizedMobile =
+                mobileNumber.Trim();
+
+            var existingUser =
+                await _userRepository.GetByMobileNumberAsync(
+                    normalizedMobile);
+
+            if (existingUser != null)
+            {
+                throw new ConflictException(
+                    "An account with this mobile number already exists.");
+            }
+
+            var user = new UserEntity
+            {
+                FirstName = "Player",
+                LastName = null,
+
+                Email = null,
+
+                MobileNumber = normalizedMobile,
+
+                IsEmailVerified = false,
+                IsMobileVerified = false,
+
+                IsUmpire = false,
+
+                IsActive = false,
+
+                CreatedAt = DateTime.UtcNow
+            };
+
+            var temporaryPassword =
+                Convert.ToBase64String(
+                    System.Security.Cryptography.RandomNumberGenerator
+                        .GetBytes(24));
+
+            user.PasswordHash =
+                _passwordHasher.HashPassword(
+                    user,
+                    temporaryPassword);
+
+            var createdUser =
+                await _userRepository.CreateAsync(user);
+
+            var mobileOtp =
+                _otpService.GenerateOtp();
+
+            var otpVerification =
+                _otpService.CreateOtpVerification(
+                    createdUser.Id,
+                    mobileOtp,
+                    Domain.Enums.OtpType.Mobile);
+
+            await _otpRepository.CreateAsync(
+                otpVerification);
+
+            return new UserResponseDto
+            {
+                Id = createdUser.Id,
+
+                FirstName = createdUser.FirstName,
+
+                LastName = createdUser.LastName,
+
+                Email = createdUser.Email,
+
+                MobileNumber = createdUser.MobileNumber,
+
+                IsEmailVerified =
+                    createdUser.IsEmailVerified,
+
+                IsMobileVerified =
+                    createdUser.IsMobileVerified,
+
+                ProfileImageUrl =
+                    createdUser.ProfileImageUrl,
+
+                IsActive =
+                    createdUser.IsActive,
+
+                CreatedAt =
+                    createdUser.CreatedAt
+            };
+        }
     }
 }

@@ -30,7 +30,7 @@ namespace CricPulse.Domain.Entities
         public double Latitude { get; set; }
         public double Longitude { get; set; }
         public string State { get; set; } = string.Empty;
-        public bool HasLocationBeenChanged { get; set; }
+        
 
         public string? LiveStreamUrl { get; set; }
 
@@ -40,6 +40,8 @@ namespace CricPulse.Domain.Entities
         public DateTime? UpdatedAt { get; set; }
 
         public User Umpire { get; set; } = null!;
-        
+
+        public ICollection<MatchPlayer> MatchPlayers { get; set; }= new List<MatchPlayer>();
+
     }
 }

@@ -40,5 +40,25 @@ public class CricPulseDbContext : DbContext
             .WithMany(u => u.MatchesAsUmpire)
             .HasForeignKey(m => m.UmpireId)
             .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<MatchPlayer>()
+    .HasOne(mp => mp.Match)
+    .WithMany(m => m.MatchPlayers)
+    .HasForeignKey(mp => mp.MatchId)
+    .OnDelete(DeleteBehavior.Cascade);
+
+        modelBuilder.Entity<MatchPlayer>()
+            .HasOne(mp => mp.Player)
+            .WithMany(p => p.MatchPlayers)
+            .HasForeignKey(mp => mp.PlayerId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<MatchPlayer>()
+            .HasIndex(mp => new
+            {
+                mp.MatchId,
+                mp.PlayerId
+            })
+            .IsUnique();
     }
 }
