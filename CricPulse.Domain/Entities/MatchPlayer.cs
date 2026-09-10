@@ -15,5 +15,20 @@
         public Match Match { get; set; } = null!;
 
         public Player Player { get; set; } = null!;
+
+        public ICollection<Ball> BallsAsStriker { get; set; }
+    = new List<Ball>();
+
+        public ICollection<Ball> BallsAsNonStriker { get; set; }
+            = new List<Ball>();
+
+        public ICollection<Ball> BallsAsBowler { get; set; }
+            = new List<Ball>();
+
+        public ICollection<Wicket> Dismissals { get; set; }
+    = new List<Wicket>();
+
+        public ICollection<Wicket> Catches { get; set; }
+            = new List<Wicket>();
     }
 }

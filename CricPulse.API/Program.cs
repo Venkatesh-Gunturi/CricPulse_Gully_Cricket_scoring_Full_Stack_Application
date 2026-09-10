@@ -1,4 +1,5 @@
 using CricPulse.API.Middleware;
+using CricPulse.Application.Interfaces;
 using CricPulse.Application.Interfaces.Auth;
 using CricPulse.Application.Interfaces.Location;
 using CricPulse.Application.Interfaces.Match;
@@ -6,6 +7,7 @@ using CricPulse.Application.Interfaces.Otp;
 using CricPulse.Application.Interfaces.player;
 using CricPulse.Application.Interfaces.Player;
 using CricPulse.Application.Interfaces.User;
+using CricPulse.Application.Services;
 using CricPulse.Application.Services.Auth;
 using CricPulse.Application.Services.Match;
 using CricPulse.Application.Services.Player;
@@ -13,6 +15,7 @@ using CricPulse.Application.Services.User;
 using CricPulse.Infrastructure.Authentication;
 using CricPulse.Infrastructure.Data;
 using CricPulse.Infrastructure.Repositories;
+using CricPulse.Infrastructure.Repositories.Match;
 using CricPulse.Infrastructure.Services.Location;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
@@ -41,6 +44,8 @@ builder.Services.AddScoped<IPlayerRepository, PlayerRepository>();
 
 builder.Services.AddScoped<IMatchService, MatchService>();
 builder.Services.AddScoped<IMatchRepository, MatchRepository>();
+builder.Services.AddScoped<IMatchScoringService, MatchScoringService>();
+builder.Services.AddScoped<IScoringRepository, ScoringRepository>();
 
 //External location service to get the match state
 builder.Services.AddHttpClient<ILocationService, LocationService>(client =>

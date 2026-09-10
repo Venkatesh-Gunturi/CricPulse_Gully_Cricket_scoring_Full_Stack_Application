@@ -1,4 +1,5 @@
 ﻿using CricPulse.Application.DTOs.Match;
+using CricPulse.Application.Interfaces;
 using CricPulse.Application.Interfaces.Location;
 using CricPulse.Application.Interfaces.Match;
 using Microsoft.AspNetCore.Authorization;
@@ -16,13 +17,17 @@ namespace CricPulse.API.Controllers
         private readonly IMatchService _matchService;
 
         private readonly ILocationService _locationService;
+        private readonly IMatchScoringService _matchScoringService;
 
+        //dependencies
         public MatchController(
             IMatchService matchService,
-            ILocationService locationService)
+            ILocationService locationService,
+            IMatchScoringService matchScoringService)
         {
             _matchService = matchService;
             _locationService = locationService;
+            _matchScoringService= matchScoringService;
         }
 
         //Match Creation
@@ -298,6 +303,75 @@ namespace CricPulse.API.Controllers
             {
                 message = "Player onboarding completed successfully."
             });
+        }
+
+
+        // Purpose:
+        // Record a normal legal delivery and update the innings score and strike state.
+        [Authorize]
+        [HttpPost("score-runs")]
+        public async Task<IActionResult> ScoreRuns([FromBody] ScoreBallDto dto)
+        {
+            var umpireId = int.Parse(
+                User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)!.Value);
+
+            var result = await _matchScoringService
+                .ScoreRunsAsync(umpireId, dto.InningsId, dto.Runs);
+
+            return result
+                ? Ok()
+                : BadRequest("Unable to score runs.");
+        }
+
+        // Purpose:
+        // Record a wicket delivery, including dismissal details and the new batter.
+        [Authorize]
+        [HttpPost("score-wicket")]
+        public async Task<IActionResult> ScoreWicket([FromBody] ScoreWicketDto dto)
+        {
+            var umpireId = int.Parse(
+                User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)!.Value);
+
+            var result = await _matchScoringService
+                .ScoreWicketAsync(umpireId, dto);
+
+            return result
+                ? Ok()
+                : BadRequest("Unable to score wicket.");
+        }
+
+        // Purpose:
+        // Record an extra such as wide, no-ball, bye, or leg bye.
+        [Authorize]
+        [HttpPost("score-extra")]
+        public async Task<IActionResult> ScoreExtra([FromBody] ScoreExtraDto dto)
+        {
+            var umpireId = int.Parse(
+                User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)!.Value);
+
+            var result = await _matchScoringService
+                .ScoreExtraAsync(umpireId, dto);
+
+            return result
+                ? Ok()
+                : BadRequest("Unable to score extra.");
+        }
+
+        // Purpose:
+        // Undo only the immediately previous scoring action.
+        [Authorize]
+        [HttpPost("undo-score")]
+        public async Task<IActionResult> UndoScore([FromBody] UndoScoreDto dto)
+        {
+            var umpireId = int.Parse(
+                User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)!.Value);
+
+            var result = await _matchScoringService
+                .UndoLastScoreAsync(umpireId, dto);
+
+            return result
+                ? Ok()
+                : BadRequest("Unable to undo score.");
         }
     }
 }

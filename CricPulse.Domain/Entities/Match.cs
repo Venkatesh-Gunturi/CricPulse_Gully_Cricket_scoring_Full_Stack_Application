@@ -43,5 +43,8 @@ namespace CricPulse.Domain.Entities
 
         public ICollection<MatchPlayer> MatchPlayers { get; set; }= new List<MatchPlayer>();
 
+        public ICollection<Innings> Innings { get; set; }
+    = new List<Innings>();
+
     }
 }

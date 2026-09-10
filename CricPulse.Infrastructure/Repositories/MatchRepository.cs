@@ -1,5 +1,5 @@
 ﻿using CricPulse.Application.Interfaces.Match;
-using CricPulse.Domain.Entities;
+using MatchEntity=CricPulse.Domain.Entities.Match;
 using CricPulse.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 
@@ -14,7 +14,7 @@ namespace CricPulse.Infrastructure.Repositories
             _context = context;
         }
 
-        public async Task<Match> CreateAsync(Match match)
+        public async Task<MatchEntity> CreateAsync(MatchEntity match)
         {
             await _context.Matches.AddAsync(match);
             await _context.SaveChangesAsync();
@@ -22,14 +22,14 @@ namespace CricPulse.Infrastructure.Repositories
             return match;
         }
 
-        public async Task<Match?> GetByIdAsync(int id)
+        public async Task<MatchEntity?> GetByIdAsync(int id)
         {
             return await _context.Matches
                 .FirstOrDefaultAsync(m => m.Id == id);
         }
 
         //All matches are fetching to display on Home page
-        public async Task<List<Match>> GetAllAsync()
+        public async Task<List<MatchEntity>> GetAllAsync()
         {
             return await _context.Matches
                 .OrderByDescending(m => m.MatchDate)
@@ -97,7 +97,7 @@ namespace CricPulse.Infrastructure.Repositories
         }
 
 
-        public async Task<List<Match>> GetMatchesByStateAsync(string state)
+        public async Task<List<MatchEntity>> GetMatchesByStateAsync(string state)
         {
             var sevenDaysAgo = DateTime.UtcNow.AddDays(-7);
 
@@ -114,13 +114,13 @@ namespace CricPulse.Infrastructure.Repositories
                 .ToListAsync();
         }
 
-        public async Task<Match?> GetByIdForUpdateAsync(int matchId)
+        public async Task<MatchEntity?> GetByIdForUpdateAsync(int matchId)
         {
             return await _context.Matches
                 .FirstOrDefaultAsync(m => m.Id == matchId);
         }
 
-        public async Task<Match?> UpdateAsync(Match match)
+        public async Task<MatchEntity?> UpdateAsync(MatchEntity match)
         {
             _context.Matches.Update(match);
             await _context.SaveChangesAsync();
@@ -146,7 +146,7 @@ namespace CricPulse.Infrastructure.Repositories
             return true;
         }
 
-        public async Task<List<Match>> GetMatchesByUmpireAsync(int umpireId)
+        public async Task<List<MatchEntity>> GetMatchesByUmpireAsync(int umpireId)
         {
             return await _context.Matches
                 .Where(m => m.UmpireId == umpireId)
