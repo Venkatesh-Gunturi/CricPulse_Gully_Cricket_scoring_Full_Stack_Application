@@ -1,14 +1,13 @@
-﻿using System;
+﻿//Namespaces which are communicated by UserRepository
+using CricPulse.Application.Interfaces.User;
+using CricPulse.Domain.Entities;
+using CricPulse.Infrastructure.Data;
+using Microsoft.EntityFrameworkCore;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-
-//Namespaces which are communicated by UserRepository
-using CricPulse.Application.Interfaces.User;
-using CricPulse.Infrastructure.Data;
-using Microsoft.EntityFrameworkCore;
-
 using UserEntity = CricPulse.Domain.Entities.User;
 
 namespace CricPulse.Infrastructure.Repositories
@@ -71,10 +70,11 @@ namespace CricPulse.Infrastructure.Repositories
             .FirstOrDefaultAsync(u => u.Email == email);
         }
 
-        public async Task<UserEntity?> GetByMobileNumberAsync(string mobileNumber)
+        public async Task<User?> GetByMobileNumberAsync(string mobileNumber)
         {
             return await _context.Users
-            .FirstOrDefaultAsync(u => u.MobileNumber == mobileNumber);
+                .Include(u => u.Player)
+                .FirstOrDefaultAsync(u => u.MobileNumber == mobileNumber);
         }
 
     }

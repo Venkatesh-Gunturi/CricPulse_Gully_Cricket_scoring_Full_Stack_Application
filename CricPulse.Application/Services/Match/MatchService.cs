@@ -1,15 +1,20 @@
-﻿using System;
+﻿using CricPulse.Application.DTOs.Match;
+using CricPulse.Application.Interfaces.Auth;
+using CricPulse.Application.Interfaces.Location;
+using CricPulse.Application.Interfaces.Match;
+using CricPulse.Application.Interfaces.Otp;
+using CricPulse.Application.Interfaces.player;
+using CricPulse.Application.Interfaces.User;
+using CricPulse.Domain.Exceptions;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-
-using CricPulse.Application.Interfaces.User;
-using CricPulse.Application.DTOs.Match;
-using CricPulse.Application.Interfaces.Match;
-using CricPulse.Application.Interfaces.Location;
-
 using MatchEntity=CricPulse.Domain.Entities.Match;
+using UserEntity = CricPulse.Domain.Entities.User;
+using PlayerEntity = CricPulse.Domain.Entities.Player;
+using MatchPlayerEntity = CricPulse.Domain.Entities.MatchPlayer;
 
 namespace CricPulse.Application.Services.Match
 {
@@ -18,13 +23,22 @@ namespace CricPulse.Application.Services.Match
         private readonly IMatchRepository _matchRepository;
         private readonly IUserRepository _userRepository;
         private readonly ILocationService _locationService;
+        private readonly IPlayerRepository _playerRepository;
+        private readonly IOtpService _otpService;
+        private readonly IOtpRepository _otpRepository;
+        private readonly IPasswordHasher _passwordHasher;
 
-
-        public MatchService(IMatchRepository matchRepository, IUserRepository userRepository, ILocationService locationService)
+        public MatchService(IMatchRepository matchRepository, IUserRepository userRepository, ILocationService locationService,IOtpRepository otpRepository,IOtpService otpService,IPasswordHasher passwordHasher,IPlayerRepository playerRepository)
         {
             _matchRepository = matchRepository;
             _userRepository = userRepository;
             _locationService = locationService;
+            _otpRepository = otpRepository;
+            _passwordHasher = passwordHasher;
+            _playerRepository = playerRepository;
+            _otpService = otpService;
+
+
         }
 
         public async Task<MatchResponseDto> CreateMatchAsync(int umpireId, CreateMatchDto dto)
@@ -40,6 +54,97 @@ namespace CricPulse.Application.Services.Match
             {
                 throw new UnauthorizedAccessException(
                     "Only umpires can create matches.");
+            }
+
+            if (dto.PlayersPerTeam < 4 || dto.PlayersPerTeam > 11)
+            {
+                throw new InvalidOperationException(
+                    "Players per team must be between 4 and 11.");
+            }
+
+            if (dto.Players == null || dto.Players.Count == 0)
+            {
+                throw new InvalidOperationException(
+                    "Players are required.");
+            }
+
+            var expectedPlayers = dto.PlayersPerTeam * 2;
+
+            if (dto.Players.Count != expectedPlayers)
+            {
+                throw new InvalidOperationException(
+                    $"Exactly {expectedPlayers} players are required.");
+            }
+
+            var validTeams = new[] { "Team1", "Team2" };
+
+            if (dto.Players.Any(p =>
+                !validTeams.Contains(p.Team)))
+            {
+                throw new InvalidOperationException(
+                    "Players must belong to Team1 or Team2.");
+            }
+
+            var team1Players = dto.Players
+                .Where(p => p.Team == "Team1")
+                .ToList();
+
+            var team2Players = dto.Players
+                .Where(p => p.Team == "Team2")
+                .ToList();
+
+            if (team1Players.Count != dto.PlayersPerTeam)
+            {
+                throw new InvalidOperationException(
+                    $"Team 1 must have exactly {dto.PlayersPerTeam} players.");
+            }
+
+            if (team2Players.Count != dto.PlayersPerTeam)
+            {
+                throw new InvalidOperationException(
+                    $"Team 2 must have exactly {dto.PlayersPerTeam} players.");
+            }
+
+            var normalizedMobiles = dto.Players
+                .Select(p => p.MobileNumber.Trim())
+                .ToList();
+
+            if (normalizedMobiles.Count != normalizedMobiles.Distinct().Count())
+            {
+                throw new InvalidOperationException(
+                    "A player cannot be assigned more than once.");
+            }
+
+            var playersToAdd = new List<MatchPlayerEntity>();
+
+            foreach (var playerDto in dto.Players)
+            {
+                var userAccount =
+                    await _userRepository.GetByMobileNumberAsync(
+                        playerDto.MobileNumber.Trim());
+
+                if (userAccount == null ||
+                    !userAccount.IsMobileVerified ||
+                    userAccount.Player == null)
+                {
+                    throw new InvalidOperationException(
+                        $"Player with mobile number {playerDto.MobileNumber} is not onboarded.");
+                }
+
+                if (userAccount.Id == umpireId)
+                {
+                    throw new InvalidOperationException(
+                        "The match umpire cannot participate as a player.");
+                }
+
+                var matchPlayer = new MatchPlayerEntity
+                {
+                    PlayerId = userAccount.Player.Id,
+                    Team = playerDto.Team,
+                    CreatedAt = DateTime.UtcNow
+                };
+
+                playersToAdd.Add(matchPlayer);
             }
 
             var state = await _locationService.GetStateAsync(dto.Latitude, dto.Longitude);
@@ -73,6 +178,11 @@ namespace CricPulse.Application.Services.Match
                 Status = "Scheduled",
                 CreatedAt = DateTime.UtcNow
             };
+
+            foreach (var matchPlayer in playersToAdd)
+            {
+                match.MatchPlayers.Add(matchPlayer);
+            }
 
             var createdMatch = await _matchRepository.CreateAsync(match);
 
@@ -199,7 +309,7 @@ namespace CricPulse.Application.Services.Match
             match.Team2Name = dto.Team2Name;
             match.Team2Logo = dto.Team2Logo;
 
-            match.PlayersPerTeam = dto.PlayersPerTeam;
+           
             match.Overs = dto.Overs;
 
             match.MatchDate = dto.MatchDate;
@@ -306,8 +416,7 @@ namespace CricPulse.Application.Services.Match
         }
 
 
-        public async Task<PlayerLookupResponseDto>
-    LookupPlayerByMobileAsync(string mobileNumber)
+        public async Task<PlayerLookupResponseDto> LookupPlayerByMobileAsync(string mobileNumber)
         {
             var normalizedMobile =
                 mobileNumber.Trim();
@@ -350,6 +459,129 @@ namespace CricPulse.Application.Services.Match
                 PlayerId = user.Player.Id,
                 DisplayName = displayName
             };
+        }
+
+        
+
+        public async Task<int> StartPlayerOnboardingAsync(string mobileNumber)
+        {
+            var normalizedMobile = mobileNumber.Trim();
+
+            var existingUser =
+                await _userRepository.GetByMobileNumberAsync(normalizedMobile);
+
+            if (existingUser != null)
+            {
+                if (existingUser.IsMobileVerified)
+                {
+                    throw new ConflictException(
+                        "A verified account already exists for this mobile number.");
+                }
+
+                throw new ConflictException(
+                    "OTP verification is already pending for this mobile number.");
+            }
+
+            // Generate a secure random temporary password.
+            var temporaryPasswordBytes =
+                System.Security.Cryptography.RandomNumberGenerator.GetBytes(24);
+
+            var temporaryPassword =
+                Convert.ToBase64String(temporaryPasswordBytes);
+
+            var user = new UserEntity
+            {
+                FirstName = "Player",
+                LastName = null,
+                Email = null,
+                MobileNumber = normalizedMobile,
+                IsEmailVerified = false,
+                IsMobileVerified = false,
+                IsUmpire = false,
+                IsActive = false,
+                CreatedAt = DateTime.UtcNow
+            };
+
+            user.PasswordHash =
+                _passwordHasher.HashPassword(
+                    user,
+                    temporaryPassword);
+
+            var createdUser =
+                await _userRepository.CreateAsync(user);
+
+            // Create placeholder name after we have the DB ID.
+            createdUser.LastName = createdUser.Id.ToString();
+
+            await _userRepository.UpdateAsync(createdUser);
+
+            var otp = _otpService.GenerateOtp();
+
+            var otpVerification =
+                _otpService.CreateOtpVerification(
+                    createdUser.Id,
+                    otp,
+                    Domain.Enums.OtpType.Mobile);
+
+            await _otpRepository.CreateAsync(otpVerification);
+
+            return createdUser.Id;
+        }
+
+        public async Task<bool> VerifyPlayerOnboardingAsync(
+    int userId,
+    string otpCode)
+        {
+            var verified = await _otpService.VerifyOtpAsync(
+                userId,
+                otpCode,
+                Domain.Enums.OtpType.Mobile);
+
+            if (!verified)
+            {
+                return false;
+            }
+
+            var user = await _userRepository.GetByIdAsync(userId);
+
+            if (user == null)
+            {
+                return false;
+            }
+
+            if (!user.IsMobileVerified)
+            {
+                user.IsMobileVerified = true;
+            }
+
+            user.IsActive = true;
+
+            await _userRepository.UpdateAsync(user);
+
+            var existingPlayer =
+                await _playerRepository.GetByUserIdAsync(user.Id);
+
+            if (existingPlayer == null)
+            {
+                var player = new PlayerEntity
+                {
+                    UserId = user.Id,
+
+                    // Placeholder values until player completes profile.
+                    DateOfBirth = DateTime.UtcNow.Date,
+
+                    Gender = string.Empty,
+                    BattingStyle = string.Empty,
+                    BowlingStyle = string.Empty,
+                    PlayerRole = string.Empty,
+                    State = string.Empty,
+                    PinCode = 0
+                };
+
+                await _playerRepository.CreateAsync(player);
+            }
+
+            return true;
         }
     }
 }

@@ -38,5 +38,13 @@ namespace CricPulse.Application.Interfaces.Match
 
         Task<PlayerLookupResponseDto> LookupPlayerByMobileAsync(string mobileNumber);
 
+
+        Task<int> StartPlayerOnboardingAsync(string mobileNumber);
+
+
+        Task<bool> VerifyPlayerOnboardingAsync(int userId, string otpCode);
+
+
+
     }
 }

@@ -126,3 +126,25 @@ export const getMyMatches = async () => {
 
   return response.data;
 };
+
+export const lookupPlayerByMobile = async (
+  mobileNumber
+) => {
+  const token =
+    localStorage.getItem("token");
+
+  const response = await axios.get(
+    `${API_URL}/player-lookup`,
+    {
+      params: {
+        mobileNumber
+      },
+      headers: {
+        Authorization:
+          `Bearer ${token}`
+      }
+    }
+  );
+
+  return response.data;
+};

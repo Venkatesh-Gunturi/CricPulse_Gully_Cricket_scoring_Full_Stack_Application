@@ -243,19 +243,61 @@ namespace CricPulse.API.Controllers
 
         [Authorize]
         [HttpGet("player-lookup")]
-        public async Task<IActionResult> LookupPlayer(
-    [FromQuery] string mobileNumber)
+        public async Task<IActionResult> LookupPlayer([FromQuery] string mobileNumber)
         {
             if (string.IsNullOrWhiteSpace(mobileNumber))
             {
                 return BadRequest("Mobile number is required.");
             }
 
-            var player =
+            var result =
                 await _matchService.LookupPlayerByMobileAsync(
                     mobileNumber);
 
-            return Ok(player);
+            return Ok(result);
+        }
+
+        [Authorize]
+        [HttpPost("player-onboarding")]
+        public async Task<IActionResult> StartPlayerOnboarding(
+    [FromBody] StartPlayerOnboardingDto dto)
+        {
+            if (string.IsNullOrWhiteSpace(dto.MobileNumber))
+            {
+                return BadRequest("Mobile number is required.");
+            }
+
+            var userId =
+                await _matchService.StartPlayerOnboardingAsync(
+                    dto.MobileNumber);
+
+            return Ok(new
+            {
+                userId,
+                message = "OTP generated successfully."
+            });
+        }
+
+
+        [Authorize]
+        [HttpPost("player-onboarding/verify")]
+        public async Task<IActionResult> VerifyPlayerOnboarding(
+    [FromBody] VerifyPlayerOnboardingDto dto)
+        {
+            var result =
+                await _matchService.VerifyPlayerOnboardingAsync(
+                    dto.UserId,
+                    dto.OtpCode);
+
+            if (!result)
+            {
+                return BadRequest("Invalid or expired OTP.");
+            }
+
+            return Ok(new
+            {
+                message = "Player onboarding completed successfully."
+            });
         }
     }
 }

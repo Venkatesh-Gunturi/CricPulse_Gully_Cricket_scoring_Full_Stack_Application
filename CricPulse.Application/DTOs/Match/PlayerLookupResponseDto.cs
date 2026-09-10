@@ -3,7 +3,7 @@
     public class PlayerLookupResponseDto
     {
         public bool IsRegistered { get; set; }
-
+        public bool IsOtpPending { get; set; }
         public int? PlayerId { get; set; }
 
         public string DisplayName { get; set; } = string.Empty;
