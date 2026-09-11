@@ -36,8 +36,13 @@ namespace CricPulse.Application.Interfaces.Match
 
         Task<List<MatchResponseDto>> GetMyMatchesAsync(int umpireId);
 
-        Task<PlayerLookupResponseDto> LookupPlayerByMobileAsync(string mobileNumber);
-        Task<int> StartPlayerOnboardingAsync(string mobileNumber);
+        Task<PlayerLookupResponseDto> LookupPlayerByMobileAsync(
+     int umpireId,
+     string mobileNumber);
+
+        Task<int> StartPlayerOnboardingAsync(
+            int umpireId,
+            string mobileNumber);
 
         Task<bool> VerifyPlayerOnboardingAsync(int userId, string otpCode);
         Task<LiveMatchResponseDto?> GetLiveMatchAsync(int matchId);

@@ -1,8 +1,10 @@
 ﻿using CricPulse.Application.Interfaces.Auth;
 using CricPulse.Application.Interfaces.Otp;
+using CricPulse.Application.Interfaces.player;
+using CricPulse.Application.Interfaces.User;
 using CricPulse.Domain.Entities;
 using CricPulse.Domain.Enums;
-using CricPulse.Application.Interfaces.User;
+
 
 namespace CricPulse.Infrastructure.Authentication
 {
@@ -10,11 +12,13 @@ namespace CricPulse.Infrastructure.Authentication
     {
         private readonly IOtpRepository _otpRepository;
         private readonly IUserRepository _userRepository;
+        private readonly IPlayerRepository _playerRepository;
 
-        public OtpService(IOtpRepository otpRepository, IUserRepository userRepository  )
+        public OtpService(IOtpRepository otpRepository, IUserRepository userRepository,IPlayerRepository playerRepository  )
         {
             _otpRepository = otpRepository;
             _userRepository = userRepository;
+            _playerRepository = playerRepository;
         }
 
         public string GenerateOtp()
@@ -39,6 +43,8 @@ namespace CricPulse.Infrastructure.Authentication
             };
         }
 
+        // Purpose:
+        // Verify the user's OTP and create their Player profile after successful mobile verification.
         public async Task<bool> VerifyOtpAsync(
             int userId,
             string otpCode,
@@ -81,6 +87,27 @@ namespace CricPulse.Infrastructure.Authentication
             else if (otpType == OtpType.Mobile)
             {
                 user.IsMobileVerified = true;
+
+                // Every verified CricPulse account is automatically a Player.
+                var existingPlayer =
+                    await _playerRepository.GetByUserIdAsync(user.Id);
+
+                if (existingPlayer == null)
+                {
+                    var player = new Player
+                    {
+                        UserId = user.Id,
+                        DateOfBirth = default,
+                        Gender = string.Empty,
+                        BattingStyle = string.Empty,
+                        BowlingStyle = string.Empty,
+                        PlayerRole = string.Empty,
+                        State = string.Empty,
+                        PinCode = 0
+                    };
+
+                    await _playerRepository.CreateAsync(player);
+                }
             }
 
             await _userRepository.UpdateAsync(user);

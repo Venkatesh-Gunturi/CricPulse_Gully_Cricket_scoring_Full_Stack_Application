@@ -1,7 +1,23 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import "./MatchPlayerAssignment.css";
 import {
-  lookupPlayerByMobile
+  lookupPlayerByMobile,
+  startPlayerOnboarding,
+  verifyPlayerOnboarding
 } from "../../services/matchService";
+
+const createEmptySlot = () => ({
+  mobileNumber: "",
+  playerId: null,
+  displayName: "",
+  verified: false,
+  onboardingRequired: false,
+  userId: null,
+  otp: "",
+  error: "",
+  submitting: false,
+  verifying: false
+});
 
 const MatchPlayerAssignment = ({
   playersPerTeam,
@@ -10,286 +26,577 @@ const MatchPlayerAssignment = ({
   setTeam1Players,
   setTeam2Players
 }) => {
-  const [mobileNumber, setMobileNumber] =
-    useState("");
+  const [team1Slots, setTeam1Slots] = useState([
+    createEmptySlot()
+  ]);
 
-  const [selectedTeam, setSelectedTeam] =
-    useState("Team1");
+  const [team2Slots, setTeam2Slots] = useState([
+    createEmptySlot()
+  ]);
 
-  const [loading, setLoading] =
-    useState(false);
+  // Purpose: Keep the number of available slots aligned with the selected team size.
+  useEffect(() => {
+    setTeam1Slots((current) => {
+      const verifiedPlayers = current.filter(
+        (slot) => slot.verified
+      );
 
-  const [error, setError] =
-    useState("");
+      let updated = current.slice(0, playersPerTeam);
 
-  const handleAddPlayer = async () => {
-    if (!mobileNumber.trim()) {
-      setError("Enter a mobile number.");
-      return;
+      if (
+        verifiedPlayers.length < playersPerTeam &&
+        updated.length === verifiedPlayers.length
+      ) {
+        updated = [...updated, createEmptySlot()];
+      }
+
+      setTeam1Players(
+        updated
+          .filter((slot) => slot.verified)
+          .map(toPlayer)
+      );
+
+      return updated;
+    });
+  }, [playersPerTeam]);
+
+  // Purpose: Keep the number of available slots aligned with the selected team size.
+  useEffect(() => {
+    setTeam2Slots((current) => {
+      const verifiedPlayers = current.filter(
+        (slot) => slot.verified
+      );
+
+      let updated = current.slice(0, playersPerTeam);
+
+      if (
+        verifiedPlayers.length < playersPerTeam &&
+        updated.length === verifiedPlayers.length
+      ) {
+        updated = [...updated, createEmptySlot()];
+      }
+
+      setTeam2Players(
+        updated
+          .filter((slot) => slot.verified)
+          .map(toPlayer)
+      );
+
+      return updated;
+    });
+  }, [playersPerTeam]);
+
+  // Purpose: Convert a verified slot into the player object used by MatchCreation.
+  const toPlayer = (slot) => ({
+    mobileNumber: slot.mobileNumber,
+    playerId: slot.playerId,
+    displayName: slot.displayName,
+    verified: true
+  });
+
+  // Purpose: Extract the useful error message returned by the API.
+  const getErrorMessage = (error) => {
+    const responseData = error?.response?.data;
+
+    if (typeof responseData === "string") {
+      return responseData;
     }
 
-    const allPlayers = [
-      ...team1Players,
-      ...team2Players
+    if (responseData?.message) {
+      return responseData.message;
+    }
+
+    return "Something went wrong. Please try again.";
+  };
+
+  // Purpose: Check whether a player is already assigned anywhere in either team.
+  const isDuplicatePlayer = (
+    playerId,
+    mobileNumber,
+    currentTeam,
+    currentIndex
+  ) => {
+    const normalizedMobile = mobileNumber.trim();
+
+    const allSlots = [
+      ...team1Slots.map((slot, index) => ({
+        slot,
+        team: "team1",
+        index
+      })),
+      ...team2Slots.map((slot, index) => ({
+        slot,
+        team: "team2",
+        index
+      }))
     ];
 
-    if (
-      allPlayers.some(
-        player =>
-          player.mobileNumber ===
-          mobileNumber.trim()
+    return allSlots.some(
+      ({ slot, team, index }) =>
+        slot.verified &&
+        !(team === currentTeam && index === currentIndex) &&
+        (
+          slot.playerId === playerId ||
+          slot.mobileNumber === normalizedMobile
+        )
+    );
+  };
+
+  // Purpose: Update a player's mobile number and reset any previous pending verification state.
+  const handleMobileChange = (team, index, value) => {
+    const setter =
+      team === "team1"
+        ? setTeam1Slots
+        : setTeam2Slots;
+
+    setter((current) =>
+      current.map((slot, slotIndex) => {
+        if (slotIndex !== index) {
+          return slot;
+        }
+
+        if (!value.trim()) {
+          return createEmptySlot();
+        }
+
+        return {
+          ...slot,
+          mobileNumber: value,
+          onboardingRequired: false,
+          userId: null,
+          otp: "",
+          error: ""
+        };
+      })
+    );
+  };
+
+  // Purpose: Update one property of a specific player slot.
+  const updateSlot = (team, index, changes) => {
+    const setter =
+      team === "team1"
+        ? setTeam1Slots
+        : setTeam2Slots;
+
+    setter((current) =>
+      current.map((slot, slotIndex) =>
+        slotIndex === index
+          ? { ...slot, ...changes }
+          : slot
       )
-    ) {
-      setError(
-        "This player is already assigned to this match."
-      );
+    );
+  };
+
+  // Purpose: Look up an existing player or start onboarding for an unregistered player.
+  const handleSubmit = async (team, index) => {
+    const slots =
+      team === "team1"
+        ? team1Slots
+        : team2Slots;
+
+    const slot = slots[index];
+
+    if (!slot?.mobileNumber.trim()) {
+      updateSlot(team, index, {
+        error: "Mobile number is required."
+      });
 
       return;
     }
 
-    const currentTeamPlayers =
-      selectedTeam === "Team1"
-        ? team1Players
-        : team2Players;
-
-    if (
-      currentTeamPlayers.length >=
-      playersPerTeam
-    ) {
-      setError(
-        "This team already has the required number of players."
-      );
-
-      return;
-    }
+    updateSlot(team, index, {
+      submitting: true,
+      error: ""
+    });
 
     try {
-      setLoading(true);
-      setError("");
+      const result = await lookupPlayerByMobile(
+        slot.mobileNumber.trim()
+      );
 
-      const result =
-        await lookupPlayerByMobile(
-          mobileNumber.trim()
-        );
+      if (result.isRegistered) {
+        if (!result.playerId) {
+          updateSlot(team, index, {
+            submitting: false,
+            error: "Player profile is not available."
+          });
 
-      if (!result.isRegistered) {
-        setError(
-          "This player is not registered. OTP onboarding is required."
-        );
+          return;
+        }
+
+        if (
+          isDuplicatePlayer(
+            result.playerId,
+            slot.mobileNumber,
+            team,
+            index
+          )
+        ) {
+          updateSlot(team, index, {
+            submitting: false,
+            error: "This player is already assigned to a team."
+          });
+
+          return;
+        }
+
+        markPlayerVerified(team, index, {
+          mobileNumber: slot.mobileNumber.trim(),
+          playerId: result.playerId,
+          displayName:
+            result.displayName || "Player"
+        });
 
         return;
       }
 
-      const player = {
-        mobileNumber:
-          mobileNumber.trim(),
+      const onboarding =
+        await startPlayerOnboarding(
+          slot.mobileNumber.trim()
+        );
 
-        playerId:
-          result.playerId,
+      updateSlot(team, index, {
+        submitting: false,
+        onboardingRequired: true,
+        userId: onboarding.userId,
+        otp: "",
+        error: ""
+      });
+    } catch (error) {
+      updateSlot(team, index, {
+        submitting: false,
+        error: getErrorMessage(error)
+      });
+    }
+  };
 
-        displayName:
-          result.displayName,
+  // Purpose: Verify a new player's OTP and then reload their player profile.
+  const handleVerifyOtp = async (team, index) => {
+    const slots =
+      team === "team1"
+        ? team1Slots
+        : team2Slots;
 
-        verified: true
-      };
+    const slot = slots[index];
 
-      if (selectedTeam === "Team1") {
-        setTeam1Players([
-          ...team1Players,
-          player
-        ]);
-      } else {
-        setTeam2Players([
-          ...team2Players,
-          player
-        ]);
+    if (!slot?.otp.trim()) {
+      updateSlot(team, index, {
+        error: "OTP is required."
+      });
+
+      return;
+    }
+
+    updateSlot(team, index, {
+      verifying: true,
+      error: ""
+    });
+
+    try {
+      await verifyPlayerOnboarding(
+        slot.userId,
+        slot.otp.trim()
+      );
+
+      const result =
+        await lookupPlayerByMobile(
+          slot.mobileNumber.trim()
+        );
+
+      if (!result.isRegistered || !result.playerId) {
+        updateSlot(team, index, {
+          verifying: false,
+          error:
+            "Verification completed, but player profile could not be loaded."
+        });
+
+        return;
       }
 
-      setMobileNumber("");
+      if (
+        isDuplicatePlayer(
+          result.playerId,
+          slot.mobileNumber,
+          team,
+          index
+        )
+      ) {
+        updateSlot(team, index, {
+          verifying: false,
+          error:
+            "This player is already assigned to a team."
+        });
+
+        return;
+      }
+
+      markPlayerVerified(team, index, {
+        mobileNumber: slot.mobileNumber.trim(),
+        playerId: result.playerId,
+        displayName:
+          result.displayName || "Player"
+      });
     } catch (error) {
-      console.error(
-        "Player lookup failed:",
-        error
-      );
-
-      setError(
-        "Unable to find player."
-      );
-    } finally {
-      setLoading(false);
+      updateSlot(team, index, {
+        verifying: false,
+        error: getErrorMessage(error)
+      });
     }
   };
 
-  const removePlayer = (
-    team,
-    index
-  ) => {
-    if (team === "Team1") {
-      setTeam1Players(
-        team1Players.filter(
-          (_, i) => i !== index
-        )
+  // Purpose: Mark a player as verified and reveal the next player slot.
+  const markPlayerVerified = (team, index, player) => {
+    const setter =
+      team === "team1"
+        ? setTeam1Slots
+        : setTeam2Slots;
+
+    const setPlayers =
+      team === "team1"
+        ? setTeam1Players
+        : setTeam2Players;
+
+    setter((current) => {
+      const updated = current.map(
+        (slot, slotIndex) =>
+          slotIndex === index
+            ? {
+                ...slot,
+                ...player,
+                verified: true,
+                onboardingRequired: false,
+                userId: null,
+                otp: "",
+                error: "",
+                submitting: false,
+                verifying: false
+              }
+            : slot
       );
-    } else {
-      setTeam2Players(
-        team2Players.filter(
-          (_, i) => i !== index
-        )
-      );
-    }
+
+      const verifiedPlayers = updated
+        .filter((slot) => slot.verified)
+        .map(toPlayer);
+
+      setPlayers(verifiedPlayers);
+
+      if (
+        updated.length < playersPerTeam &&
+        updated.every((slot) => slot.verified)
+      ) {
+        updated.push(createEmptySlot());
+      }
+
+      return updated;
+    });
   };
 
-  const renderTeam = (
-    title,
-    players,
-    team
-  ) => (
-    <div className="col-md-6">
-      <div className="card">
-        <div className="card-body">
+  // Purpose: Remove a player and make the slot available again.
+  const handleRemove = (team, index) => {
+    const setter =
+      team === "team1"
+        ? setTeam1Slots
+        : setTeam2Slots;
 
-          <h5>
-            {title}
-          </h5>
+    const setPlayers =
+      team === "team1"
+        ? setTeam1Players
+        : setTeam2Players;
 
-          <p className="text-muted">
-            {players.length} /{" "}
-            {playersPerTeam} players
-          </p>
+    setter((current) => {
+      const updated = current.filter(
+        (_, slotIndex) => slotIndex !== index
+      );
 
-          {players.map(
-            (player, index) => (
+      if (updated.length === 0) {
+        updated.push(createEmptySlot());
+      }
+
+      setPlayers(
+        updated
+          .filter((slot) => slot.verified)
+          .map(toPlayer)
+      );
+
+      return updated;
+    });
+  };
+
+  // Purpose: Render one team's player assignment slots.
+  const renderTeamSlots = (team, slots) => {
+    const teamName =
+      team === "team1"
+        ? "Team 1"
+        : "Team 2";
+
+    return (
+      <div className="player-team-column">
+        <h3>{teamName}</h3>
+
+        <div className="player-list">
+          {slots.map((slot, index) => {
+            const isCaptain = index === 0;
+
+            return (
               <div
-                key={`${player.playerId}-${index}`}
-                className="d-flex justify-content-between align-items-center border rounded p-2 mb-2"
+                key={`${team}-${index}`}
+                className="player-slot"
               >
-                <div>
-                  <strong>
-                    {player.displayName}
-                  </strong>
-
-                  <div className="text-success small">
-                    ✓ Verified player
-                  </div>
+                <div className="player-slot-header">
+                  <span>
+                    {slot.verified
+                      ? `${slot.displayName}${
+                          isCaptain ? " (C)" : ""
+                        }`
+                      : `Player ${index + 1}`}
+                  </span>
                 </div>
 
-                <button
-                  type="button"
-                  className="btn btn-sm btn-outline-danger"
-                  onClick={() =>
-                    removePlayer(
-                      team,
-                      index
-                    )
-                  }
-                >
-                  Remove
-                </button>
+                {!slot.verified ? (
+                  <>
+                    <div className="player-input-row">
+                      <input
+                        type="tel"
+                        placeholder="Mobile number"
+                        value={slot.mobileNumber}
+                        onChange={(event) =>
+                          handleMobileChange(
+                            team,
+                            index,
+                            event.target.value
+                          )
+                        }
+                        disabled={
+                          slot.submitting ||
+                          slot.verifying
+                        }
+                      />
+
+                      <button
+                        type="button"
+                        onClick={() =>
+                          handleSubmit(
+                            team,
+                            index
+                          )
+                        }
+                        disabled={
+                          slot.submitting ||
+                          slot.verifying
+                        }
+                      >
+                        {slot.submitting
+                          ? "Checking..."
+                          : "Submit"}
+                      </button>
+                    </div>
+
+                    {slot.onboardingRequired && (
+                      <div className="otp-section">
+                        <div className="unregistered-message">
+                          Player not registered
+                        </div>
+
+                        <div className="otp-row">
+                          <input
+                            type="text"
+                            placeholder="Enter OTP"
+                            value={slot.otp}
+                            onChange={(event) =>
+                              updateSlot(
+                                team,
+                                index,
+                                {
+                                  otp: event.target.value,
+                                  error: ""
+                                }
+                              )
+                            }
+                            disabled={
+                              slot.verifying
+                            }
+                          />
+
+                          <button
+                            type="button"
+                            onClick={() =>
+                              handleVerifyOtp(
+                                team,
+                                index
+                              )
+                            }
+                            disabled={
+                              slot.verifying
+                            }
+                          >
+                            {slot.verifying
+                              ? "Verifying..."
+                              : "Verify OTP"}
+                          </button>
+                        </div>
+                      </div>
+                    )}
+
+                    {slot.error && (
+                      <div className="player-error">
+                        {slot.error}
+                      </div>
+                    )}
+                  </>
+                ) : (
+                  <div className="verified-player">
+                    <div className="verified-player-info">
+                      <strong>
+                        {slot.displayName}
+                        {isCaptain && " (C)"}
+                      </strong>
+
+                      <span className="player-mobile">
+                        {slot.mobileNumber}
+                      </span>
+
+                      <span className="verified-status">
+                        ✓ Verified
+                      </span>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() =>
+                        handleRemove(
+                          team,
+                          index
+                        )
+                      }
+                    >
+                      Remove
+                    </button>
+                  </div>
+                )}
               </div>
-            )
-          )}
-
-          {players.length <
-            playersPerTeam && (
-            <p className="text-muted small">
-              {playersPerTeam -
-                players.length}{" "}
-              player slot(s) remaining.
-            </p>
-          )}
-
+            );
+          })}
         </div>
       </div>
-    </div>
-  );
+    );
+  };
 
   return (
-    <div className="mt-4">
+    <section className="match-player-assignment">
+      <h2>PLAYERS</h2>
 
-      <h4>
-        Add Players
-      </h4>
-
-      <div className="row mb-3">
-
-        <div className="col-md-4">
-          <label className="form-label">
-            Team
-          </label>
-
-          <select
-            className="form-select"
-            value={selectedTeam}
-            onChange={(e) =>
-              setSelectedTeam(
-                e.target.value
-              )
-            }
-          >
-            <option value="Team1">
-              Team 1
-            </option>
-
-            <option value="Team2">
-              Team 2
-            </option>
-          </select>
-        </div>
-
-        <div className="col-md-5">
-          <label className="form-label">
-            Player Mobile Number
-          </label>
-
-          <input
-            type="tel"
-            className="form-control"
-            value={mobileNumber}
-            onChange={(e) =>
-              setMobileNumber(
-                e.target.value
-              )
-            }
-            placeholder="Enter mobile number"
-          />
-        </div>
-
-        <div className="col-md-3 d-flex align-items-end">
-          <button
-            type="button"
-            className="btn btn-primary w-100"
-            onClick={handleAddPlayer}
-            disabled={loading}
-          >
-            {loading
-              ? "Checking..."
-              : "Add Player"}
-          </button>
-        </div>
-
-      </div>
-
-      {error && (
-        <div className="alert alert-warning">
-          {error}
-        </div>
-      )}
-
-      <div className="row">
-        {renderTeam(
-          "Team 1",
-          team1Players,
-          "Team1"
+      <div className="players-columns">
+        {renderTeamSlots(
+          "team1",
+          team1Slots
         )}
 
-        {renderTeam(
-          "Team 2",
-          team2Players,
-          "Team2"
+        {renderTeamSlots(
+          "team2",
+          team2Slots
         )}
       </div>
-
-    </div>
+    </section>
   );
 };
 

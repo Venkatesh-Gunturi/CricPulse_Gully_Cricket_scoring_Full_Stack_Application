@@ -148,3 +148,45 @@ export const lookupPlayerByMobile = async (
 
   return response.data;
 };
+
+// Purpose: Start player onboarding and generate an OTP for an unregistered mobile number.
+export const startPlayerOnboarding = async (mobileNumber) => {
+  const token = localStorage.getItem("token");
+
+  const response = await axios.post(
+    `${API_URL}/player-onboarding`,
+    {
+      mobileNumber
+    },
+    {
+      headers: {
+        Authorization: `Bearer ${token}`
+      }
+    }
+  );
+
+  return response.data;
+};
+
+// Purpose: Verify the OTP generated for a new player during match creation.
+export const verifyPlayerOnboarding = async (
+  userId,
+  otpCode
+) => {
+  const token = localStorage.getItem("token");
+
+  const response = await axios.post(
+    `${API_URL}/player-onboarding/verify`,
+    {
+      userId,
+      otpCode
+    },
+    {
+      headers: {
+        Authorization: `Bearer ${token}`
+      }
+    }
+  );
+
+  return response.data;
+};

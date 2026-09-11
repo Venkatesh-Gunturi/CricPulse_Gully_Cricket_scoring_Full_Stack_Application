@@ -416,59 +416,102 @@ namespace CricPulse.Application.Services.Match
         }
 
 
-        public async Task<PlayerLookupResponseDto> LookupPlayerByMobileAsync(string mobileNumber)
+        // Purpose:
+        // Find a registered player by mobile number or indicate that onboarding is required.
+        public async Task<PlayerLookupResponseDto>
+            LookupPlayerByMobileAsync(
+                int umpireId,
+                string mobileNumber)
         {
-            var normalizedMobile =
-                mobileNumber.Trim();
+            var normalizedMobile = mobileNumber.Trim();
 
-            var user =
-                await _userRepository.GetByMobileNumberAsync(
-                    normalizedMobile);
+            var umpire = await _userRepository
+                .GetByIdAsync(umpireId);
+
+            if (umpire == null)
+            {
+                throw new InvalidOperationException(
+                    "Umpire account not found.");
+            }
+
+            // The umpire creating the match cannot add their own account as a player.
+            if (umpire.MobileNumber == normalizedMobile)
+            {
+                throw new ConflictException(
+                    "You cannot add yourself as a player in a match you are umpiring.");
+            }
+
+            var user = await _userRepository
+                .GetByMobileNumberAsync(normalizedMobile);
 
             if (user == null)
             {
                 return new PlayerLookupResponseDto
                 {
                     IsRegistered = false,
-                    DisplayName = string.Empty
+                    IsOtpPending = false
                 };
             }
 
-            if (user.Player == null)
+            if (!user.IsMobileVerified)
             {
                 return new PlayerLookupResponseDto
                 {
                     IsRegistered = false,
-                    DisplayName = string.Empty
+                    IsOtpPending = true
                 };
             }
 
-            var displayName =
-                string.Join(
-                    " ",
-                    new[]
-                    {
-                user.FirstName,
-                user.LastName
-                    }
-                    .Where(x => !string.IsNullOrWhiteSpace(x)));
+            // A verified CricPulse user is automatically considered a player.
+            // No separate Player profile is required for match assignment.
+            var displayName = string.Join(
+                " ",
+                new[]
+                {
+            user.FirstName,
+            user.LastName
+                }
+                .Where(x => !string.IsNullOrWhiteSpace(x)));
 
             return new PlayerLookupResponseDto
             {
                 IsRegistered = true,
-                PlayerId = user.Player.Id,
-                DisplayName = displayName
+                IsOtpPending = false,
+                PlayerId = user.Player?.Id,
+                DisplayName = string.IsNullOrWhiteSpace(displayName)
+                    ? "Player"
+                    : displayName
             };
         }
 
-        
 
-        public async Task<int> StartPlayerOnboardingAsync(string mobileNumber)
+
+        // Purpose:
+        // Start OTP onboarding for a new player while preventing the match umpire
+        // from onboarding their own mobile number as a player.
+        public async Task<int> StartPlayerOnboardingAsync(
+            int umpireId,
+            string mobileNumber)
         {
             var normalizedMobile = mobileNumber.Trim();
 
+            var umpire = await _userRepository.GetByIdAsync(umpireId);
+
+            if (umpire == null)
+            {
+                throw new UnauthorizedAccessException(
+                    "Umpire account could not be found.");
+            }
+
+            if (umpire.MobileNumber == normalizedMobile)
+            {
+                throw new ConflictException(
+                    "You cannot add yourself as a player in a match you are umpiring.");
+            }
+
             var existingUser =
-                await _userRepository.GetByMobileNumberAsync(normalizedMobile);
+                await _userRepository.GetByMobileNumberAsync(
+                    normalizedMobile);
 
             if (existingUser != null)
             {

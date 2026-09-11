@@ -246,34 +246,49 @@ namespace CricPulse.API.Controllers
         }
 
 
+        // Purpose:
+        // Look up a player while ensuring the authenticated umpire cannot select themselves.
         [Authorize]
         [HttpGet("player-lookup")]
-        public async Task<IActionResult> LookupPlayer([FromQuery] string mobileNumber)
+        public async Task<IActionResult> LookupPlayer(
+            [FromQuery] string mobileNumber)
         {
             if (string.IsNullOrWhiteSpace(mobileNumber))
             {
                 return BadRequest("Mobile number is required.");
             }
 
+            var umpireId = int.Parse(
+                User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
+
             var result =
                 await _matchService.LookupPlayerByMobileAsync(
+                    umpireId,
                     mobileNumber);
 
             return Ok(result);
         }
 
+
+        // Purpose:
+        // Start player OTP onboarding while preventing the authenticated umpire
+        // from onboarding themselves as a player.
         [Authorize]
         [HttpPost("player-onboarding")]
         public async Task<IActionResult> StartPlayerOnboarding(
-    [FromBody] StartPlayerOnboardingDto dto)
+            [FromBody] StartPlayerOnboardingDto dto)
         {
             if (string.IsNullOrWhiteSpace(dto.MobileNumber))
             {
                 return BadRequest("Mobile number is required.");
             }
 
+            var umpireId = int.Parse(
+                User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
+
             var userId =
                 await _matchService.StartPlayerOnboardingAsync(
+                    umpireId,
                     dto.MobileNumber);
 
             return Ok(new

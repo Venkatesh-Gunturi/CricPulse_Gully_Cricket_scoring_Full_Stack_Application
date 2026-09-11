@@ -1,0 +1,77 @@
+.players-columns {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 30px;
+  width: 100%;
+}
+
+.player-team-column {
+  width: 100%;
+}
+
+.player-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.player-slot {
+  width: 100%;
+}
+
+.player-slot-header {
+  margin-bottom: 8px;
+  font-weight: 600;
+}
+
+.player-input-row,
+.otp-row {
+  display: flex;
+  gap: 8px;
+  width: 100%;
+}
+
+.player-input-row input,
+.otp-row input {
+  flex: 1;
+}
+
+.verified-player {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.verified-player-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.player-mobile {
+  font-size: 14px;
+}
+
+.verified-status {
+  font-size: 14px;
+}
+
+.otp-section {
+  margin-top: 10px;
+}
+
+.unregistered-message {
+  margin-bottom: 8px;
+  font-weight: 600;
+}
+
+.player-error {
+  margin-top: 8px;
+}
+
+@media (max-width: 768px) {
+  .players-columns {
+    grid-template-columns: 1fr;
+  }
+}
