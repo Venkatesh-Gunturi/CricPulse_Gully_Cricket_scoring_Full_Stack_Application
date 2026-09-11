@@ -1,5 +1,5 @@
 ﻿using CricPulse.Domain.Entities;
-
+using MatchEntity = CricPulse.Domain.Entities.Match;
 namespace CricPulse.Application.Interfaces.Match
 {
     public interface IScoringRepository
@@ -13,5 +13,10 @@ namespace CricPulse.Application.Interfaces.Match
         // Remove the specified scoring action and its associated wicket, if any,
         // so the latest scoring action can be safely undone.
         Task RemoveBallAsync(Ball ball);
+
+        Task<MatchEntity?> GetMatchForTossAsync(int matchId);
+        Task<List<MatchEntity>> GetExpiredScheduledMatchesAsync();
+
+        Task<MatchEntity?> GetMatchForInningsAsync(int matchId);
     }
 }

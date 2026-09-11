@@ -154,5 +154,19 @@ namespace CricPulse.Infrastructure.Repositories
                 .ThenByDescending(m => m.MatchTime)
                 .ToListAsync();
         }
+
+        // Purpose:
+        // Load the match with its players, toss information, innings, balls,
+        // and wicket details for the live match screen.
+        public async Task<MatchEntity?> GetLiveMatchAsync(int matchId)
+        {
+            return await _context.Matches
+                .Include(m => m.MatchPlayers)
+                    .ThenInclude(mp => mp.Player)
+                .Include(m => m.Innings)
+                    .ThenInclude(i => i.Balls)
+                        .ThenInclude(b => b.Wicket)
+                .FirstOrDefaultAsync(m => m.Id == matchId);
+        }
     }
 }

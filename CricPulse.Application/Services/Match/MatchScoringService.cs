@@ -348,5 +348,255 @@ namespace CricPulse.Application.Services
 
             return true;
         }
+
+        // Purpose:
+        // Record the umpire's toss result and determine which team bats first.
+        public async Task<bool> RecordTossAsync(
+            int umpireId,
+            RecordTossDto dto)
+        {
+            var match = await _scoringRepository
+                .GetMatchForTossAsync(dto.MatchId);
+
+            if (match == null)
+            {
+                return false;
+            }
+
+            if (match.UmpireId != umpireId)
+            {
+                return false;
+            }
+
+            // Toss can only be recorded after the umpire starts the match.
+            if (match.Status != "Live")
+            {
+                return false;
+            }
+
+            // The toss can only be recorded once.
+            if (!string.IsNullOrWhiteSpace(match.TossWinnerTeam))
+            {
+                return false;
+            }
+
+            if (match.Innings.Any())
+            {
+                return false;
+            }
+
+            var tossWinner = dto.TossWinnerTeam.Trim();
+            var tossDecision = dto.TossDecision.Trim().ToUpper();
+
+            if (tossWinner != match.Team1Name &&
+                tossWinner != match.Team2Name)
+            {
+                return false;
+            }
+
+            if (tossDecision != "BAT" && tossDecision != "BOWL")
+            {
+                return false;
+            }
+
+            match.TossWinnerTeam = tossWinner;
+            match.TossDecision = tossDecision;
+
+            // If the toss winner chooses BAT, they bat first.
+            // If they choose BOWL, the opposing team bats first.
+            match.BattingFirstTeam = tossDecision == "BAT"
+                ? tossWinner
+                : tossWinner == match.Team1Name
+                    ? match.Team2Name
+                    : match.Team1Name;
+
+            match.UpdatedAt = DateTime.UtcNow;
+
+            await _scoringRepository.SaveChangesAsync();
+
+            return true;
+        }
+
+        // Purpose:
+        // Create and start the first innings using valid players from the match
+        // after the toss has determined the batting and bowling teams.
+        public async Task<bool> StartInningsAsync(
+            int umpireId,
+            StartInningsDto dto)
+        {
+            var match = await _scoringRepository
+                .GetMatchForInningsAsync(dto.MatchId);
+
+            if (match == null)
+            {
+                return false;
+            }
+
+            if (match.UmpireId != umpireId)
+            {
+                return false;
+            }
+
+            // The match must already have been started by the umpire.
+            if (match.Status != "Live")
+            {
+                return false;
+            }
+
+            // Toss must be completed before innings setup.
+            if (string.IsNullOrWhiteSpace(match.BattingFirstTeam))
+            {
+                return false;
+            }
+
+            // Both teams must have exactly the configured number of players.
+            var team1PlayerCount = match.MatchPlayers
+                .Count(mp => mp.Team == match.Team1Name);
+
+            var team2PlayerCount = match.MatchPlayers
+                .Count(mp => mp.Team == match.Team2Name);
+
+            if (team1PlayerCount != match.PlayersPerTeam ||
+                team2PlayerCount != match.PlayersPerTeam)
+            {
+                return false;
+            }
+
+            // Striker and non-striker must be different players.
+            if (dto.StrikerMatchPlayerId == dto.NonStrikerMatchPlayerId)
+            {
+                return false;
+            }
+
+            if (dto.StrikerMatchPlayerId <= 0 ||
+                dto.NonStrikerMatchPlayerId <= 0 ||
+                dto.BowlerMatchPlayerId <= 0)
+            {
+                return false;
+            }
+
+            var striker = match.MatchPlayers
+                .FirstOrDefault(mp => mp.Id == dto.StrikerMatchPlayerId);
+
+            var nonStriker = match.MatchPlayers
+                .FirstOrDefault(mp => mp.Id == dto.NonStrikerMatchPlayerId);
+
+            var bowler = match.MatchPlayers
+                .FirstOrDefault(mp => mp.Id == dto.BowlerMatchPlayerId);
+
+            // All selected players must belong to this match.
+            if (striker == null ||
+                nonStriker == null ||
+                bowler == null)
+            {
+                return false;
+            }
+
+            // Both opening batters must belong to the batting-first team.
+            if (striker.Team != match.BattingFirstTeam ||
+                nonStriker.Team != match.BattingFirstTeam)
+            {
+                return false;
+            }
+
+            var bowlingTeam = match.BattingFirstTeam == match.Team1Name
+                ? match.Team2Name
+                : match.Team1Name;
+
+            // The opening bowler must belong to the bowling team.
+            if (bowler.Team != bowlingTeam)
+            {
+                return false;
+            }
+
+            // A player cannot be both a batter and the opening bowler.
+            if (striker.Team == bowler.Team ||
+                nonStriker.Team == bowler.Team)
+            {
+                return false;
+            }
+
+            // Only one first innings can be started.
+            if (match.Innings.Any(i => i.InningsNumber == 1))
+            {
+                return false;
+            }
+
+            var innings = new Innings
+            {
+                MatchId = match.Id,
+                InningsNumber = 1,
+                BattingTeam = match.BattingFirstTeam,
+                BowlingTeam = bowlingTeam,
+                StrikerMatchPlayerId = striker.Id,
+                NonStrikerMatchPlayerId = nonStriker.Id,
+                CurrentBowlerMatchPlayerId = bowler.Id,
+                TotalRuns = 0,
+                Wickets = 0,
+                LegalBalls = 0,
+                Status = "Live",
+                CreatedAt = DateTime.UtcNow
+            };
+
+            match.Innings.Add(innings);
+            match.UpdatedAt = DateTime.UtcNow;
+
+            await _scoringRepository.SaveChangesAsync();
+
+            return true;
+        }
+
+        // Purpose:
+        // Start the match when the umpire chooses to begin, provided the
+        // 24-hour grace period after the scheduled match time has not expired.
+        public async Task<bool> StartMatchAsync(int umpireId, int matchId)
+        {
+            var match = await _scoringRepository
+                .GetMatchForTossAsync(matchId);
+
+            if (match == null)
+            {
+                return false;
+            }
+
+            // Only the assigned umpire can start the match.
+            if (match.UmpireId != umpireId)
+            {
+                return false;
+            }
+
+            // A match can only be started once.
+            if (match.Status != "Scheduled" || match.StartedAt != null)
+            {
+                return false;
+            }
+
+            var scheduledDateTime = match.MatchDate.Date
+                .Add(match.MatchTime);
+
+            var startDeadline = scheduledDateTime.AddHours(24);
+
+            // The umpire can start before, at, or after the scheduled time,
+            // but not after the 24-hour grace period.
+            if (DateTime.UtcNow > startDeadline)
+            {
+                match.Status = "Cancelled";
+                match.UpdatedAt = DateTime.UtcNow;
+                match.CancellationReason = "Umpire unavailable";
+
+                await _scoringRepository.SaveChangesAsync();
+
+                return false;
+            }
+
+            // Starting the match makes it visible as Live immediately.
+            match.Status = "Live";
+            match.StartedAt = DateTime.UtcNow;
+            match.UpdatedAt = DateTime.UtcNow;
+
+            await _scoringRepository.SaveChangesAsync();
+
+            return true;
+        }
     }
 }

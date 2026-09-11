@@ -583,5 +583,71 @@ namespace CricPulse.Application.Services.Match
 
             return true;
         }
+
+
+        // Purpose:
+        // Load the live match and map its current innings, teams, and ball history
+        // into a response that the live screens can consume.
+        public async Task<LiveMatchResponseDto?> GetLiveMatchAsync(int matchId)
+        {
+            var match = await _matchRepository
+                .GetLiveMatchAsync(matchId);
+
+            if (match == null || match.Status != "Live")
+            {
+                return null;
+            }
+
+            var innings = match.Innings
+                .OrderByDescending(i => i.InningsNumber)
+                .FirstOrDefault();
+
+            var response = new LiveMatchResponseDto
+            {
+                MatchId = match.Id,
+                Team1Name = match.Team1Name,
+                Team2Name = match.Team2Name,
+                Team1Logo = match.Team1Logo,
+                Team2Logo = match.Team2Logo,
+                Status = match.Status,
+                TossWinnerTeam = match.TossWinnerTeam,
+                TossDecision = match.TossDecision,
+                BattingFirstTeam = match.BattingFirstTeam,
+                InningsId = innings?.Id,
+                InningsNumber = innings?.InningsNumber,
+                BattingTeam = innings?.BattingTeam,
+                BowlingTeam = innings?.BowlingTeam,
+                StrikerMatchPlayerId = innings?.StrikerMatchPlayerId,
+                NonStrikerMatchPlayerId = innings?.NonStrikerMatchPlayerId,
+                CurrentBowlerMatchPlayerId = innings?.CurrentBowlerMatchPlayerId,
+                TotalRuns = innings?.TotalRuns,
+                Wickets = innings?.Wickets,
+                LegalBalls = innings?.LegalBalls
+            };
+
+            if (innings != null)
+            {
+                response.Balls = innings.Balls
+                    .OrderBy(b => b.Id)
+                    .Select(b => new LiveBallDto
+                    {
+                        Id = b.Id,
+                        OverNumber = b.OverNumber,
+                        BallNumber = b.BallNumber,
+                        StrikerMatchPlayerId = b.StrikerMatchPlayerId,
+                        NonStrikerMatchPlayerId = b.NonStrikerMatchPlayerId,
+                        BowlerMatchPlayerId = b.BowlerMatchPlayerId,
+                        Runs = b.Runs,
+                        IsLegalDelivery = b.IsLegalDelivery,
+                        ExtraType = b.ExtraType,
+                        ExtraRuns = b.ExtraRuns,
+                        WicketType = b.Wicket?.WicketType,
+                        DismissedMatchPlayerId = b.Wicket?.DismissedMatchPlayerId
+                    })
+                    .ToList();
+            }
+
+            return response;
+        }
     }
 }

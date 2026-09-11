@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-
+using MatchEntity=CricPulse.Domain.Entities.Match;
 using CricPulse.Application.DTOs.Match;
 
 namespace CricPulse.Application.Interfaces.Match
@@ -37,14 +37,10 @@ namespace CricPulse.Application.Interfaces.Match
         Task<List<MatchResponseDto>> GetMyMatchesAsync(int umpireId);
 
         Task<PlayerLookupResponseDto> LookupPlayerByMobileAsync(string mobileNumber);
-
-
         Task<int> StartPlayerOnboardingAsync(string mobileNumber);
 
-
         Task<bool> VerifyPlayerOnboardingAsync(int userId, string otpCode);
-
-
+        Task<LiveMatchResponseDto?> GetLiveMatchAsync(int matchId);
 
     }
 }

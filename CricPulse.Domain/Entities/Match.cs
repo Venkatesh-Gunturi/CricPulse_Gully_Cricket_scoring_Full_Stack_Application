@@ -30,11 +30,12 @@ namespace CricPulse.Domain.Entities
         public double Latitude { get; set; }
         public double Longitude { get; set; }
         public string State { get; set; } = string.Empty;
-        
+        public DateTime? StartedAt { get; set; }
 
         public string? LiveStreamUrl { get; set; }
 
         public string Status { get; set; } = "Scheduled";
+        public string? CancellationReason { get; set; }
 
         public DateTime CreatedAt { get; set; }
         public DateTime? UpdatedAt { get; set; }
@@ -45,6 +46,13 @@ namespace CricPulse.Domain.Entities
 
         public ICollection<Innings> Innings { get; set; }
     = new List<Innings>();
+
+        // Toss result recorded before the first innings begins.
+        public string? TossWinnerTeam { get; set; }
+
+        public string? TossDecision { get; set; }
+
+        public string? BattingFirstTeam { get; set; }
 
     }
 }

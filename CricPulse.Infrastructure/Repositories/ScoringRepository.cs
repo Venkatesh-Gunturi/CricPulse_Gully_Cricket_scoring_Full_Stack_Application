@@ -5,6 +5,7 @@ using Microsoft.EntityFrameworkCore;
 using BallEntity = CricPulse.Domain.Entities.Ball;
 using InningsEntity=CricPulse.Domain.Entities.Innings;
 using WicketEntity = CricPulse.Domain.Entities.Wicket;
+using MatchEntity = CricPulse.Domain.Entities.Match;
 
 namespace CricPulse.Infrastructure.Repositories.Match
 {
@@ -54,6 +55,40 @@ namespace CricPulse.Infrastructure.Repositories.Match
             _context.Balls.Remove(ball);
 
             await Task.CompletedTask;
+        }
+
+        // Purpose:
+        // Load the match and its innings so toss operations can verify
+        // whether the innings has already started.
+        public async Task<MatchEntity?> GetMatchForTossAsync(int matchId)
+        {
+            return await _context.Matches
+                .Include(m => m.Innings)
+                .FirstOrDefaultAsync(m => m.Id == matchId);
+        }
+
+
+        // Purpose:
+        // Find scheduled matches whose 24-hour start window has expired
+        // so they can be automatically cancelled.
+        public async Task<List<MatchEntity>> GetExpiredScheduledMatchesAsync()
+        {
+            var now = DateTime.UtcNow;
+
+            return await _context.Matches
+                .Where(m => m.Status == "Scheduled")
+                .Where(m => m.MatchDate.Date.Add(m.MatchTime).AddHours(24) < now)
+                .ToListAsync();
+        }
+
+        // Purpose:
+        // Load the match together with its players so innings setup can validate
+        // the selected striker, non-striker, and bowler.
+        public async Task<MatchEntity?> GetMatchForInningsAsync(int matchId)
+        {
+            return await _context.Matches
+                .Include(m => m.MatchPlayers)
+                .FirstOrDefaultAsync(m => m.Id == matchId);
         }
     }
 }

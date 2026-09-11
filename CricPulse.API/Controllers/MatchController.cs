@@ -373,5 +373,77 @@ namespace CricPulse.API.Controllers
                 ? Ok()
                 : BadRequest("Unable to undo score.");
         }
+
+
+        // Purpose:
+        // Accept the umpire's final toss decision and record which team bats first.
+        [Authorize]
+        [HttpPost("record-toss")]
+        public async Task<IActionResult> RecordToss(
+            [FromBody] RecordTossDto dto)
+        {
+            var umpireId = int.Parse(
+                User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
+
+            var result = await _matchScoringService
+                .RecordTossAsync(umpireId, dto);
+
+            return result
+                ? Ok()
+                : BadRequest("Unable to record toss.");
+        }
+
+
+        // Purpose:
+        // Start the first innings with the umpire-selected opening batters and bowler.
+        [Authorize]
+        [HttpPost("start-innings")]
+        public async Task<IActionResult> StartInnings(
+            [FromBody] StartInningsDto dto)
+        {
+            var umpireId = int.Parse(
+                User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
+
+            var result = await _matchScoringService
+                .StartInningsAsync(umpireId, dto);
+
+            return result
+                ? Ok()
+                : BadRequest("Unable to start innings.");
+        }
+
+        // Purpose:
+        // Start the match when the assigned umpire chooses to begin it.
+        [Authorize]
+        [HttpPost("start-match/{matchId}")]
+        public async Task<IActionResult> StartMatch(int matchId)
+        {
+            var umpireId = int.Parse(
+                User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
+
+            var result = await _matchScoringService
+                .StartMatchAsync(umpireId, matchId);
+
+            return result
+                ? Ok()
+                : BadRequest("Unable to start match.");
+        }
+
+        // Purpose:
+        // Return the current live match state for the requested match.
+        [Authorize]
+        [HttpGet("live/{matchId}")]
+        public async Task<IActionResult> GetLiveMatch(int matchId)
+        {
+            var match = await _matchService
+                .GetLiveMatchAsync(matchId);
+
+            if (match == null)
+            {
+                return NotFound("Live match not found.");
+            }
+
+            return Ok(match);
+        }
     }
 }

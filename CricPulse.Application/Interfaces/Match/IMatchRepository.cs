@@ -23,5 +23,6 @@ namespace CricPulse.Application.Interfaces.Match
 
         Task<MatchEntity?> GetByIdForUpdateAsync(int matchId);
         Task<List<MatchEntity>> GetMatchesByUmpireAsync(int umpireId);
+        Task<MatchEntity?> GetLiveMatchAsync(int matchId);
     }
 }
