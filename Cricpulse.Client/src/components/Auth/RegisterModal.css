@@ -1,0 +1,232 @@
+.register-modal {
+  padding: 16px;
+}
+
+.register-modal-content {
+  border: none;
+  border-radius: 18px;
+  overflow: hidden;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
+}
+
+.register-modal-header {
+  padding: 20px 24px;
+  border-bottom: 1px solid #edf0f2;
+  background: #ffffff;
+}
+
+.register-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.register-brand-icon {
+  width: 44px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 12px;
+  background: #0d6efd;
+  color: #ffffff;
+  font-size: 21px;
+  box-shadow: 0 6px 16px rgba(13, 110, 253, 0.22);
+}
+
+.register-modal-header .modal-title {
+  font-size: 18px;
+  font-weight: 700;
+  margin-bottom: 2px;
+}
+
+.register-modal-header small {
+  color: #6c757d;
+  font-size: 12px;
+}
+
+.register-modal-body {
+  padding: 24px;
+}
+
+.form-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: #343a40;
+  margin-bottom: 7px;
+}
+
+.optional-label {
+  color: #8a929a;
+  font-weight: 400;
+}
+
+.register-input {
+  min-height: 45px;
+  border-radius: 9px;
+  border: 1px solid #dfe3e7;
+  font-size: 14px;
+  padding: 9px 12px;
+  transition: all 0.2s ease;
+}
+
+.register-input:focus {
+  border-color: #0d6efd;
+  box-shadow: 0 0 0 3px rgba(13, 110, 253, 0.1);
+}
+
+.register-input:disabled {
+  background-color: #f4f6f8;
+  color: #6c757d;
+}
+
+.verify-button {
+  min-width: 108px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.verified-message {
+  margin-top: 7px;
+  color: #198754;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.verified-message span {
+  margin-right: 5px;
+}
+
+.otp-box {
+  padding: 15px;
+  border: 1px solid #e4e8ec;
+  border-radius: 11px;
+  background: #f8f9fa;
+}
+
+.otp-input {
+  letter-spacing: 4px;
+  font-weight: 700;
+}
+
+.otp-help {
+  margin-top: 7px;
+  color: #6c757d;
+  font-size: 11px;
+}
+
+.create-account-button {
+  min-height: 47px;
+  margin-top: 28px;
+  border-radius: 9px;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.create-account-button:disabled {
+  cursor: not-allowed;
+}
+
+.register-alert {
+  border-radius: 9px;
+  font-size: 13px;
+  margin-bottom: 18px;
+}
+
+.register-footer {
+  display: flex;
+  justify-content: center;
+  gap: 5px;
+  margin-top: 22px;
+  padding-top: 18px;
+  border-top: 1px solid #edf0f2;
+  color: #6c757d;
+  font-size: 13px;
+}
+
+.login-link {
+  border: none;
+  background: transparent;
+  padding: 0;
+  color: #0d6efd;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.login-link:hover {
+  text-decoration: underline;
+}
+
+.register-backdrop {
+  opacity: 0.55;
+}
+
+@media (max-width: 576px) {
+  .register-modal {
+    padding: 8px;
+  }
+
+  .register-modal-content {
+    border-radius: 14px;
+  }
+
+  .register-modal-header {
+    padding: 17px 18px;
+  }
+
+  .register-modal-body {
+    padding: 20px 18px;
+  }
+
+  .register-brand-icon {
+    width: 40px;
+    height: 40px;
+    font-size: 19px;
+  }
+
+  .register-modal-header .modal-title {
+    font-size: 16px;
+  }
+
+  .register-modal-header small {
+    font-size: 11px;
+  }
+
+  .verify-button {
+    min-width: 96px;
+  }
+}
+
+/* Purpose:
+   Visually indicate that the OTP was successfully sent and the button is locked. */
+.otp-sent-button {
+  color: #198754 !important;
+  border: 1px solid #198754 !important;
+  background-color: #ffffff !important;
+  cursor: not-allowed;
+  opacity: 1 !important;
+}
+
+.otp-sent-button:disabled {
+  color: #198754 !important;
+  border-color: #198754 !important;
+  background-color: #ffffff !important;
+  opacity: 1 !important;
+}
+
+/* Purpose:
+   Show that the mobile number has been successfully verified. */
+.otp-verified-button {
+  color: #198754 !important;
+  border: 1px solid #198754 !important;
+  background-color: #ffffff !important;
+  cursor: not-allowed;
+  opacity: 1 !important;
+}
+
+.otp-verified-button:disabled {
+  color: #198754 !important;
+  border-color: #198754 !important;
+  background-color: #ffffff !important;
+  opacity: 1 !important;
+}

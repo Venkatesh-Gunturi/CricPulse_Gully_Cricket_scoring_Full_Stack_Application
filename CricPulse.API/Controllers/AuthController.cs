@@ -22,7 +22,7 @@ namespace CricPulse.API.Controllers
         }
 
         [HttpPost("register")]
-        public async Task<ActionResult<UserResponseDto>> Register(RegisterPlayerDto dto)
+        public async Task<ActionResult<RegistrationOtpResponseDto>> Register(RegisterPlayerDto dto)
         {
             var user = await _authService.RegisterPlayerAsync(dto);
 
@@ -58,26 +58,13 @@ namespace CricPulse.API.Controllers
             {
                 return Unauthorized(new
                 {
-                    message = "Invalid email/mobile number or password."
+                    message = "Unable to login."
                 });
             }
 
             return Ok(result);
-
-
         }
 
-        ////JWT Authentication
-        //[Authorize]
-        //[HttpGet("test-auth")]
-        //public IActionResult TestAuth()
-        //{
-        //    return Ok(new
-        //    {
-        //        Message = "JWT authentication is working!",
-        //        UserId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value
-        //    });
-        //}
 
     }
 }

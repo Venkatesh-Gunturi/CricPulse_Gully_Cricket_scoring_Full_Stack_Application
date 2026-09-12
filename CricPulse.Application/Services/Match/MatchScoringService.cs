@@ -2,6 +2,7 @@
 using CricPulse.Application.Interfaces;
 using CricPulse.Application.Interfaces.Match;
 using CricPulse.Domain.Entities;
+using CricPulse.Domain.Enums;
 
 namespace CricPulse.Application.Services
 {
@@ -369,7 +370,7 @@ namespace CricPulse.Application.Services
             }
 
             // Toss can only be recorded after the umpire starts the match.
-            if (match.Status != "Live")
+            if (match.Status != MatchStatus.Live)
             {
                 return false;
             }
@@ -418,8 +419,7 @@ namespace CricPulse.Application.Services
         }
 
         // Purpose:
-        // Create and start the first innings using valid players from the match
-        // after the toss has determined the batting and bowling teams.
+        // Start the first innings after validating the match, toss, teams, and opening players.
         public async Task<bool> StartInningsAsync(
             int umpireId,
             StartInningsDto dto)
@@ -438,7 +438,7 @@ namespace CricPulse.Application.Services
             }
 
             // The match must already have been started by the umpire.
-            if (match.Status != "Live")
+            if (match.Status != MatchStatus.Live)
             {
                 return false;
             }
@@ -549,6 +549,8 @@ namespace CricPulse.Application.Services
         // Purpose:
         // Start the match when the umpire chooses to begin, provided the
         // 24-hour grace period after the scheduled match time has not expired.
+        // Purpose:
+        // Start a scheduled match after validating the assigned umpire and 24-hour start window.
         public async Task<bool> StartMatchAsync(int umpireId, int matchId)
         {
             var match = await _scoringRepository
@@ -566,7 +568,8 @@ namespace CricPulse.Application.Services
             }
 
             // A match can only be started once.
-            if (match.Status != "Scheduled" || match.StartedAt != null)
+            if (match.Status != MatchStatus.Scheduled ||
+                match.StartedAt != null)
             {
                 return false;
             }
@@ -580,7 +583,7 @@ namespace CricPulse.Application.Services
             // but not after the 24-hour grace period.
             if (DateTime.UtcNow > startDeadline)
             {
-                match.Status = "Cancelled";
+                match.Status = MatchStatus.Cancelled;
                 match.UpdatedAt = DateTime.UtcNow;
                 match.CancellationReason = "Umpire unavailable";
 
@@ -590,7 +593,7 @@ namespace CricPulse.Application.Services
             }
 
             // Starting the match makes it visible as Live immediately.
-            match.Status = "Live";
+            match.Status = MatchStatus.Live;
             match.StartedAt = DateTime.UtcNow;
             match.UpdatedAt = DateTime.UtcNow;
 

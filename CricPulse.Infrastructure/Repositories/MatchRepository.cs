@@ -1,7 +1,8 @@
 ﻿using CricPulse.Application.Interfaces.Match;
-using MatchEntity=CricPulse.Domain.Entities.Match;
+using CricPulse.Domain.Enums;
 using CricPulse.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
+using MatchEntity=CricPulse.Domain.Entities.Match;
 
 namespace CricPulse.Infrastructure.Repositories
 {
@@ -46,10 +47,12 @@ namespace CricPulse.Infrastructure.Repositories
 
             var matches = await _context.Matches
                 .Where(m =>
-                    m.Status == "Scheduled" ||
-                    m.Status == "Live" ||
-                    (m.Status == "Completed" && m.MatchDate >= sevenDaysAgo) ||
-                    (m.Status == "Cancelled" && m.MatchDate >= sevenDaysAgo))
+                    m.Status == MatchStatus.Scheduled ||
+                    m.Status == MatchStatus.Live ||
+                    (m.Status == MatchStatus.Completed &&
+                     m.MatchDate >= sevenDaysAgo) ||
+                    (m.Status == MatchStatus.Cancelled &&
+                     m.MatchDate >= sevenDaysAgo))
                 .ToListAsync();
 
             return matches
@@ -105,9 +108,10 @@ namespace CricPulse.Infrastructure.Repositories
                 .Where(m =>
                     m.State == state &&
                     (
-                        m.Status == "Scheduled" ||
-                        m.Status == "Live" ||
-                        (m.Status == "Completed" && m.MatchDate >= sevenDaysAgo)
+                        m.Status == MatchStatus.Scheduled ||
+                        m.Status == MatchStatus.Live ||
+                        (m.Status == MatchStatus.Completed &&
+                         m.MatchDate >= sevenDaysAgo)
                     ))
                 .OrderBy(m => m.MatchDate)
                 .ThenBy(m => m.MatchTime)
@@ -138,7 +142,7 @@ namespace CricPulse.Infrastructure.Repositories
                 return false;
             }
 
-            match.Status = "Cancelled";
+            match.Status = MatchStatus.Cancelled;
             match.UpdatedAt = DateTime.UtcNow;
 
             await _context.SaveChangesAsync();

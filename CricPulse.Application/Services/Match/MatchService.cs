@@ -5,6 +5,8 @@ using CricPulse.Application.Interfaces.Match;
 using CricPulse.Application.Interfaces.Otp;
 using CricPulse.Application.Interfaces.player;
 using CricPulse.Application.Interfaces.User;
+using CricPulse.Application.Utilities;
+using CricPulse.Domain.Enums;
 using CricPulse.Domain.Exceptions;
 using System;
 using System.Collections.Generic;
@@ -12,9 +14,10 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using MatchEntity=CricPulse.Domain.Entities.Match;
-using UserEntity = CricPulse.Domain.Entities.User;
-using PlayerEntity = CricPulse.Domain.Entities.Player;
 using MatchPlayerEntity = CricPulse.Domain.Entities.MatchPlayer;
+using PlayerEntity = CricPulse.Domain.Entities.Player;
+using UserEntity = CricPulse.Domain.Entities.User;
+
 
 namespace CricPulse.Application.Services.Match
 {
@@ -41,7 +44,12 @@ namespace CricPulse.Application.Services.Match
 
         }
 
-        public async Task<MatchResponseDto> CreateMatchAsync(int umpireId, CreateMatchDto dto)
+        // Purpose:
+        // Validate match creation details, prepare players, capture the match location,
+        // and create a new scheduled match.
+        public async Task<MatchResponseDto> CreateMatchAsync(
+            int umpireId,
+            CreateMatchDto dto)
         {
             var user = await _userRepository.GetByIdAsync(umpireId);
 
@@ -50,10 +58,32 @@ namespace CricPulse.Application.Services.Match
                 throw new InvalidOperationException("User not found.");
             }
 
+            // Any authenticated registered user becomes an umpire when creating a match.
             if (!user.IsUmpire)
             {
-                throw new UnauthorizedAccessException(
-                    "Only umpires can create matches.");
+                user.IsUmpire = true;
+                await _userRepository.UpdateAsync(user);
+            }
+
+            if (string.IsNullOrWhiteSpace(dto.Team1Name) ||
+                string.IsNullOrWhiteSpace(dto.Team2Name))
+            {
+                throw new InvalidOperationException(
+                    "Both team names are required.");
+            }
+
+            if (!int.TryParse(dto.Team1Logo, out var team1LogoId) ||
+                !Enum.IsDefined(typeof(TeamLogo), team1LogoId))
+            {
+                throw new InvalidOperationException(
+                    "Team 1 logo must be one of the predefined logos.");
+            }
+
+            if (!int.TryParse(dto.Team2Logo, out var team2LogoId) ||
+                !Enum.IsDefined(typeof(TeamLogo), team2LogoId))
+            {
+                throw new InvalidOperationException(
+                    "Team 2 logo must be one of the predefined logos.");
             }
 
             if (dto.PlayersPerTeam < 4 || dto.PlayersPerTeam > 11)
@@ -62,7 +92,32 @@ namespace CricPulse.Application.Services.Match
                     "Players per team must be between 4 and 11.");
             }
 
-            if (dto.Players == null || dto.Players.Count == 0)
+            if (dto.Overs < 1 || dto.Overs > 90)
+            {
+                throw new InvalidOperationException(
+                    "Overs must be between 1 and 90.");
+            }
+
+            if (dto.MatchDate == default)
+            {
+                throw new InvalidOperationException(
+                    "Match date is required.");
+            }
+
+            if (string.IsNullOrWhiteSpace(dto.VenueName))
+            {
+                throw new InvalidOperationException(
+                    "Venue name is required.");
+            }
+
+            if (dto.Latitude < -90 || dto.Latitude > 90 ||
+                dto.Longitude < -180 || dto.Longitude > 180)
+            {
+                throw new InvalidOperationException(
+                    "Invalid match location.");
+            }
+
+            if (dto.Players == null)
             {
                 throw new InvalidOperationException(
                     "Players are required.");
@@ -78,8 +133,7 @@ namespace CricPulse.Application.Services.Match
 
             var validTeams = new[] { "Team1", "Team2" };
 
-            if (dto.Players.Any(p =>
-                !validTeams.Contains(p.Team)))
+            if (dto.Players.Any(p => !validTeams.Contains(p.Team)))
             {
                 throw new InvalidOperationException(
                     "Players must belong to Team1 or Team2.");
@@ -109,6 +163,13 @@ namespace CricPulse.Application.Services.Match
                 .Select(p => p.MobileNumber.Trim())
                 .ToList();
 
+            if (normalizedMobiles.Any(m =>
+                    m.Length != 10 || !m.All(char.IsDigit)))
+            {
+                throw new InvalidOperationException(
+                    "Every player mobile number must contain exactly 10 digits.");
+            }
+
             if (normalizedMobiles.Count != normalizedMobiles.Distinct().Count())
             {
                 throw new InvalidOperationException(
@@ -119,16 +180,17 @@ namespace CricPulse.Application.Services.Match
 
             foreach (var playerDto in dto.Players)
             {
+                var mobileNumber = playerDto.MobileNumber.Trim();
+
                 var userAccount =
-                    await _userRepository.GetByMobileNumberAsync(
-                        playerDto.MobileNumber.Trim());
+                    await _userRepository.GetByMobileNumberAsync(mobileNumber);
 
                 if (userAccount == null ||
                     !userAccount.IsMobileVerified ||
                     userAccount.Player == null)
                 {
                     throw new InvalidOperationException(
-                        $"Player with mobile number {playerDto.MobileNumber} is not onboarded.");
+                        $"Player with mobile number {mobileNumber} is not onboarded.");
                 }
 
                 if (userAccount.Id == umpireId)
@@ -137,28 +199,47 @@ namespace CricPulse.Application.Services.Match
                         "The match umpire cannot participate as a player.");
                 }
 
-                var matchPlayer = new MatchPlayerEntity
+                playersToAdd.Add(new MatchPlayerEntity
                 {
                     PlayerId = userAccount.Player.Id,
                     Team = playerDto.Team,
                     CreatedAt = DateTime.UtcNow
-                };
-
-                playersToAdd.Add(matchPlayer);
+                });
             }
 
-            var state = await _locationService.GetStateAsync(dto.Latitude, dto.Longitude);
+            if (!string.IsNullOrWhiteSpace(dto.LiveStreamUrl))
+            {
+                if (!Uri.TryCreate(
+                        dto.LiveStreamUrl,
+                        UriKind.Absolute,
+                        out var youtubeUri) ||
+                    (youtubeUri.Host != "youtube.com" &&
+                     youtubeUri.Host != "www.youtube.com" &&
+                     youtubeUri.Host != "youtu.be" &&
+                     youtubeUri.Host != "m.youtube.com"))
+                {
+                    throw new InvalidOperationException(
+                        "Live stream URL must be a valid YouTube URL.");
+                }
+            }
 
+            var state = await _locationService.GetStateAsync(
+                dto.Latitude,
+                dto.Longitude);
 
+            if (string.IsNullOrWhiteSpace(state))
+            {
+                throw new InvalidOperationException(
+                    "Unable to determine match state from the current location.");
+            }
 
             var match = new MatchEntity
             {
                 UmpireId = umpireId,
 
-                Team1Name = dto.Team1Name,
+                Team1Name = dto.Team1Name.Trim(),
                 Team1Logo = dto.Team1Logo,
-
-                Team2Name = dto.Team2Name,
+                Team2Name = dto.Team2Name.Trim(),
                 Team2Logo = dto.Team2Logo,
 
                 PlayersPerTeam = dto.PlayersPerTeam,
@@ -167,15 +248,17 @@ namespace CricPulse.Application.Services.Match
                 MatchDate = dto.MatchDate,
                 MatchTime = dto.MatchTime,
 
-                VenueName = dto.VenueName,
-                Address = dto.Address,
+                VenueName = dto.VenueName.Trim(),
+                Address = dto.Address?.Trim() ?? string.Empty,
+
                 Latitude = dto.Latitude,
                 Longitude = dto.Longitude,
-                State = state ?? string.Empty,
+                State = state,
 
-                LiveStreamUrl = dto.LiveStreamUrl,
+                LiveStreamUrl = dto.LiveStreamUrl?.Trim(),
 
-                Status = "Scheduled",
+                Status = MatchStatus.Scheduled,
+
                 CreatedAt = DateTime.UtcNow
             };
 
@@ -184,7 +267,8 @@ namespace CricPulse.Application.Services.Match
                 match.MatchPlayers.Add(matchPlayer);
             }
 
-            var createdMatch = await _matchRepository.CreateAsync(match);
+            var createdMatch =
+                await _matchRepository.CreateAsync(match);
 
             return MapToResponse(createdMatch);
         }
@@ -201,6 +285,8 @@ namespace CricPulse.Application.Services.Match
             return MapToResponse(match);
         }
 
+        // Purpose:
+        // Convert the domain match entity into the API response model used by the frontend.
         private MatchResponseDto MapToResponse(MatchEntity match)
         {
             return new MatchResponseDto
@@ -226,11 +312,10 @@ namespace CricPulse.Application.Services.Match
                 Latitude = match.Latitude,
                 Longitude = match.Longitude,
                 State = match.State,
-                
 
                 LiveStreamUrl = match.LiveStreamUrl,
 
-                Status = match.Status,
+                Status = match.Status.ToString(),
 
                 CreatedAt = match.CreatedAt,
                 UpdatedAt = match.UpdatedAt
@@ -278,10 +363,12 @@ namespace CricPulse.Application.Services.Match
         }
 
 
+        // Purpose:
+        // Update a scheduled match while preventing changes after the match has started.
         public async Task<MatchResponseDto?> UpdateMatchAsync(
-    int matchId,
-    int userId,
-    UpdateMatchDto dto)
+            int matchId,
+            int userId,
+            UpdateMatchDto dto)
         {
             var match =
                 await _matchRepository.GetByIdForUpdateAsync(matchId);
@@ -297,7 +384,7 @@ namespace CricPulse.Application.Services.Match
                     "Only the match umpire can update this match.");
             }
 
-            if (match.Status != "Scheduled")
+            if (match.Status != MatchStatus.Scheduled)
             {
                 throw new InvalidOperationException(
                     "Only scheduled matches can be updated.");
@@ -309,7 +396,6 @@ namespace CricPulse.Application.Services.Match
             match.Team2Name = dto.Team2Name;
             match.Team2Logo = dto.Team2Logo;
 
-           
             match.Overs = dto.Overs;
 
             match.MatchDate = dto.MatchDate;
@@ -330,12 +416,16 @@ namespace CricPulse.Application.Services.Match
                 : MapToResponse(updatedMatch);
         }
 
+        // Purpose:
+        // Start a scheduled match, enforce its 24-hour start window,
+        // capture its final physical location, and change its status to Live.
         public async Task<MatchResponseDto?> StartMatchAsync(
-    int matchId,
-    int userId,
-    StartMatchDto dto)
+            int matchId,
+            int userId,
+            StartMatchDto dto)
         {
-            var match = await _matchRepository.GetByIdForUpdateAsync(matchId);
+            var match =
+                await _matchRepository.GetByIdForUpdateAsync(matchId);
 
             if (match == null)
             {
@@ -348,41 +438,65 @@ namespace CricPulse.Application.Services.Match
                     "Only the match umpire can start this match.");
             }
 
-            if (match.Status != "Scheduled")
+            if (match.Status != MatchStatus.Scheduled)
             {
                 throw new InvalidOperationException(
                     "Only scheduled matches can be started.");
+            }
+
+            var scheduledUtc = MatchTimeHelper.GetScheduledUtc(
+                match.MatchDate,
+                match.MatchTime);
+
+            var cancellationDeadline = scheduledUtc.AddHours(24);
+
+            if (DateTime.UtcNow > cancellationDeadline)
+            {
+                match.Status = MatchStatus.Cancelled;
+                match.CancellationReason = "Umpire unavailable";
+                match.UpdatedAt = DateTime.UtcNow;
+
+                await _matchRepository.UpdateAsync(match);
+
+                throw new InvalidOperationException(
+                    "This match was automatically cancelled because it was not started within 24 hours of its scheduled time.");
             }
 
             var state = await _locationService.GetStateAsync(
                 dto.Latitude,
                 dto.Longitude);
 
-            if (string.IsNullOrEmpty(state))
+            if (string.IsNullOrWhiteSpace(state))
             {
                 throw new InvalidOperationException(
                     "Unable to determine match state from current location.");
             }
 
+            // The device's current GPS location becomes the final match location.
             match.Latitude = dto.Latitude;
             match.Longitude = dto.Longitude;
             match.State = state;
 
-            match.Status = "Live";
+            match.Status = MatchStatus.Live;
+            match.StartedAt = DateTime.UtcNow;
             match.UpdatedAt = DateTime.UtcNow;
 
-            var updatedMatch = await _matchRepository.UpdateAsync(match);
+            var updatedMatch =
+                await _matchRepository.UpdateAsync(match);
 
             return updatedMatch == null
                 ? null
                 : MapToResponse(updatedMatch);
         }
 
+        // Purpose:
+        // Cancel a scheduled or live match when requested by its assigned umpire.
         public async Task<bool> CancelMatchAsync(
-    int matchId,
-    int userId)
+            int matchId,
+            int userId)
         {
-            var match = await _matchRepository.GetByIdForUpdateAsync(matchId);
+            var match =
+                await _matchRepository.GetByIdForUpdateAsync(matchId);
 
             if (match == null)
             {
@@ -395,8 +509,8 @@ namespace CricPulse.Application.Services.Match
                     "Only the match umpire can cancel this match.");
             }
 
-            if (match.Status != "Scheduled" &&
-                match.Status != "Live")
+            if (match.Status != MatchStatus.Scheduled &&
+                match.Status != MatchStatus.Live)
             {
                 throw new InvalidOperationException(
                     "Only scheduled or live matches can be cancelled.");
@@ -631,12 +745,14 @@ namespace CricPulse.Application.Services.Match
         // Purpose:
         // Load the live match and map its current innings, teams, and ball history
         // into a response that the live screens can consume.
-        public async Task<LiveMatchResponseDto?> GetLiveMatchAsync(int matchId)
+        public async Task<LiveMatchResponseDto?> GetLiveMatchAsync(
+            int matchId)
         {
             var match = await _matchRepository
                 .GetLiveMatchAsync(matchId);
 
-            if (match == null || match.Status != "Live")
+            if (match == null ||
+                match.Status != MatchStatus.Live)
             {
                 return null;
             }
@@ -652,7 +768,7 @@ namespace CricPulse.Application.Services.Match
                 Team2Name = match.Team2Name,
                 Team1Logo = match.Team1Logo,
                 Team2Logo = match.Team2Logo,
-                Status = match.Status,
+                Status = match.Status.ToString(),
                 TossWinnerTeam = match.TossWinnerTeam,
                 TossDecision = match.TossDecision,
                 BattingFirstTeam = match.BattingFirstTeam,
@@ -662,7 +778,8 @@ namespace CricPulse.Application.Services.Match
                 BowlingTeam = innings?.BowlingTeam,
                 StrikerMatchPlayerId = innings?.StrikerMatchPlayerId,
                 NonStrikerMatchPlayerId = innings?.NonStrikerMatchPlayerId,
-                CurrentBowlerMatchPlayerId = innings?.CurrentBowlerMatchPlayerId,
+                CurrentBowlerMatchPlayerId =
+                    innings?.CurrentBowlerMatchPlayerId,
                 TotalRuns = innings?.TotalRuns,
                 Wickets = innings?.Wickets,
                 LegalBalls = innings?.LegalBalls
@@ -685,7 +802,8 @@ namespace CricPulse.Application.Services.Match
                         ExtraType = b.ExtraType,
                         ExtraRuns = b.ExtraRuns,
                         WicketType = b.Wicket?.WicketType,
-                        DismissedMatchPlayerId = b.Wicket?.DismissedMatchPlayerId
+                        DismissedMatchPlayerId =
+                            b.Wicket?.DismissedMatchPlayerId
                     })
                     .ToList();
             }

@@ -46,6 +46,7 @@ builder.Services.AddScoped<IMatchService, MatchService>();
 builder.Services.AddScoped<IMatchRepository, MatchRepository>();
 builder.Services.AddScoped<IMatchScoringService, MatchScoringService>();
 builder.Services.AddScoped<IScoringRepository, ScoringRepository>();
+builder.Services.AddScoped<IPendingRegistrationRepository, PendingRegistrationRepository>();
 
 //External location service to get the match state
 builder.Services.AddHttpClient<ILocationService, LocationService>(client =>

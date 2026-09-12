@@ -1,11 +1,12 @@
 ﻿using CricPulse.Application.Interfaces.Match;
 using CricPulse.Domain.Entities;
+using CricPulse.Domain.Enums;
 using CricPulse.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 using BallEntity = CricPulse.Domain.Entities.Ball;
 using InningsEntity=CricPulse.Domain.Entities.Innings;
-using WicketEntity = CricPulse.Domain.Entities.Wicket;
 using MatchEntity = CricPulse.Domain.Entities.Match;
+using WicketEntity = CricPulse.Domain.Entities.Wicket;
 
 namespace CricPulse.Infrastructure.Repositories.Match
 {
@@ -67,17 +68,18 @@ namespace CricPulse.Infrastructure.Repositories.Match
                 .FirstOrDefaultAsync(m => m.Id == matchId);
         }
 
-
         // Purpose:
-        // Find scheduled matches whose 24-hour start window has expired
-        // so they can be automatically cancelled.
+        // Find scheduled matches that have passed their 24-hour start window.
         public async Task<List<MatchEntity>> GetExpiredScheduledMatchesAsync()
         {
             var now = DateTime.UtcNow;
 
             return await _context.Matches
-                .Where(m => m.Status == "Scheduled")
-                .Where(m => m.MatchDate.Date.Add(m.MatchTime).AddHours(24) < now)
+                .Where(m => m.Status == MatchStatus.Scheduled)
+                .Where(m =>
+                    m.MatchDate.Date
+                        .Add(m.MatchTime)
+                        .AddHours(24) < now)
                 .ToListAsync();
         }
 

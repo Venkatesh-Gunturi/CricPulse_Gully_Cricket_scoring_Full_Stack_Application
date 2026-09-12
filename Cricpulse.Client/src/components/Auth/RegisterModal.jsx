@@ -1,16 +1,53 @@
-import { useState } from "react";
-import { registerPlayer } from "../../services/authService";
+import { useEffect, useState } from "react";
+import { registerPlayer, verifyOtp } from "../../services/authService";
+import "./RegisterModal.css";
 
-function RegisterModal({ show, onClose, onRegistered }) {
+function RegisterModal({ show, onClose, onRegistered, onLogin }) {
   const [formData, setFormData] = useState({
     firstName: "",
     lastName: "",
-    email: "",
     mobileNumber: "",
     password: "",
     confirmPassword: ""
   });
 
+  const [otp, setOtp] = useState("");
+  const [registrationId, setRegistrationId] = useState(null);
+
+  const [otpSent, setOtpSent] = useState(false);
+  const [otpVerified, setOtpVerified] = useState(false);
+
+  const [otpLoading, setOtpLoading] = useState(false);
+  const [accountLoading, setAccountLoading] = useState(false);
+
+  const [error, setError] = useState("");
+  const [successMessage, setSuccessMessage] = useState("");
+
+  const [otpSecondsLeft, setOtpSecondsLeft] = useState(0);
+
+  // Purpose:
+  // Count down the five-minute OTP validity period on the registration screen.
+  useEffect(() => {
+    if (!otpSent || otpVerified || otpSecondsLeft <= 0) {
+      return;
+    }
+
+    const timer = setInterval(() => {
+      setOtpSecondsLeft((previousSeconds) => {
+        if (previousSeconds <= 1) {
+          clearInterval(timer);
+          return 0;
+        }
+
+        return previousSeconds - 1;
+      });
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [otpSent, otpVerified, otpSecondsLeft]);
+
+  // Purpose:
+  // Update registration form values while clearing previous messages.
   const handleChange = (event) => {
     const { name, value } = event.target;
 
@@ -18,39 +55,186 @@ function RegisterModal({ show, onClose, onRegistered }) {
       ...previousData,
       [name]: value
     }));
+
+    setError("");
+    setSuccessMessage("");
   };
 
- const handleSubmit = async (event) => {
-  event.preventDefault();
+  // Purpose:
+  // Validate basic registration details and request a mobile OTP.
+  const handleSendOtp = async () => {
+    setError("");
+    setSuccessMessage("");
 
-  console.log("Create Account clicked");
+    if (!formData.firstName.trim()) {
+      setError("First name is required.");
+      return;
+    }
 
-  if (formData.password !== formData.confirmPassword) {
-    console.log("Passwords do not match.");
-    return;
-  }
+    if (formData.firstName.trim().length > 100) {
+      setError("First name cannot exceed 100 characters.");
+      return;
+    }
 
-  const request = {
-    firstName: formData.firstName,
-    lastName: formData.lastName,
-    email: formData.email,
-    mobileNumber: formData.mobileNumber,
-    password: formData.password
+    if (formData.lastName.trim().length > 100) {
+      setError("Last name cannot exceed 100 characters.");
+      return;
+    }
+
+    if (!/^\d{10}$/.test(formData.mobileNumber)) {
+      setError("Mobile number must contain exactly 10 digits.");
+      return;
+    }
+
+    try {
+      setOtpLoading(true);
+
+      const response = await registerPlayer({
+        firstName: formData.firstName.trim(),
+        lastName: formData.lastName.trim() || null,
+        mobileNumber: formData.mobileNumber
+      });
+
+      setRegistrationId(response.registrationId);
+      setOtpSent(true);
+      setOtpVerified(false);
+      setOtp("");
+      setOtpSecondsLeft(300);
+
+      setSuccessMessage(
+        "OTP sent successfully. Please enter the OTP below."
+      );
+    } catch (error) {
+      console.error("OTP request failed:", error);
+
+      setError(
+        error?.response?.data?.message ||
+        "Unable to send OTP. Please try again."
+      );
+    } finally {
+      setOtpLoading(false);
+    }
   };
 
-  console.log("Registration request:", request);
+  // Purpose:
+  // Verify the OTP belonging to the temporary registration.
+  const handleVerifyOtp = async () => {
+    setError("");
+    setSuccessMessage("");
 
-  try {
-    const response = await registerPlayer(request);
+    if (!/^\d{6}$/.test(otp)) {
+      setError("OTP must contain exactly 6 digits.");
+      return;
+    }
 
-    console.log("Registration successful:", response);
+    try {
+      setOtpLoading(true);
 
-    onRegistered(response.id);
+      await verifyOtp(registrationId, otp);
 
-  } catch (error) {
-    console.error("Registration failed:", error);
-  }
-};
+      setOtpVerified(true);
+      setOtpSecondsLeft(0);
+
+      setSuccessMessage(
+        "Mobile number verified successfully. You can now create your password."
+      );
+    } catch (error) {
+      console.error("OTP verification failed:", error);
+
+      setError(
+        error?.response?.data?.message ||
+        "Invalid or expired OTP."
+      );
+    } finally {
+      setOtpLoading(false);
+    }
+  };
+
+  // Purpose:
+  // Complete registration and create the User and Player after OTP verification.
+  const handleCreateAccount = async (event) => {
+    event.preventDefault();
+
+    setError("");
+    setSuccessMessage("");
+
+    if (!otpVerified) {
+      setError("Please verify your mobile number first.");
+      return;
+    }
+
+    if (formData.password.length < 8) {
+      setError("Password must contain at least 8 characters.");
+      return;
+    }
+
+    if (formData.password !== formData.confirmPassword) {
+      setError("Passwords do not match.");
+      return;
+    }
+
+    try {
+      setAccountLoading(true);
+
+      const response = await registerPlayer({
+        firstName: formData.firstName.trim(),
+        lastName: formData.lastName.trim() || null,
+        mobileNumber: formData.mobileNumber,
+        password: formData.password
+      });
+
+      setSuccessMessage("Account created successfully!");
+
+      setTimeout(() => {
+        onRegistered(response);
+      }, 800);
+    } catch (error) {
+      console.error("Account creation failed:", error);
+
+      setError(
+        error?.response?.data?.message ||
+        "Unable to create your account. Please try again."
+      );
+    } finally {
+      setAccountLoading(false);
+    }
+  };
+
+  // Purpose:
+  // Reset all registration state when the modal is closed.
+  const handleClose = () => {
+    setFormData({
+      firstName: "",
+      lastName: "",
+      mobileNumber: "",
+      password: "",
+      confirmPassword: ""
+    });
+
+    setOtp("");
+    setRegistrationId(null);
+
+    setOtpSent(false);
+    setOtpVerified(false);
+    setOtpSecondsLeft(0);
+
+    setOtpLoading(false);
+    setAccountLoading(false);
+
+    setError("");
+    setSuccessMessage("");
+
+    onClose();
+  };
+
+  // Purpose:
+  // Format the remaining OTP validity time as minutes and seconds.
+  const formatOtpTime = () => {
+    const minutes = Math.floor(otpSecondsLeft / 60);
+    const seconds = otpSecondsLeft % 60;
+
+    return `${minutes}:${seconds.toString().padStart(2, "0")}`;
+  };
 
   if (!show) {
     return null;
@@ -59,138 +243,303 @@ function RegisterModal({ show, onClose, onRegistered }) {
   return (
     <>
       <div
-        className="modal show d-block"
+        className="modal show d-block register-modal"
         tabIndex="-1"
         role="dialog"
         aria-modal="true"
       >
-        <div className="modal-dialog modal-dialog-centered">
-          <div className="modal-content">
+        <div className="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+          <div className="modal-content register-modal-content">
 
-            <div className="modal-header">
-              <h5 className="modal-title">
-                Create CricPulse Account
-              </h5>
+            <div className="modal-header register-modal-header">
+              <div className="register-brand">
+                <span className="register-brand-icon">🏏</span>
+
+                <div>
+                  <h5 className="modal-title">
+                    Create your account
+                  </h5>
+
+                  <small>
+                    Join CricPulse and start your cricket journey
+                  </small>
+                </div>
+              </div>
 
               <button
                 type="button"
                 className="btn-close"
-                onClick={onClose}
+                onClick={handleClose}
                 aria-label="Close"
-              ></button>
+              />
             </div>
 
-            <div className="modal-body">
+            <div className="modal-body register-modal-body">
 
-              <form onSubmit={handleSubmit}>
+              {error && (
+                <div className="alert alert-danger register-alert">
+                  {error}
+                </div>
+              )}
 
-                <div className="mb-3">
-                  <label className="form-label">
-                    First Name
-                  </label>
+              {successMessage && (
+                <div className="alert alert-success register-alert">
+                  {successMessage}
+                </div>
+              )}
 
-                  <input
-                    type="text"
-                    className="form-control"
-                    name="firstName"
-                    value={formData.firstName}
-                    onChange={handleChange}
-                    required
-                  />
+              <form onSubmit={handleCreateAccount}>
+
+                {/* Name */}
+                <div className="row g-3">
+
+                  <div className="col-sm-6">
+                    <label className="form-label">
+                      First Name
+                    </label>
+
+                    <input
+                      type="text"
+                      name="firstName"
+                      className="form-control register-input"
+                      placeholder="First name"
+                      value={formData.firstName}
+                      onChange={handleChange}
+                      maxLength="100"
+                      disabled={otpSent}
+                      required
+                    />
+                  </div>
+
+                  <div className="col-sm-6">
+                    <label className="form-label">
+                      Last Name
+                      <span className="optional-label">
+                        {" "}Optional
+                      </span>
+                    </label>
+
+                    <input
+                      type="text"
+                      name="lastName"
+                      className="form-control register-input"
+                      placeholder="Last name"
+                      value={formData.lastName}
+                      onChange={handleChange}
+                      maxLength="100"
+                      disabled={otpSent}
+                    />
+                  </div>
+
                 </div>
 
-                <div className="mb-3">
-                  <label className="form-label">
-                    Last Name
-                  </label>
+                {/* Mobile */}
+                <div className="mt-3">
 
-                  <input
-                    type="text"
-                    className="form-control"
-                    name="lastName"
-                    value={formData.lastName}
-                    onChange={handleChange}
-                  />
-                </div>
-
-                <div className="mb-3">
-                  <label className="form-label">
-                    Email
-                  </label>
-
-                  <input
-                    type="email"
-                    className="form-control"
-                    name="email"
-                    value={formData.email}
-                    onChange={handleChange}
-                    required
-                  />
-                </div>
-
-                <div className="mb-3">
                   <label className="form-label">
                     Mobile Number
                   </label>
 
-                  <input
-                    type="text"
-                    className="form-control"
-                    name="mobileNumber"
-                    value={formData.mobileNumber}
-                    onChange={handleChange}
-                    required
-                  />
+                  <div className="input-group">
+
+                    <input
+                      type="tel"
+                      name="mobileNumber"
+                      className="form-control register-input"
+                      placeholder="10-digit mobile number"
+                      value={formData.mobileNumber}
+                      onChange={(event) => {
+                        const value =
+                          event.target.value.replace(/\D/g, "");
+
+                        if (value.length <= 10) {
+                          setFormData((previousData) => ({
+                            ...previousData,
+                            mobileNumber: value
+                          }));
+                        }
+
+                        setError("");
+                        setSuccessMessage("");
+                      }}
+                      maxLength="10"
+                      disabled={otpSent}
+                      required
+                    />
+
+                    <button
+                      type="button"
+                      className={`btn verify-button ${
+                        otpVerified
+                          ? "otp-verified-button"
+                          : otpSent && otpSecondsLeft > 0
+                            ? "otp-sent-button"
+                            : "btn-outline-primary"
+                      }`}
+                      onClick={handleSendOtp}
+                      disabled={
+                        otpLoading ||
+                        otpVerified ||
+                        (otpSent && otpSecondsLeft > 0)
+                      }
+                    >
+                      {otpLoading
+                        ? "Sending..."
+                        : otpVerified
+                          ? "✓ Verified"
+                          : !otpSent
+                            ? "Send OTP"
+                            : otpSecondsLeft > 0
+                              ? "✓ OTP Sent"
+                              : "Resend OTP"}
+                    </button>
+
+                  </div>
+
+                  {otpSent && !otpVerified && otpSecondsLeft > 0 && (
+                    <div className="otp-timer">
+                      OTP expires in <strong>{formatOtpTime()}</strong>
+                    </div>
+                  )}
+
                 </div>
 
-                <div className="mb-3">
-                  <label className="form-label">
-                    Password
-                  </label>
+                {/* OTP */}
+                {otpSent && !otpVerified && (
+                  <div className="otp-box mt-3">
 
-                  <input
-                    type="password"
-                    className="form-control"
-                    name="password"
-                    value={formData.password}
-                    onChange={handleChange}
-                    minLength="8"
-                    required
-                  />
+                    <label className="form-label">
+                      Enter OTP
+                    </label>
+
+                    <div className="input-group">
+
+                      <input
+                        type="text"
+                        className="form-control register-input otp-input"
+                        placeholder="6-digit OTP"
+                        value={otp}
+                        onChange={(event) => {
+                          const value =
+                            event.target.value.replace(/\D/g, "");
+
+                          if (value.length <= 6) {
+                            setOtp(value);
+                          }
+
+                          setError("");
+                        }}
+                        maxLength="6"
+                        autoComplete="one-time-code"
+                      />
+
+                      <button
+                        type="button"
+                        className="btn btn-primary verify-button"
+                        onClick={handleVerifyOtp}
+                        disabled={
+                          otp.length !== 6 ||
+                          otpLoading ||
+                          otpSecondsLeft === 0
+                        }
+                      >
+                        {otpLoading ? "Verifying..." : "Verify"}
+                      </button>
+
+                    </div>
+
+                    {otpSecondsLeft === 0 && (
+                      <div className="otp-expired">
+                        OTP expired. Click <strong>Resend OTP</strong> below.
+                      </div>
+                    )}
+
+                  </div>
+                )}
+
+                {/* Password */}
+                <div className="row g-3 mt-1">
+
+                  <div className="col-sm-6">
+                    <label className="form-label">
+                      Password
+                    </label>
+
+                    <input
+                      type="password"
+                      name="password"
+                      className="form-control register-input"
+                      placeholder="Minimum 8 characters"
+                      value={formData.password}
+                      onChange={handleChange}
+                      minLength="8"
+                      disabled={!otpVerified}
+                      required
+                    />
+                  </div>
+
+                  <div className="col-sm-6">
+                    <label className="form-label">
+                      Confirm Password
+                    </label>
+
+                    <input
+                      type="password"
+                      name="confirmPassword"
+                      className="form-control register-input"
+                      placeholder="Re-enter password"
+                      value={formData.confirmPassword}
+                      onChange={handleChange}
+                      minLength="8"
+                      disabled={!otpVerified}
+                      required
+                    />
+                  </div>
+
                 </div>
 
-                <div className="mb-3">
-                  <label className="form-label">
-                    Confirm Password
-                  </label>
-
-                  <input
-                    type="password"
-                    className="form-control"
-                    name="confirmPassword"
-                    value={formData.confirmPassword}
-                    onChange={handleChange}
-                    minLength="8"
-                    required
-                  />
-                </div>
-
+                {/* Create Account */}
                 <button
                   type="submit"
-                  className="btn btn-primary w-100"
+                  className="btn btn-primary w-100 create-account-button"
+                  disabled={
+                    !otpVerified ||
+                    accountLoading
+                  }
                 >
-                  Create Account
+                  {accountLoading
+                    ? "Creating Account..."
+                    : "Create Account"}
                 </button>
 
               </form>
 
-            </div>
+              <div className="register-footer">
+                <span>
+                  Already have an account?
+                </span>
 
+                <button
+                  type="button"
+                  className="login-link"
+                  onClick={() => {
+                    handleClose();
+
+                    if (onLogin) {
+                      onLogin();
+                    }
+                  }}
+                >
+                  Login
+                </button>
+              </div>
+
+            </div>
           </div>
         </div>
       </div>
 
-      <div className="modal-backdrop show"></div>
+      <div className="modal-backdrop show register-backdrop"></div>
     </>
   );
 }

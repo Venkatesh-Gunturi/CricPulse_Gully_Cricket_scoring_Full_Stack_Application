@@ -1,6 +1,7 @@
 ﻿// Purpose:
 // Periodically cancel scheduled matches whose 24-hour start window has expired.
 using CricPulse.Application.Interfaces.Match;
+using CricPulse.Domain.Enums;
 
 public class MatchCancellationService : BackgroundService
 {
@@ -11,6 +12,8 @@ public class MatchCancellationService : BackgroundService
         _scopeFactory = scopeFactory;
     }
 
+    // Purpose:
+    // Automatically cancel scheduled matches that were not started within their allowed time window.
     protected override async Task ExecuteAsync(
         CancellationToken stoppingToken)
     {
@@ -26,7 +29,7 @@ public class MatchCancellationService : BackgroundService
 
             foreach (var match in expiredMatches)
             {
-                match.Status = "Cancelled";
+                match.Status = MatchStatus.Cancelled;
                 match.CancellationReason = "Umpire unavailable";
                 match.UpdatedAt = DateTime.UtcNow;
             }

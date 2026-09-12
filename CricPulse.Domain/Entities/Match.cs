@@ -4,6 +4,8 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
+using CricPulse.Domain.Enums;
+
 namespace CricPulse.Domain.Entities
 {
     public class Match
@@ -34,7 +36,7 @@ namespace CricPulse.Domain.Entities
 
         public string? LiveStreamUrl { get; set; }
 
-        public string Status { get; set; } = "Scheduled";
+        public MatchStatus Status { get; set; } = MatchStatus.Scheduled;
         public string? CancellationReason { get; set; }
 
         public DateTime CreatedAt { get; set; }

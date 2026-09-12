@@ -2,7 +2,9 @@
 using CricPulse.Application.DTOs.User;
 using CricPulse.Application.Interfaces.Auth;
 using CricPulse.Application.Interfaces.Otp;
+using CricPulse.Application.Interfaces.player;
 using CricPulse.Application.Interfaces.User;
+using CricPulse.Domain.Entities;
 using CricPulse.Domain.Exceptions;
 
 using Microsoft.AspNetCore.Identity;
@@ -12,6 +14,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using UserEntity = CricPulse.Domain.Entities.User;
+using PlayerEntity = CricPulse.Domain.Entities.Player;
 
 
 namespace CricPulse.Application.Services.Auth
@@ -23,79 +26,179 @@ namespace CricPulse.Application.Services.Auth
         private readonly IOtpService _otpService;
         private readonly IOtpRepository _otpRepository;
         private readonly IJwtService _jwtService;
+        private readonly IPendingRegistrationRepository _pendingRegistrationRepository;
+        private readonly IPlayerRepository _playerRepository;
 
         //Constructor for DI(s)
-        public AuthService(IUserRepository userRepository, IPasswordHasher passwordHasher, IOtpService otpService,IOtpRepository otpRepository, IJwtService jwtService)
+        public AuthService(IUserRepository userRepository, IPasswordHasher passwordHasher, IOtpService otpService,IOtpRepository otpRepository, IJwtService jwtService, IPendingRegistrationRepository pendingRegistrationRepository, IPlayerRepository playerRepository)
         {
             _userRepository = userRepository;
             _passwordHasher = passwordHasher;
             _otpService = otpService;
             _otpRepository = otpRepository;
             _jwtService = jwtService;
+            _pendingRegistrationRepository = pendingRegistrationRepository;
+            _playerRepository = playerRepository;
         }
 
-        //checks registering player already register with either mobile or email before 
-        public async Task<UserResponseDto> RegisterPlayerAsync(RegisterPlayerDto dto)
+        // Purpose:
+        // Start registration by sending an OTP, or complete registration after mobile verification.
+        public async Task<RegistrationOtpResponseDto> RegisterPlayerAsync(
+            RegisterPlayerDto dto)
         {
-            var normalizedFirstName = FormatName(dto.FirstName);
+            var normalizedMobile = dto.MobileNumber.Trim();
 
-            var normalizedLastName = string.IsNullOrWhiteSpace(dto.LastName) ? null : FormatName(dto.LastName);
+            var existingUser =
+                await _userRepository.GetByMobileNumberAsync(normalizedMobile);
 
-
-            var normalizedMobileNumber = dto.MobileNumber.Trim();
-
-            
-            // Check whether mobile number already exists
-            bool mobileExists = await _userRepository.MobileExistsAsync(normalizedMobileNumber);
-
-
-            if (mobileExists)
+            if (existingUser != null)
             {
-                throw new ConflictException("An account with this mobile number already exists. Please log in.");
-
+                throw new ConflictException(
+                    "An account with this mobile number already exists.");
             }
 
-            var user = new UserEntity
-            {
-                FirstName = normalizedFirstName,
-                LastName = normalizedLastName,
-                Email = null,
-                MobileNumber = normalizedMobileNumber,
+            var pendingRegistration =
+                await _pendingRegistrationRepository
+                    .GetByMobileNumberAsync(normalizedMobile);
 
-                IsEmailVerified = false,
-                IsMobileVerified = false,
-                IsUmpire = false,
-                IsActive = false,
+            // An expired registration can no longer be used.
+            if (pendingRegistration != null &&
+                pendingRegistration.OtpExpiresAt < DateTime.UtcNow)
+            {
+                await _pendingRegistrationRepository.DeleteAsync(
+                    pendingRegistration);
+
+                pendingRegistration = null;
+            }
+
+            // OTP was already verified, so this call is the final "Create Account" step.
+            if (pendingRegistration != null &&
+                pendingRegistration.IsOtpVerified)
+            {
+                if (string.IsNullOrWhiteSpace(dto.Password) ||
+                    dto.Password.Length < 8)
+                {
+                    throw new ConflictException(
+                        "Password must contain at least 8 characters.");
+                }
+
+                var passwordHash =
+                    _passwordHasher.HashPassword(
+                        new UserEntity(),
+                        dto.Password);
+
+                var user = new UserEntity
+                {
+                    FirstName = pendingRegistration.FirstName,
+                    LastName = pendingRegistration.LastName,
+                    Email = null,
+                    MobileNumber = pendingRegistration.MobileNumber,
+                    PasswordHash = passwordHash,
+                    IsEmailVerified = false,
+                    IsMobileVerified = true,
+                    IsUmpire = false,
+                    IsActive = true,
+                    CreatedAt = DateTime.UtcNow
+                };
+
+                var createdUser =
+                    await _userRepository.CreateAsync(user);
+
+                // Every successfully registered CricPulse account is automatically a Player.
+                var player = new PlayerEntity
+                {
+                    UserId = createdUser.Id,
+                    DateOfBirth = default,
+                    Gender = string.Empty,
+                    BattingStyle = string.Empty,
+                    BowlingStyle = string.Empty,
+                    PlayerRole = string.Empty,
+                    State = string.Empty,
+                    PinCode = 0
+                };
+
+                await _playerRepository.CreateAsync(player);
+
+                var token =
+                    _jwtService.GenerateToken(createdUser);
+
+                var userResponse = new UserResponseDto
+                {
+                    Id = createdUser.Id,
+                    FirstName = createdUser.FirstName,
+                    LastName = createdUser.LastName,
+                    Email = createdUser.Email,
+                    MobileNumber = createdUser.MobileNumber,
+                    IsEmailVerified = createdUser.IsEmailVerified,
+                    IsMobileVerified = createdUser.IsMobileVerified,
+                    IsUmpire = createdUser.IsUmpire,
+                    ProfileImageUrl = createdUser.ProfileImageUrl,
+                    IsActive = createdUser.IsActive,
+                    CreatedAt = createdUser.CreatedAt
+                };
+
+                await _pendingRegistrationRepository.DeleteAsync(
+                    pendingRegistration);
+
+                return new RegistrationOtpResponseDto
+                {
+                    RegistrationId = pendingRegistration.Id,
+                    UserId = createdUser.Id,
+                    MobileNumber = createdUser.MobileNumber,
+                    Message = "Account created successfully.",
+                    Token = token,
+                    User = userResponse
+                };
+            }
+
+            // An active pending registration means an OTP has already been issued.
+            if (pendingRegistration != null)
+            {
+                throw new ConflictException(
+                    "A registration OTP is already active for this mobile number.");
+            }
+
+            var otp = _otpService.GenerateOtp();
+
+            // Development-only OTP visibility until SMS integration is added.
+            Console.WriteLine(
+                $"[DEV OTP] Mobile: {normalizedMobile}, OTP: {otp}");
+
+            var registration = new PendingRegistration
+            {
+                FirstName = dto.FirstName.Trim(),
+
+                LastName = string.IsNullOrWhiteSpace(dto.LastName)
+                    ? null
+                    : dto.LastName.Trim(),
+
+                MobileNumber = normalizedMobile,
+
+                // Password is intentionally not stored at the OTP stage.
+                PasswordHash = null,
+
+                OtpCode = otp,
+
+                OtpExpiresAt = DateTime.UtcNow.AddMinutes(5),
+
+                AttemptedCount = 0,
+
+                IsOtpVerified = false,
+
                 CreatedAt = DateTime.UtcNow
             };
 
-            user.PasswordHash = _passwordHasher.HashPassword(user, dto.Password);
+            await _pendingRegistrationRepository.CreateAsync(
+                registration);
 
-            var createdUser = await _userRepository.CreateAsync(user);
-
-            // Mobile OTP generation
-            var mobileOtp = _otpService.GenerateOtp();
-
-            var mobileOtpVerification = _otpService.CreateOtpVerification(
-                createdUser.Id,
-                mobileOtp,
-                Domain.Enums.OtpType.Mobile);
-
-            await _otpRepository.CreateAsync(mobileOtpVerification);
-
-
-            return new UserResponseDto
+            return new RegistrationOtpResponseDto
             {
-                Id = createdUser.Id,
-                FirstName = createdUser.FirstName,
-                LastName = createdUser.LastName,
-                Email = createdUser.Email,
-                MobileNumber = createdUser.MobileNumber,
-                IsEmailVerified=createdUser.IsEmailVerified,
-                IsMobileVerified=createdUser.IsMobileVerified,
-                ProfileImageUrl = createdUser.ProfileImageUrl,
-                IsActive= createdUser.IsActive,
-                CreatedAt= createdUser.CreatedAt
+                RegistrationId = registration.Id,
+                UserId = null,
+                MobileNumber = registration.MobileNumber,
+                Message = "OTP sent successfully.",
+                Token = null,
+                User = null
             };
         }
 
@@ -113,46 +216,50 @@ namespace CricPulse.Application.Services.Auth
             }
         }
 
-        //OTP verification
+        // Purpose:
+        // Verify the temporary registration OTP and mark the pending registration as mobile-verified.
         public async Task<bool> VerifyOtpAsync(VerifyOtpDto dto)
         {
-            var isVerified = await _otpService.VerifyOtpAsync(
-            dto.UserId,
-            dto.OtpCode,
-            dto.OtpType);
+            var pendingRegistration =
+                await _pendingRegistrationRepository
+                    .GetByIdAsync(dto.RegistrationId);
 
+            if (pendingRegistration == null)
+                return false;
 
-            if (!isVerified)
+            // The pending registration and its OTP expire together after 5 minutes.
+            if (pendingRegistration.OtpExpiresAt < DateTime.UtcNow)
             {
+                await _pendingRegistrationRepository.DeleteAsync(
+                    pendingRegistration);
+
                 return false;
             }
 
-            var user = await _userRepository.GetByIdAsync(dto.UserId);
+            if (pendingRegistration.IsOtpVerified)
+                return true;
 
-            if (user == null)
+            if (pendingRegistration.OtpCode != dto.OtpCode)
             {
+                pendingRegistration.AttemptedCount++;
+
+                await _pendingRegistrationRepository.UpdateAsync(
+                    pendingRegistration);
+
                 return false;
             }
 
-            if (dto.OtpType == Domain.Enums.OtpType.Mobile)
-            {
-                user.IsMobileVerified = true;
-                user.IsActive = true;
-            }
-            else if (dto.OtpType == Domain.Enums.OtpType.Email)
-            {
-                user.IsEmailVerified = true;
-            }
+            pendingRegistration.IsOtpVerified = true;
 
-            await _userRepository.UpdateAsync(user);
+            await _pendingRegistrationRepository.UpdateAsync(
+                pendingRegistration);
 
             return true;
-
-
         }
 
 
-        //Login verification restring an unverified email and mobile number to login 
+        // Purpose:
+        // Authenticate a user and provide a specific reason when login fails.
         public async Task<LoginResponseDto?> LoginAsync(LoginDto dto)
         {
             var identifier = dto.Identifier.Trim().ToLowerInvariant();
@@ -171,34 +278,38 @@ namespace CricPulse.Application.Services.Auth
 
             if (user == null)
             {
-                return null;
+                throw new ConflictException(
+                    "This mobile number is not registered. Please register first.");
             }
 
             if (!user.IsActive)
             {
-                return null;
+                throw new ConflictException(
+                    "This account is not active. Please complete your registration.");
             }
 
-            if (identifier.Contains("@"))
+            if (identifier.Contains("@") && !user.IsEmailVerified)
             {
-                if (!user.IsEmailVerified)
-                {
-                    return null;
-                }
-            }
-            else
-            {
-                if (!user.IsMobileVerified)
-                {
-                    return null;
-                }
+                throw new ConflictException(
+                    "This email address is not verified.");
             }
 
-            var passwordResult = _passwordHasher.VerifyPassword(user, user.PasswordHash, dto.Password);
+            if (!identifier.Contains("@") && !user.IsMobileVerified)
+            {
+                throw new ConflictException(
+                    "This mobile number is not verified.");
+            }
+
+            var passwordResult =
+                _passwordHasher.VerifyPassword(
+                    user,
+                    user.PasswordHash,
+                    dto.Password);
 
             if (!passwordResult)
             {
-                return null;
+                throw new ConflictException(
+                    "Incorrect password.");
             }
 
             var token = _jwtService.GenerateToken(user);
@@ -222,11 +333,9 @@ namespace CricPulse.Application.Services.Auth
                     CreatedAt = user.CreatedAt
                 }
             };
-
         }
 
-        public async Task<UserResponseDto>
-    RegisterMatchPlayerAsync(string mobileNumber)
+        public async Task<UserResponseDto> RegisterMatchPlayerAsync(string mobileNumber)
         {
             var normalizedMobile =
                 mobileNumber.Trim();
@@ -313,5 +422,6 @@ namespace CricPulse.Application.Services.Auth
                     createdUser.CreatedAt
             };
         }
+
     }
 }

@@ -1,11 +1,16 @@
-﻿using CricPulse.Domain.Enums;
+﻿using System.ComponentModel.DataAnnotations;
 
 namespace CricPulse.Application.DTOs.Auth
 {
     public class VerifyOtpDto
     {
-        public int UserId { get; set; }
+        [Required]
+        public int RegistrationId { get; set; }
+
+        [Required]
+        [RegularExpression(
+            @"^[0-9]{6}$",
+            ErrorMessage = "OTP must contain exactly 6 digits.")]
         public string OtpCode { get; set; } = string.Empty;
-        public OtpType OtpType { get; set; }
     }
 }

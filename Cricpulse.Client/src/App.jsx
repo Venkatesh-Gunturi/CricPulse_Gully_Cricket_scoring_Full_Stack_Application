@@ -5,20 +5,14 @@ import UmpireDashboard from "./pages/UmpireDashboard";
 
 import LoginModal from "./components/Auth/LoginModal";
 import RegisterModal from "./components/Auth/RegisterModal";
-import VerifyMobileModal from "./components/Auth/VerifyMobileModal";
 import MatchCreation from "./components/Match/MatchCreation";
 
 function App() {
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [showRegisterModal, setShowRegisterModal] = useState(false);
-  const [showVerifyMobileModal, setShowVerifyMobileModal] =
-    useState(false);
-
+ 
   const [showMatchCreation, setShowMatchCreation] =
     useState(false);
-
-  const [registeredUserId, setRegisteredUserId] =
-    useState(null);
 
   const [loggedInUser, setLoggedInUser] = useState(
     JSON.parse(localStorage.getItem("user"))
@@ -149,31 +143,43 @@ function App() {
           </>
         )}
 
-      <LoginModal
-        show={showLoginModal}
-        onClose={() => setShowLoginModal(false)}
-        onLoginSuccess={handleLoginSuccess}
-      />
+        <LoginModal
+          show={showLoginModal}
+          onClose={() => setShowLoginModal(false)}
+          onLoginSuccess={handleLoginSuccess}
+          onRegister={() => {
+            setShowLoginModal(false);
+            setShowRegisterModal(true);
+          }}
+        />
 
-      <RegisterModal
-        show={showRegisterModal}
-        onClose={() =>
-          setShowRegisterModal(false)
-        }
-        onRegistrationSuccess={(userId) => {
-          setRegisteredUserId(userId);
-          setShowRegisterModal(false);
-          setShowVerifyMobileModal(true);
-        }}
-      />
+        <RegisterModal
+          show={showRegisterModal}
+          onClose={() =>
+            setShowRegisterModal(false)
+          }
+                  onRegistered={(registrationResult) => {
+            setShowRegisterModal(false);
 
-      <VerifyMobileModal
-        show={showVerifyMobileModal}
-        userId={registeredUserId}
-        onClose={() =>
-          setShowVerifyMobileModal(false)
-        }
-      />
+            localStorage.setItem(
+              "token",
+              registrationResult.token
+            );
+
+            localStorage.setItem(
+              "user",
+              JSON.stringify(registrationResult.user)
+            );
+
+            setLoggedInUser(registrationResult.user);
+            setAppMode("normal");
+          }}
+          onLogin={() => {
+            setShowRegisterModal(false);
+            setShowLoginModal(true);
+          }}
+        />
+
     </>
   );
 }
