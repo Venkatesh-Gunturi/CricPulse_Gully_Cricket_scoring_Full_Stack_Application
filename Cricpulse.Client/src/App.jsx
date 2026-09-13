@@ -10,9 +10,7 @@ import MatchCreation from "./components/Match/MatchCreation";
 function App() {
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [showRegisterModal, setShowRegisterModal] = useState(false);
- 
-  const [showMatchCreation, setShowMatchCreation] =
-    useState(false);
+  const [showMatchCreation, setShowMatchCreation] = useState(false);
 
   const [loggedInUser, setLoggedInUser] = useState(
     JSON.parse(localStorage.getItem("user"))
@@ -20,13 +18,12 @@ function App() {
 
   const [appMode, setAppMode] = useState("normal");
 
+  // Purpose:
+  // Handle successful login and update the authenticated user in the application.
   const handleLoginSuccess = (user) => {
     setLoggedInUser(user);
 
-    localStorage.setItem(
-      "user",
-      JSON.stringify(user)
-    );
+    localStorage.setItem("user", JSON.stringify(user));
 
     setShowLoginModal(false);
 
@@ -35,6 +32,8 @@ function App() {
     }
   };
 
+  // Purpose:
+  // Clear the authenticated session and return the application to normal mode.
   const handleLogout = () => {
     localStorage.removeItem("token");
     localStorage.removeItem("user");
@@ -111,84 +110,87 @@ function App() {
       )}
 
       {appMode === "normal" && (
-        <MainPage
-          onLogin={() => setShowLoginModal(true)}
-          onRegister={() => setShowRegisterModal(true)}
-          loggedInUser={loggedInUser}
-          onCreateMatch={() => setShowMatchCreation(true)}
-        />
+        <>
+          {!showMatchCreation ? (
+            <MainPage
+              onLogin={() => setShowLoginModal(true)}
+              onRegister={() => setShowRegisterModal(true)}
+              loggedInUser={loggedInUser}
+              onCreateMatch={() => setShowMatchCreation(true)}
+            />
+          ) : (
+            <div className="container mt-4">
+              <button
+                className="btn btn-secondary mb-3"
+                onClick={() => setShowMatchCreation(false)}
+              >
+                ← Back
+              </button>
+
+              <MatchCreation />
+            </div>
+          )}
+        </>
       )}
 
-      {showMatchCreation && (
-        <MatchCreation />
+      {appMode === "umpire" && loggedInUser?.isUmpire && (
+        <>
+          {!showMatchCreation ? (
+            <UmpireDashboard
+              onCreateMatch={() => setShowMatchCreation(true)}
+              onContinueScoring={(match) => {
+                console.log("Continue scoring:", match);
+              }}
+            />
+          ) : (
+            <div className="container mt-4">
+              <button
+                className="btn btn-secondary mb-3"
+                onClick={() => setShowMatchCreation(false)}
+              >
+                ← Back to My Matches
+              </button>
+
+              <MatchCreation />
+            </div>
+          )}
+        </>
       )}
 
-      {appMode === "umpire" &&
-        loggedInUser?.isUmpire && (
-          <>
-            {!showMatchCreation ? (
-              <UmpireDashboard
-                onCreateMatch={() =>
-                  setShowMatchCreation(true)
-                }
-                onContinueScoring={(match) => {
-                  console.log("Continue scoring:", match);
-                }}
-              />
-            ) : (
-              <div className="container mt-4">
-                <button
-                  className="btn btn-secondary mb-3"
-                  onClick={() =>
-                    setShowMatchCreation(false)
-                  }
-                >
-                  ← Back to My Matches
-                </button>
+      <LoginModal
+        show={showLoginModal}
+        onClose={() => setShowLoginModal(false)}
+        onLoginSuccess={handleLoginSuccess}
+        onRegister={() => {
+          setShowLoginModal(false);
+          setShowRegisterModal(true);
+        }}
+      />
 
-                <MatchCreation />
-              </div>
-            )}
-          </>
-        )}
+      <RegisterModal
+        show={showRegisterModal}
+        onClose={() => setShowRegisterModal(false)}
+        onRegistered={(registrationResult) => {
+          setShowRegisterModal(false);
 
-        <LoginModal
-          show={showLoginModal}
-          onClose={() => setShowLoginModal(false)}
-          onLoginSuccess={handleLoginSuccess}
-          onRegister={() => {
-            setShowLoginModal(false);
-            setShowRegisterModal(true);
-          }}
-        />
+          localStorage.setItem(
+            "token",
+            registrationResult.token
+          );
 
-        <RegisterModal
-          show={showRegisterModal}
-          onClose={() =>
-            setShowRegisterModal(false)
-          }
-                  onRegistered={(registrationResult) => {
-            setShowRegisterModal(false);
+          localStorage.setItem(
+            "user",
+            JSON.stringify(registrationResult.user)
+          );
 
-            localStorage.setItem(
-              "token",
-              registrationResult.token
-            );
-
-            localStorage.setItem(
-              "user",
-              JSON.stringify(registrationResult.user)
-            );
-
-            setLoggedInUser(registrationResult.user);
-            setAppMode("normal");
-          }}
-          onLogin={() => {
-            setShowRegisterModal(false);
-            setShowLoginModal(true);
-          }}
-        />
-
+          setLoggedInUser(registrationResult.user);
+          setAppMode("normal");
+        }}
+        onLogin={() => {
+          setShowRegisterModal(false);
+          setShowLoginModal(true);
+        }}
+      />
     </>
   );
 }

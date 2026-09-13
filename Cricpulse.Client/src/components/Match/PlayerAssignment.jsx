@@ -58,154 +58,70 @@ const MatchPlayerAssignment = ({
   );
 
   // Purpose:
-// Synchronize Team 1 slots when the selected team size or initial edit lineup changes.
-useEffect(() => {
-  setTeam1Slots((current) => {
-    const hasInitialPlayers =
-      initialTeam1Players &&
-      initialTeam1Players.length > 0;
-
-    if (hasInitialPlayers) {
-      const initialSlots =
-        createInitialSlots(
-          initialTeam1Players
-        );
-
-      const updated =
-        initialSlots.slice(
-          0,
-          playersPerTeam
-        );
+  // Adjust Team 1 slots when the selected team size changes.
+  useEffect(() => {
+    setTeam1Slots((current) => {
+      const updated = current.slice(0, playersPerTeam);
 
       if (
-        updated.length < playersPerTeam &&
-        updated.every((slot) => slot.verified)
+        updated.length === 0 ||
+        (
+          updated.length < playersPerTeam &&
+          updated.every((slot) => slot.verified)
+        )
       ) {
         updated.push(createEmptySlot());
       }
 
-      setTeam1Players(
-        updated
-          .filter((slot) => slot.verified)
-          .map(toPlayer)
-      );
-
       return updated;
-    }
+    });
+  }, [playersPerTeam]);
 
-    const updated =
-      current.slice(
-        0,
-        playersPerTeam
-      );
-
-    if (
-      updated.length === 0 ||
-      (
-        updated.length < playersPerTeam &&
-        updated.every((slot) => slot.verified)
-      )
-    ) {
-      updated.push(createEmptySlot());
-    }
-
-    setTeam1Players(
-      updated
-        .filter((slot) => slot.verified)
-        .map(toPlayer)
-    );
-
-    return updated;
-  });
-}, [playersPerTeam, initialTeam1Players]);
-
-// Purpose:
-// Synchronize Team 2 slots when the selected team size or initial edit lineup changes.
-useEffect(() => {
-  setTeam2Slots((current) => {
-    const hasInitialPlayers =
-      initialTeam2Players &&
-      initialTeam2Players.length > 0;
-
-    if (hasInitialPlayers) {
-      const initialSlots =
-        createInitialSlots(
-          initialTeam2Players
-        );
-
-      const updated =
-        initialSlots.slice(
-          0,
-          playersPerTeam
-        );
+  // Purpose:
+  // Adjust Team 2 slots when the selected team size changes.
+  useEffect(() => {
+    setTeam2Slots((current) => {
+      const updated = current.slice(0, playersPerTeam);
 
       if (
-        updated.length < playersPerTeam &&
-        updated.every((slot) => slot.verified)
+        updated.length === 0 ||
+        (
+          updated.length < playersPerTeam &&
+          updated.every((slot) => slot.verified)
+        )
       ) {
         updated.push(createEmptySlot());
       }
 
-      setTeam2Players(
-        updated
-          .filter((slot) => slot.verified)
-          .map(toPlayer)
-      );
-
       return updated;
-    }
-
-    const updated =
-      current.slice(
-        0,
-        playersPerTeam
-      );
-
-    if (
-      updated.length === 0 ||
-      (
-        updated.length < playersPerTeam &&
-        updated.every((slot) => slot.verified)
-      )
-    ) {
-      updated.push(createEmptySlot());
-    }
-
-    setTeam2Players(
-      updated
-        .filter((slot) => slot.verified)
-        .map(toPlayer)
-    );
-
-    return updated;
-  });
-}, [playersPerTeam, initialTeam2Players]);
+    });
+  }, [playersPerTeam]);
 
 
-  // Purpose:
-  // Convert a verified slot into the player object used by the parent component.
-  const toPlayer = (slot) => ({
-    mobileNumber: slot.mobileNumber,
-    playerId: slot.playerId,
-    displayName: slot.displayName,
-    verified: true
-  });
+    // Purpose:
+    // Convert a verified slot into the player object used by the parent component.
+    const toPlayer = (slot) => ({
+      mobileNumber: slot.mobileNumber,
+      playerId: slot.playerId,
+      displayName: slot.displayName,
+      verified: true
+    });
 
-  // Purpose:
-  // Extract the useful error message returned by the API.
-  const getErrorMessage = (error) => {
-    const responseData = error?.response?.data;
+    // Purpose:
+    // Extract the useful error message returned by the API.
+    const getErrorMessage = (error) => {
+      const responseData = error?.response?.data;
 
-    if (typeof responseData === "string") {
-      return responseData;
-    }
+      if (typeof responseData === "string") {
+        return responseData;
+      }
 
-    if (responseData?.message) {
-      return responseData.message;
-    }
+      if (responseData?.message) {
+        return responseData.message;
+      }
 
-    return "Something went wrong. Please try again.";
-  };
+      return "Something went wrong. Please try again.";
+    };
 
   // Purpose:
   // Check whether a player is already assigned anywhere in either team.

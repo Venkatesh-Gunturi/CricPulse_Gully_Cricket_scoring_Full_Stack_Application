@@ -428,23 +428,6 @@ namespace CricPulse.API.Controllers
         }
 
         // Purpose:
-        // Start the match when the assigned umpire chooses to begin it.
-        [Authorize]
-        [HttpPost("start-match/{matchId}")]
-        public async Task<IActionResult> StartMatch(int matchId)
-        {
-            var umpireId = int.Parse(
-                User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
-
-            var result = await _matchScoringService
-                .StartMatchAsync(umpireId, matchId);
-
-            return result
-                ? Ok()
-                : BadRequest("Unable to start match.");
-        }
-
-        // Purpose:
         // Return the current live match state for the requested match.
         [Authorize]
         [HttpGet("live/{matchId}")]
@@ -459,6 +442,25 @@ namespace CricPulse.API.Controllers
             }
 
             return Ok(match);
+        }
+
+
+        // Purpose:
+        // Allow the assigned umpire to immediately confirm completion of a match
+        // that has reached its final result.
+        [Authorize]
+        [HttpPost("{matchId}/complete")]
+        public async Task<IActionResult> CompleteMatch(int matchId)
+        {
+            var umpireId = int.Parse(
+                User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
+
+            var result = await _matchScoringService
+                .CompleteMatchAsync(umpireId, matchId);
+
+            return result
+                ? Ok()
+                : BadRequest("Unable to complete match.");
         }
     }
 }

@@ -56,5 +56,8 @@ namespace CricPulse.Domain.Entities
 
         public string? BattingFirstTeam { get; set; }
 
+        public MatchResult Result { get; set; } = MatchResult.None;
+        public DateTime? CompletionDeadline { get; set; }
+
     }
 }

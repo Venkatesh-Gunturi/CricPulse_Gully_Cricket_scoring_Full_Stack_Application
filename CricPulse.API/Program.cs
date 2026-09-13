@@ -1,3 +1,4 @@
+using CricPulse.Api.Services;
 using CricPulse.API.Middleware;
 using CricPulse.Application.Interfaces;
 using CricPulse.Application.Interfaces.Auth;
@@ -47,6 +48,7 @@ builder.Services.AddScoped<IMatchRepository, MatchRepository>();
 builder.Services.AddScoped<IMatchScoringService, MatchScoringService>();
 builder.Services.AddScoped<IScoringRepository, ScoringRepository>();
 builder.Services.AddScoped<IPendingRegistrationRepository, PendingRegistrationRepository>();
+builder.Services.AddHostedService<MatchCompletionBackgroundService>();
 
 //External location service to get the match state
 builder.Services.AddHttpClient<ILocationService, LocationService>(client =>

@@ -15,7 +15,13 @@ namespace CricPulse.Application.Services
             _scoringRepository = scoringRepository;
         }
 
-        public async Task<bool> ScoreRunsAsync(int umpireId, int inningsId, int runs)
+        // Purpose:
+        // Record runs scored from the bat and attribute those runs to the striker
+        // so batting and bowling statistics can later be calculated accurately.
+        public async Task<bool> ScoreRunsAsync(
+            int umpireId,
+            int inningsId,
+            int runs)
         {
             if (runs != 0 && runs != 1 && runs != 2 &&
                 runs != 3 && runs != 4 && runs != 6)
@@ -27,6 +33,11 @@ namespace CricPulse.Application.Services
                 .GetInningsForScoringAsync(inningsId);
 
             if (innings == null)
+            {
+                return false;
+            }
+
+            if (innings.Match.UmpireId != umpireId)
             {
                 return false;
             }
@@ -49,10 +60,17 @@ namespace CricPulse.Application.Services
                 InningsId = innings.Id,
                 OverNumber = innings.LegalBalls / 6,
                 BallNumber = (innings.LegalBalls % 6) + 1,
+
                 StrikerMatchPlayerId = strikerId,
                 NonStrikerMatchPlayerId = nonStrikerId,
-                BowlerMatchPlayerId = innings.CurrentBowlerMatchPlayerId.Value,
+                BowlerMatchPlayerId =
+                    innings.CurrentBowlerMatchPlayerId.Value,
+
                 Runs = runs,
+
+                // All runs recorded through ScoreRuns are runs scored from the bat.
+                BatterRuns = runs,
+
                 IsLegalDelivery = true,
                 ExtraRuns = 0,
                 CreatedAt = DateTime.UtcNow
@@ -72,8 +90,12 @@ namespace CricPulse.Application.Services
             if (innings.LegalBalls % 6 == 0)
             {
                 var currentStriker = innings.StrikerMatchPlayerId;
-                innings.StrikerMatchPlayerId = innings.NonStrikerMatchPlayerId;
-                innings.NonStrikerMatchPlayerId = currentStriker;
+
+                innings.StrikerMatchPlayerId =
+                    innings.NonStrikerMatchPlayerId;
+
+                innings.NonStrikerMatchPlayerId =
+                    currentStriker;
 
                 // The current bowler must be selected again for the next over.
                 innings.CurrentBowlerMatchPlayerId = null;
@@ -85,14 +107,29 @@ namespace CricPulse.Application.Services
             return true;
         }
 
+
+        // Purpose:
+        // Record a wicket delivery, automatically finish an innings when the maximum
+        // wickets or overs are reached, attribute completed runs to the batter,
+        // and determine the second-innings match result.
         public async Task<bool> ScoreWicketAsync(
-     int umpireId,
-     ScoreWicketDto dto)
+            int umpireId,
+            ScoreWicketDto dto)
         {
             var innings = await _scoringRepository
                 .GetInningsForScoringAsync(dto.InningsId);
 
-            if (innings == null || innings.Status != "Live")
+            if (innings == null)
+            {
+                return false;
+            }
+
+            if (innings.Match.UmpireId != umpireId)
+            {
+                return false;
+            }
+
+            if (innings.Status != "Live")
             {
                 return false;
             }
@@ -119,7 +156,11 @@ namespace CricPulse.Application.Services
                 return false;
             }
 
-            // Save the state before changing striker/non-striker.
+            if (dto.RunsCompleted < 0)
+            {
+                return false;
+            }
+
             var strikerId = innings.StrikerMatchPlayerId;
             var nonStrikerId = innings.NonStrikerMatchPlayerId;
 
@@ -128,13 +169,28 @@ namespace CricPulse.Application.Services
             var dismissedPlayerId =
                 dto.DismissedMatchPlayerId ?? strikerId;
 
+            if (wicketType == "RUN OUT" &&
+                dto.DismissedMatchPlayerId == null)
+            {
+                return false;
+            }
+
             if (wicketType == "CAUGHT" &&
                 dto.CaughtByMatchPlayerId == null)
             {
                 return false;
             }
 
-            if (dto.NewBatterMatchPlayerId <= 0)
+            // For an N-player team, N-1 wickets means the innings is all out.
+            var maximumWickets =
+                innings.Match.PlayersPerTeam - 1;
+
+            var wicketWillEndInnings =
+                innings.Wickets + 1 >= maximumWickets;
+
+            // A new batter is required only when the innings will continue.
+            if (!wicketWillEndInnings &&
+                dto.NewBatterMatchPlayerId <= 0)
             {
                 return false;
             }
@@ -144,12 +200,21 @@ namespace CricPulse.Application.Services
                 InningsId = innings.Id,
                 OverNumber = innings.LegalBalls / 6,
                 BallNumber = (innings.LegalBalls % 6) + 1,
+
                 StrikerMatchPlayerId = strikerId,
                 NonStrikerMatchPlayerId = nonStrikerId,
-                BowlerMatchPlayerId = innings.CurrentBowlerMatchPlayerId.Value,
+
+                BowlerMatchPlayerId =
+                    innings.CurrentBowlerMatchPlayerId.Value,
+
+                // Runs completed during a wicket delivery are runs scored
+                // from the bat for the purposes of this scoring model.
                 Runs = dto.RunsCompleted,
+                BatterRuns = dto.RunsCompleted,
+
                 IsLegalDelivery = true,
                 ExtraRuns = 0,
+
                 CreatedAt = DateTime.UtcNow
             };
 
@@ -166,22 +231,32 @@ namespace CricPulse.Application.Services
             innings.LegalBalls++;
             innings.Wickets++;
 
-            // The umpire decides who is striker after the new batter comes in.
-            if (dto.NewBatterIsStriker)
+            if (!wicketWillEndInnings)
             {
-                innings.StrikerMatchPlayerId = dto.NewBatterMatchPlayerId;
-                innings.NonStrikerMatchPlayerId = nonStrikerId;
-            }
-            else
-            {
-                innings.StrikerMatchPlayerId = strikerId;
-                innings.NonStrikerMatchPlayerId = dto.NewBatterMatchPlayerId;
+                // The umpire decides who is striker after the new batter comes in.
+                if (dto.NewBatterIsStriker)
+                {
+                    innings.StrikerMatchPlayerId =
+                        dto.NewBatterMatchPlayerId;
+
+                    innings.NonStrikerMatchPlayerId =
+                        nonStrikerId;
+                }
+                else
+                {
+                    innings.StrikerMatchPlayerId =
+                        strikerId;
+
+                    innings.NonStrikerMatchPlayerId =
+                        dto.NewBatterMatchPlayerId;
+                }
             }
 
             // End of over: rotate strike and require a new bowler.
             if (innings.LegalBalls % 6 == 0)
             {
-                var currentStriker = innings.StrikerMatchPlayerId;
+                var currentStriker =
+                    innings.StrikerMatchPlayerId;
 
                 innings.StrikerMatchPlayerId =
                     innings.NonStrikerMatchPlayerId;
@@ -194,19 +269,68 @@ namespace CricPulse.Application.Services
 
             await _scoringRepository.AddBallAsync(ball);
             await _scoringRepository.AddWicketAsync(wicket);
+
+            var maximumLegalBalls =
+                innings.Match.Overs * 6;
+
+            var inningsHasEnded =
+                innings.Wickets >= maximumWickets ||
+                innings.LegalBalls >= maximumLegalBalls;
+
+            if (inningsHasEnded)
+            {
+                innings.Status = "Completed";
+                innings.CurrentBowlerMatchPlayerId = null;
+
+                if (innings.InningsNumber == 2)
+                {
+                    var firstInnings = innings.Match.Innings
+                        .FirstOrDefault(i => i.InningsNumber == 1);
+
+                    if (firstInnings != null)
+                    {
+                        innings.Match.Result =
+                            innings.TotalRuns > firstInnings.TotalRuns
+                                ? MatchResult.Team2Won
+                                : innings.TotalRuns < firstInnings.TotalRuns
+                                    ? MatchResult.Team1Won
+                                    : MatchResult.Tie;
+
+                        innings.Match.Status =
+                            MatchStatus.PendingCompletion;
+
+                        innings.Match.CompletionDeadline =
+                            DateTime.UtcNow.AddSeconds(10);
+                    }
+                }
+            }
+
             await _scoringRepository.SaveChangesAsync();
 
             return true;
         }
 
+        // Purpose:
+        // Record an extra delivery while correctly separating batter runs from
+        // extra runs so batting and bowling statistics remain accurate.
         public async Task<bool> ScoreExtraAsync(
-    int umpireId,
-    ScoreExtraDto dto)
+            int umpireId,
+            ScoreExtraDto dto)
         {
             var innings = await _scoringRepository
                 .GetInningsForScoringAsync(dto.InningsId);
 
-            if (innings == null || innings.Status != "Live")
+            if (innings == null)
+            {
+                return false;
+            }
+
+            if (innings.Match.UmpireId != umpireId)
+            {
+                return false;
+            }
+
+            if (innings.Status != "Live")
             {
                 return false;
             }
@@ -236,6 +360,52 @@ namespace CricPulse.Application.Services
                 return false;
             }
 
+            if (dto.BatterRuns < 0)
+            {
+                return false;
+            }
+
+            // Byes and leg-byes can never contain batter runs.
+            if ((extraType == "BYE" || extraType == "LEG BYE") &&
+                dto.BatterRuns != 0)
+            {
+                return false;
+            }
+
+            int extraRuns;
+
+            if (extraType == "WIDE")
+            {
+                // Every wide run is an extra and none belongs to the batter.
+                if (dto.BatterRuns != 0)
+                {
+                    return false;
+                }
+
+                extraRuns = dto.Runs;
+            }
+            else if (extraType == "NO BALL")
+            {
+                // A no-ball always contributes at least one extra run.
+                if (dto.Runs < dto.BatterRuns + 1)
+                {
+                    return false;
+                }
+
+                extraRuns = dto.Runs - dto.BatterRuns;
+
+                // At least one run must be the no-ball penalty.
+                if (extraRuns < 1)
+                {
+                    return false;
+                }
+            }
+            else
+            {
+                // BYE / LEG BYE
+                extraRuns = dto.Runs;
+            }
+
             var strikerId = innings.StrikerMatchPlayerId;
             var nonStrikerId = innings.NonStrikerMatchPlayerId;
 
@@ -246,19 +416,32 @@ namespace CricPulse.Application.Services
             var ball = new Ball
             {
                 InningsId = innings.Id,
+
                 OverNumber = innings.LegalBalls / 6,
+
                 BallNumber = isLegalDelivery
                     ? (innings.LegalBalls % 6) + 1
                     : innings.LegalBalls + 1,
 
                 StrikerMatchPlayerId = strikerId,
                 NonStrikerMatchPlayerId = nonStrikerId,
-                BowlerMatchPlayerId = innings.CurrentBowlerMatchPlayerId.Value,
 
+                BowlerMatchPlayerId =
+                    innings.CurrentBowlerMatchPlayerId.Value,
+
+                // Total runs added to the team's score.
                 Runs = dto.Runs,
+
+                // Only runs actually scored from the bat belong to the batter.
+                BatterRuns = dto.BatterRuns,
+
                 IsLegalDelivery = isLegalDelivery,
+
+                // Runs classified as extras.
+                ExtraRuns = extraRuns,
+
                 ExtraType = extraType,
-                ExtraRuns = dto.Runs,
+
                 CreatedAt = DateTime.UtcNow
             };
 
@@ -269,7 +452,7 @@ namespace CricPulse.Application.Services
                 innings.LegalBalls++;
             }
 
-            // Odd extra runs rotate the strike.
+            // Odd total runs rotate the strike.
             if (dto.Runs % 2 != 0)
             {
                 innings.StrikerMatchPlayerId = nonStrikerId;
@@ -277,9 +460,11 @@ namespace CricPulse.Application.Services
             }
 
             // End of over only applies to legal deliveries.
-            if (isLegalDelivery && innings.LegalBalls % 6 == 0)
+            if (isLegalDelivery &&
+                innings.LegalBalls % 6 == 0)
             {
-                var currentStriker = innings.StrikerMatchPlayerId;
+                var currentStriker =
+                    innings.StrikerMatchPlayerId;
 
                 innings.StrikerMatchPlayerId =
                     innings.NonStrikerMatchPlayerId;
@@ -287,6 +472,7 @@ namespace CricPulse.Application.Services
                 innings.NonStrikerMatchPlayerId =
                     currentStriker;
 
+                // The bowler must be selected again for the next over.
                 innings.CurrentBowlerMatchPlayerId = null;
             }
 
@@ -297,8 +483,9 @@ namespace CricPulse.Application.Services
         }
 
         // Purpose:
-        // Undo only the immediately previous scoring action and restore the innings
-        // state that existed before that delivery was recorded.
+        // Undo the immediately previous scoring action and restore the innings and match
+        // to the exact state that existed before that delivery, including cancelling
+        // a pending match completion when the final ball is undone.
         public async Task<bool> UndoLastScoreAsync(
             int umpireId,
             UndoScoreDto dto)
@@ -306,7 +493,24 @@ namespace CricPulse.Application.Services
             var innings = await _scoringRepository
                 .GetInningsForScoringAsync(dto.InningsId);
 
-            if (innings == null || innings.Status != "Live")
+            if (innings == null)
+            {
+                return false;
+            }
+
+            if (innings.Match.UmpireId != umpireId)
+            {
+                return false;
+            }
+
+            var isLiveInnings = innings.Status == "Live";
+            var isCompletedInnings = innings.Status == "Completed";
+
+            // A completed innings can only be undone when its match is waiting
+            // for final completion. This is the safety window after the last ball.
+            if (!isLiveInnings &&
+                !(isCompletedInnings &&
+                  innings.Match.Status == MatchStatus.PendingCompletion))
             {
                 return false;
             }
@@ -316,7 +520,6 @@ namespace CricPulse.Application.Services
                 .FirstOrDefault();
 
             // Only the latest scoring action can be undone.
-            // This prevents rolling the match back multiple deliveries.
             if (lastBall == null || lastBall.Id != dto.BallId)
             {
                 return false;
@@ -334,14 +537,35 @@ namespace CricPulse.Application.Services
 
             // Restore the exact striker, non-striker and bowler
             // that were active before this delivery.
-            innings.StrikerMatchPlayerId = lastBall.StrikerMatchPlayerId;
-            innings.NonStrikerMatchPlayerId = lastBall.NonStrikerMatchPlayerId;
-            innings.CurrentBowlerMatchPlayerId = lastBall.BowlerMatchPlayerId;
+            innings.StrikerMatchPlayerId =
+                lastBall.StrikerMatchPlayerId;
+
+            innings.NonStrikerMatchPlayerId =
+                lastBall.NonStrikerMatchPlayerId;
+
+            innings.CurrentBowlerMatchPlayerId =
+                lastBall.BowlerMatchPlayerId;
 
             // If the delivery contained a wicket, restore the wicket count.
             if (lastBall.Wicket != null)
             {
                 innings.Wickets--;
+            }
+
+            // If this was the final delivery that caused the second innings
+            // to finish the match, return the match to its live scoring state.
+            if (innings.Match.Status == MatchStatus.PendingCompletion)
+            {
+                innings.Status = "Live";
+
+                innings.Match.Status = MatchStatus.Live;
+                innings.Match.Result = MatchResult.None;
+                innings.Match.CompletionDeadline = null;
+                innings.Match.UpdatedAt = DateTime.UtcNow;
+            }
+            else
+            {
+                innings.UpdatedAt = DateTime.UtcNow;
             }
 
             await _scoringRepository.RemoveBallAsync(lastBall);
@@ -419,7 +643,8 @@ namespace CricPulse.Application.Services
         }
 
         // Purpose:
-        // Start the first innings after validating the match, toss, teams, and opening players.
+        // Start either innings of a live match after validating the match state,
+        // toss result, selected players, and the correct batting and bowling teams.
         public async Task<bool> StartInningsAsync(
             int umpireId,
             StartInningsDto dto)
@@ -437,13 +662,13 @@ namespace CricPulse.Application.Services
                 return false;
             }
 
-            // The match must already have been started by the umpire.
+            // The match must already be live.
             if (match.Status != MatchStatus.Live)
             {
                 return false;
             }
 
-            // Toss must be completed before innings setup.
+            // Toss must be completed before either innings can start.
             if (string.IsNullOrWhiteSpace(match.BattingFirstTeam))
             {
                 return false;
@@ -492,32 +717,85 @@ namespace CricPulse.Application.Services
                 return false;
             }
 
-            // Both opening batters must belong to the batting-first team.
-            if (striker.Team != match.BattingFirstTeam ||
-                nonStriker.Team != match.BattingFirstTeam)
+            var firstInnings = match.Innings
+                .FirstOrDefault(i => i.InningsNumber == 1);
+
+            var secondInnings = match.Innings
+                .FirstOrDefault(i => i.InningsNumber == 2);
+
+            int inningsNumber;
+            string battingTeam;
+            string bowlingTeam;
+
+            if (firstInnings == null)
             {
-                return false;
+                // -----------------------------
+                // FIRST INNINGS
+                // -----------------------------
+
+                inningsNumber = 1;
+                battingTeam = match.BattingFirstTeam;
+
+                bowlingTeam = battingTeam == match.Team1Name
+                    ? match.Team2Name
+                    : match.Team1Name;
+
+                // Both opening batters must belong to the batting-first team.
+                if (striker.Team != battingTeam ||
+                    nonStriker.Team != battingTeam)
+                {
+                    return false;
+                }
+
+                // Opening bowler must belong to the opposing team.
+                if (bowler.Team != bowlingTeam)
+                {
+                    return false;
+                }
             }
-
-            var bowlingTeam = match.BattingFirstTeam == match.Team1Name
-                ? match.Team2Name
-                : match.Team1Name;
-
-            // The opening bowler must belong to the bowling team.
-            if (bowler.Team != bowlingTeam)
+            else
             {
-                return false;
+                // -----------------------------
+                // SECOND INNINGS
+                // -----------------------------
+
+                // Second innings can only begin after the first innings has ended.
+                if (firstInnings.Status != "Completed")
+                {
+                    return false;
+                }
+
+                // Only one second innings is allowed.
+                if (secondInnings != null)
+                {
+                    return false;
+                }
+
+                inningsNumber = 2;
+
+                // The team that batted first now bowls.
+                bowlingTeam = firstInnings.BattingTeam;
+
+                // The other team now bats.
+                battingTeam = firstInnings.BowlingTeam;
+
+                // Both opening batters must belong to the second innings batting team.
+                if (striker.Team != battingTeam ||
+                    nonStriker.Team != battingTeam)
+                {
+                    return false;
+                }
+
+                // Opening bowler must belong to the first innings batting team.
+                if (bowler.Team != bowlingTeam)
+                {
+                    return false;
+                }
             }
 
             // A player cannot be both a batter and the opening bowler.
-            if (striker.Team == bowler.Team ||
-                nonStriker.Team == bowler.Team)
-            {
-                return false;
-            }
-
-            // Only one first innings can be started.
-            if (match.Innings.Any(i => i.InningsNumber == 1))
+            if (striker.Id == bowler.Id ||
+                nonStriker.Id == bowler.Id)
             {
                 return false;
             }
@@ -525,8 +803,8 @@ namespace CricPulse.Application.Services
             var innings = new Innings
             {
                 MatchId = match.Id,
-                InningsNumber = 1,
-                BattingTeam = match.BattingFirstTeam,
+                InningsNumber = inningsNumber,
+                BattingTeam = battingTeam,
                 BowlingTeam = bowlingTeam,
                 StrikerMatchPlayerId = striker.Id,
                 NonStrikerMatchPlayerId = nonStriker.Id,
@@ -547,11 +825,11 @@ namespace CricPulse.Application.Services
         }
 
         // Purpose:
-        // Start the match when the umpire chooses to begin, provided the
-        // 24-hour grace period after the scheduled match time has not expired.
-        // Purpose:
-        // Start a scheduled match after validating the assigned umpire and 24-hour start window.
-        public async Task<bool> StartMatchAsync(int umpireId, int matchId)
+        // Permanently complete a match after its second innings has reached a final result
+        // and the umpire has confirmed completion or the completion grace period has expired.
+        public async Task<bool> CompleteMatchAsync(
+            int umpireId,
+            int matchId)
         {
             var match = await _scoringRepository
                 .GetMatchForTossAsync(matchId);
@@ -561,45 +839,42 @@ namespace CricPulse.Application.Services
                 return false;
             }
 
-            // Only the assigned umpire can start the match.
             if (match.UmpireId != umpireId)
             {
                 return false;
             }
 
-            // A match can only be started once.
-            if (match.Status != MatchStatus.Scheduled ||
-                match.StartedAt != null)
+            if (match.Status != MatchStatus.PendingCompletion)
             {
                 return false;
             }
 
-            var scheduledDateTime = match.MatchDate.Date
-                .Add(match.MatchTime);
-
-            var startDeadline = scheduledDateTime.AddHours(24);
-
-            // The umpire can start before, at, or after the scheduled time,
-            // but not after the 24-hour grace period.
-            if (DateTime.UtcNow > startDeadline)
+            if (match.Result == MatchResult.None)
             {
-                match.Status = MatchStatus.Cancelled;
-                match.UpdatedAt = DateTime.UtcNow;
-                match.CancellationReason = "Umpire unavailable";
-
-                await _scoringRepository.SaveChangesAsync();
-
                 return false;
             }
 
-            // Starting the match makes it visible as Live immediately.
-            match.Status = MatchStatus.Live;
-            match.StartedAt = DateTime.UtcNow;
+            if (match.CompletionDeadline == null)
+            {
+                return false;
+            }
+
+            // The umpire can confirm immediately, or the backend can complete
+            // the match after the grace period has expired.
+            if (DateTime.UtcNow < match.CompletionDeadline.Value)
+            {
+                // Manual confirmation is intentionally allowed during the
+                // grace period, so the umpire does not have to wait 10 seconds.
+            }
+
+            match.Status = MatchStatus.Completed;
+            match.CompletionDeadline = null;
             match.UpdatedAt = DateTime.UtcNow;
 
             await _scoringRepository.SaveChangesAsync();
 
             return true;
         }
+
     }
 }

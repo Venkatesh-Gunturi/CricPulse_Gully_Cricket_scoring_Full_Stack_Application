@@ -92,5 +92,21 @@ namespace CricPulse.Infrastructure.Repositories.Match
                 .Include(m => m.MatchPlayers)
                 .FirstOrDefaultAsync(m => m.Id == matchId);
         }
+
+
+        // Purpose:
+        // Find matches whose final-result confirmation window has expired so the
+        // background process can automatically complete them.
+        public async Task<List<MatchEntity>> GetPendingCompletionMatchesAsync()
+        {
+            var now = DateTime.UtcNow;
+
+            return await _context.Matches
+                .Where(m =>
+                    m.Status == MatchStatus.PendingCompletion &&
+                    m.CompletionDeadline != null &&
+                    m.CompletionDeadline <= now)
+                .ToListAsync();
+        }
     }
 }

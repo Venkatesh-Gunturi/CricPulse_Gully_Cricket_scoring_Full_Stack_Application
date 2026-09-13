@@ -45,8 +45,8 @@ namespace CricPulse.Application.Services.Match
         }
 
         // Purpose:
-        // Validate match creation details, prepare players, capture the match location,
-        // and create a new scheduled match.
+        // Validate match creation details, ensure the user is an approved umpire,
+        // prepare players, capture the match location, and create a new scheduled match.
         public async Task<MatchResponseDto> CreateMatchAsync(
             int umpireId,
             CreateMatchDto dto)
@@ -58,11 +58,26 @@ namespace CricPulse.Application.Services.Match
                 throw new InvalidOperationException("User not found.");
             }
 
+            if (!user.IsUmpire)
+            {
+                throw new UnauthorizedAccessException(
+                    "Only registered umpires can create matches.");
+            }
+
             if (string.IsNullOrWhiteSpace(dto.Team1Name) ||
                 string.IsNullOrWhiteSpace(dto.Team2Name))
             {
                 throw new InvalidOperationException(
                     "Both team names are required.");
+            }
+
+            if (dto.Team1Name.Trim()
+                .Equals(
+                    dto.Team2Name.Trim(),
+                    StringComparison.OrdinalIgnoreCase))
+            {
+                throw new InvalidOperationException(
+                    "Team 1 and Team 2 must have different names.");
             }
 
             if (!int.TryParse(dto.Team1Logo, out var team1LogoId) ||
@@ -232,6 +247,7 @@ namespace CricPulse.Application.Services.Match
 
                 Team1Name = dto.Team1Name.Trim(),
                 Team1Logo = dto.Team1Logo,
+
                 Team2Name = dto.Team2Name.Trim(),
                 Team2Logo = dto.Team2Logo,
 

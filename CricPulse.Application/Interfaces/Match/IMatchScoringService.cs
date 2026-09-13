@@ -9,8 +9,9 @@ namespace CricPulse.Application.Interfaces
         Task<bool> ScoreExtraAsync(int umpireId, ScoreExtraDto dto);
         Task<bool> UndoLastScoreAsync(int umpireId, UndoScoreDto dto);
         Task<bool> RecordTossAsync(int umpireId, RecordTossDto dto);
-        Task<bool> StartMatchAsync(int umpireId, int matchId);
+       
         Task<bool> StartInningsAsync(int umpireId, StartInningsDto dto);
+        Task<bool> CompleteMatchAsync(int umpireId, int matchId);
 
     }
 }

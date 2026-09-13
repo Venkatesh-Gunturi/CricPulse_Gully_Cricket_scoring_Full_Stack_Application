@@ -19,6 +19,7 @@ public class CricPulseDbContext : DbContext
     public DbSet<Innings> Innings { get; set; }
     public DbSet<Ball> Balls { get; set; }
     public DbSet<Wicket> Wickets { get; set; }
+    public DbSet<PlayerStatistics> PlayerStatistics { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

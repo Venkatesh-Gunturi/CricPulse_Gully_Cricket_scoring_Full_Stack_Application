@@ -17,6 +17,7 @@
         public int BowlerMatchPlayerId { get; set; }
 
         public int Runs { get; set; }
+        public int BatterRuns { get; set; }
 
         public bool IsLegalDelivery { get; set; }
 
@@ -35,5 +36,7 @@
         public MatchPlayer BowlerMatchPlayer { get; set; } = null!;
 
         public Wicket? Wicket { get; set; }
+
+        
     }
 }

@@ -18,5 +18,7 @@ namespace CricPulse.Application.Interfaces.Match
         Task<List<MatchEntity>> GetExpiredScheduledMatchesAsync();
 
         Task<MatchEntity?> GetMatchForInningsAsync(int matchId);
+
+        Task<List<MatchEntity>> GetPendingCompletionMatchesAsync();
     }
 }

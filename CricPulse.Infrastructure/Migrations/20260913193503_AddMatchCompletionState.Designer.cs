@@ -4,6 +4,7 @@ using CricPulse.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace CricPulse.Infrastructure.Migrations
 {
     [DbContext(typeof(CricPulseDbContext))]
-    partial class CricPulseDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260913193503_AddMatchCompletionState")]
+    partial class AddMatchCompletionState
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -31,9 +34,6 @@ namespace CricPulse.Infrastructure.Migrations
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
                     b.Property<int>("BallNumber")
-                        .HasColumnType("int");
-
-                    b.Property<int>("BatterRuns")
                         .HasColumnType("int");
 
                     b.Property<int>("BowlerMatchPlayerId")
@@ -395,66 +395,6 @@ namespace CricPulse.Infrastructure.Migrations
                     b.ToTable("Players");
                 });
 
-            modelBuilder.Entity("CricPulse.Domain.Entities.PlayerStatistics", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<int>("BallsBowled")
-                        .HasColumnType("int");
-
-                    b.Property<int>("BallsFaced")
-                        .HasColumnType("int");
-
-                    b.Property<int>("BattingInnings")
-                        .HasColumnType("int");
-
-                    b.Property<int>("BowlingInnings")
-                        .HasColumnType("int");
-
-                    b.Property<int>("Fifties")
-                        .HasColumnType("int");
-
-                    b.Property<int>("Fours")
-                        .HasColumnType("int");
-
-                    b.Property<int>("HighestScore")
-                        .HasColumnType("int");
-
-                    b.Property<int>("Hundreds")
-                        .HasColumnType("int");
-
-                    b.Property<int>("MaidenOvers")
-                        .HasColumnType("int");
-
-                    b.Property<int>("Matches")
-                        .HasColumnType("int");
-
-                    b.Property<int>("PlayerId")
-                        .HasColumnType("int");
-
-                    b.Property<int>("Runs")
-                        .HasColumnType("int");
-
-                    b.Property<int>("RunsConceded")
-                        .HasColumnType("int");
-
-                    b.Property<int>("Sixes")
-                        .HasColumnType("int");
-
-                    b.Property<int>("Wickets")
-                        .HasColumnType("int");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("PlayerId");
-
-                    b.ToTable("PlayerStatistics");
-                });
-
             modelBuilder.Entity("CricPulse.Domain.Entities.User", b =>
                 {
                     b.Property<int>("Id")
@@ -669,17 +609,6 @@ namespace CricPulse.Infrastructure.Migrations
                         .IsRequired();
 
                     b.Navigation("User");
-                });
-
-            modelBuilder.Entity("CricPulse.Domain.Entities.PlayerStatistics", b =>
-                {
-                    b.HasOne("CricPulse.Domain.Entities.Player", "Player")
-                        .WithMany()
-                        .HasForeignKey("PlayerId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Player");
                 });
 
             modelBuilder.Entity("CricPulse.Domain.Entities.Wicket", b =>
