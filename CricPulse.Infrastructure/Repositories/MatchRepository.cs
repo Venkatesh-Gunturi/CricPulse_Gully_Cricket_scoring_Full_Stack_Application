@@ -118,9 +118,15 @@ namespace CricPulse.Infrastructure.Repositories
                 .ToListAsync();
         }
 
+        // Purpose:
+        // Load a scheduled match with its assigned players and user details
+        // so the lineup can be safely edited and returned to the frontend.
         public async Task<MatchEntity?> GetByIdForUpdateAsync(int matchId)
         {
             return await _context.Matches
+                .Include(m => m.MatchPlayers)
+                    .ThenInclude(mp => mp.Player)
+                        .ThenInclude(p => p.User)
                 .FirstOrDefaultAsync(m => m.Id == matchId);
         }
 
@@ -150,10 +156,16 @@ namespace CricPulse.Infrastructure.Repositories
             return true;
         }
 
+        // Purpose:
+        // Load all matches belonging to an umpire together with their assigned players
+        // so the dashboard and match management screens can display the existing lineup.
         public async Task<List<MatchEntity>> GetMatchesByUmpireAsync(int umpireId)
         {
             return await _context.Matches
                 .Where(m => m.UmpireId == umpireId)
+                .Include(m => m.MatchPlayers)
+                    .ThenInclude(mp => mp.Player)
+                        .ThenInclude(p => p.User)
                 .OrderByDescending(m => m.MatchDate)
                 .ThenByDescending(m => m.MatchTime)
                 .ToListAsync();

@@ -423,5 +423,52 @@ namespace CricPulse.Application.Services.Auth
             };
         }
 
+        // Purpose:
+        // Promote a registered user to an umpire so they can create and manage matches.
+        public async Task<UserResponseDto> BecomeUmpireAsync(int userId)
+        {
+            var user = await _userRepository.GetByIdAsync(userId);
+
+            if (user == null)
+            {
+                throw new InvalidOperationException(
+                    "User not found.");
+            }
+
+            if (!user.IsActive)
+            {
+                throw new InvalidOperationException(
+                    "Your account is not active.");
+            }
+
+            if (!user.IsMobileVerified)
+            {
+                throw new InvalidOperationException(
+                    "Your mobile number must be verified before becoming an umpire.");
+            }
+
+            if (!user.IsUmpire)
+            {
+                user.IsUmpire = true;
+                user.UpdatedAt = DateTime.UtcNow;
+
+                await _userRepository.UpdateAsync(user);
+            }
+
+            return new UserResponseDto
+            {
+                Id = user.Id,
+                FirstName = user.FirstName,
+                LastName = user.LastName,
+                Email = user.Email,
+                MobileNumber = user.MobileNumber,
+                IsEmailVerified = user.IsEmailVerified,
+                IsMobileVerified = user.IsMobileVerified,
+                IsUmpire = user.IsUmpire,
+                ProfileImageUrl = user.ProfileImageUrl,
+                IsActive = user.IsActive,
+                CreatedAt = user.CreatedAt
+            };
+        }
     }
 }

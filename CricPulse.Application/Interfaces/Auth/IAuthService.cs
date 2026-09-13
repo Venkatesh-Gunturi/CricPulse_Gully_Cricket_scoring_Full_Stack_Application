@@ -12,5 +12,6 @@ namespace CricPulse.Application.Interfaces.Auth
         Task<LoginResponseDto?> LoginAsync(LoginDto dto);
 
         Task<UserResponseDto> RegisterMatchPlayerAsync(string mobileNumber);
+        Task<UserResponseDto> BecomeUmpireAsync(int userId);
     }
 }

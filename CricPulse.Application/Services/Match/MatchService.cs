@@ -58,13 +58,6 @@ namespace CricPulse.Application.Services.Match
                 throw new InvalidOperationException("User not found.");
             }
 
-            // Any authenticated registered user becomes an umpire when creating a match.
-            if (!user.IsUmpire)
-            {
-                user.IsUmpire = true;
-                await _userRepository.UpdateAsync(user);
-            }
-
             if (string.IsNullOrWhiteSpace(dto.Team1Name) ||
                 string.IsNullOrWhiteSpace(dto.Team2Name))
             {
@@ -318,7 +311,20 @@ namespace CricPulse.Application.Services.Match
                 Status = match.Status.ToString(),
 
                 CreatedAt = match.CreatedAt,
-                UpdatedAt = match.UpdatedAt
+                UpdatedAt = match.UpdatedAt,
+
+                Players = match.MatchPlayers
+                    .Where(mp => mp.Player != null)
+                    .Select(mp => new MatchPlayerResponseDto
+                    {
+                        PlayerId = mp.Player.Id,
+                        MobileNumber = mp.Player.User.MobileNumber,
+                        DisplayName =
+                            $"{mp.Player.User.FirstName} {mp.Player.User.LastName}"
+                                .Trim(),
+                        Team = mp.Team
+                    })
+                    .ToList()
             };
         }
 
@@ -364,7 +370,7 @@ namespace CricPulse.Application.Services.Match
 
 
         // Purpose:
-        // Update a scheduled match while preventing changes after the match has started.
+        // Validate and update a scheduled match, including its players and match details.
         public async Task<MatchResponseDto?> UpdateMatchAsync(
             int matchId,
             int userId,
@@ -390,23 +396,230 @@ namespace CricPulse.Application.Services.Match
                     "Only scheduled matches can be updated.");
             }
 
-            match.Team1Name = dto.Team1Name;
-            match.Team1Logo = dto.Team1Logo;
+            if (string.IsNullOrWhiteSpace(dto.Team1Name) ||
+                string.IsNullOrWhiteSpace(dto.Team2Name))
+            {
+                throw new InvalidOperationException(
+                    "Both team names are required.");
+            }
 
-            match.Team2Name = dto.Team2Name;
-            match.Team2Logo = dto.Team2Logo;
+            if (dto.Team1Name.Trim()
+                .Equals(
+                    dto.Team2Name.Trim(),
+                    StringComparison.OrdinalIgnoreCase))
+            {
+                throw new InvalidOperationException(
+                    "Team 1 and Team 2 must have different names.");
+            }
 
-            match.Overs = dto.Overs;
+            if (!int.TryParse(dto.Team1Logo, out var team1LogoId) ||
+                !Enum.IsDefined(typeof(TeamLogo), team1LogoId))
+            {
+                throw new InvalidOperationException(
+                    "Team 1 logo must be one of the predefined logos.");
+            }
 
-            match.MatchDate = dto.MatchDate;
-            match.MatchTime = dto.MatchTime;
+            if (!int.TryParse(dto.Team2Logo, out var team2LogoId) ||
+                !Enum.IsDefined(typeof(TeamLogo), team2LogoId))
+            {
+                throw new InvalidOperationException(
+                    "Team 2 logo must be one of the predefined logos.");
+            }
 
-            match.VenueName = dto.VenueName;
-            match.Address = dto.Address;
+            if (dto.PlayersPerTeam < 4 ||
+                dto.PlayersPerTeam > 11)
+            {
+                throw new InvalidOperationException(
+                    "Players per team must be between 4 and 11.");
+            }
 
-            match.LiveStreamUrl = dto.LiveStreamUrl;
+            if (dto.Overs < 1 ||
+                dto.Overs > 90)
+            {
+                throw new InvalidOperationException(
+                    "Overs must be between 1 and 90.");
+            }
 
-            match.UpdatedAt = DateTime.UtcNow;
+            if (dto.MatchDate == default)
+            {
+                throw new InvalidOperationException(
+                    "Match date is required.");
+            }
+
+            if (dto.MatchTime == default)
+            {
+                throw new InvalidOperationException(
+                    "Match time is required.");
+            }
+
+            if (string.IsNullOrWhiteSpace(dto.VenueName))
+            {
+                throw new InvalidOperationException(
+                    "Venue name is required.");
+            }
+
+            if (dto.Players == null)
+            {
+                throw new InvalidOperationException(
+                    "Players are required.");
+            }
+
+            var expectedPlayers =
+                dto.PlayersPerTeam * 2;
+
+            if (dto.Players.Count != expectedPlayers)
+            {
+                throw new InvalidOperationException(
+                    $"Exactly {expectedPlayers} players are required.");
+            }
+
+            var validTeams = new[]
+            {
+        "Team1",
+        "Team2"
+    };
+
+            if (dto.Players.Any(p =>
+                    !validTeams.Contains(p.Team)))
+            {
+                throw new InvalidOperationException(
+                    "Players must belong to Team1 or Team2.");
+            }
+
+            var team1Players = dto.Players
+                .Where(p => p.Team == "Team1")
+                .ToList();
+
+            var team2Players = dto.Players
+                .Where(p => p.Team == "Team2")
+                .ToList();
+
+            if (team1Players.Count != dto.PlayersPerTeam)
+            {
+                throw new InvalidOperationException(
+                    $"Team 1 must have exactly {dto.PlayersPerTeam} players.");
+            }
+
+            if (team2Players.Count != dto.PlayersPerTeam)
+            {
+                throw new InvalidOperationException(
+                    $"Team 2 must have exactly {dto.PlayersPerTeam} players.");
+            }
+
+            var normalizedMobiles = dto.Players
+                .Select(p => p.MobileNumber.Trim())
+                .ToList();
+
+            if (normalizedMobiles.Any(m =>
+                    m.Length != 10 ||
+                    !m.All(char.IsDigit)))
+            {
+                throw new InvalidOperationException(
+                    "Every player mobile number must contain exactly 10 digits.");
+            }
+
+            if (normalizedMobiles.Count !=
+                normalizedMobiles.Distinct().Count())
+            {
+                throw new InvalidOperationException(
+                    "A player cannot be assigned more than once.");
+            }
+
+            var playersToAssign =
+                new List<MatchPlayerEntity>();
+
+            foreach (var playerDto in dto.Players)
+            {
+                var mobileNumber =
+                    playerDto.MobileNumber.Trim();
+
+                var userAccount =
+                    await _userRepository
+                        .GetByMobileNumberAsync(mobileNumber);
+
+                if (userAccount == null ||
+                    !userAccount.IsMobileVerified ||
+                    userAccount.Player == null)
+                {
+                    throw new InvalidOperationException(
+                        $"Player with mobile number {mobileNumber} is not onboarded.");
+                }
+
+                if (userAccount.Id == userId)
+                {
+                    throw new InvalidOperationException(
+                        "The match umpire cannot participate as a player.");
+                }
+
+                playersToAssign.Add(
+                    new MatchPlayerEntity
+                    {
+                        PlayerId = userAccount.Player.Id,
+                        Team = playerDto.Team,
+                        CreatedAt = DateTime.UtcNow
+                    });
+            }
+
+            if (!string.IsNullOrWhiteSpace(dto.LiveStreamUrl))
+            {
+                if (!Uri.TryCreate(
+                        dto.LiveStreamUrl,
+                        UriKind.Absolute,
+                        out var youtubeUri) ||
+                    (youtubeUri.Host != "youtube.com" &&
+                     youtubeUri.Host != "www.youtube.com" &&
+                     youtubeUri.Host != "youtu.be" &&
+                     youtubeUri.Host != "m.youtube.com"))
+                {
+                    throw new InvalidOperationException(
+                        "Live stream URL must be a valid YouTube URL.");
+                }
+            }
+
+            // Replace the existing player assignments because the match
+            // is still scheduled and its player lineup can be changed.
+            match.MatchPlayers.Clear();
+
+            foreach (var matchPlayer in playersToAssign)
+            {
+                match.MatchPlayers.Add(matchPlayer);
+            }
+
+            match.Team1Name =
+                dto.Team1Name.Trim();
+
+            match.Team1Logo =
+                dto.Team1Logo;
+
+            match.Team2Name =
+                dto.Team2Name.Trim();
+
+            match.Team2Logo =
+                dto.Team2Logo;
+
+            match.PlayersPerTeam =
+                dto.PlayersPerTeam;
+
+            match.Overs =
+                dto.Overs;
+
+            match.MatchDate =
+                dto.MatchDate;
+
+            match.MatchTime =
+                dto.MatchTime;
+
+            match.VenueName =
+                dto.VenueName.Trim();
+
+            match.Address =
+                dto.Address?.Trim() ?? string.Empty;
+
+            match.LiveStreamUrl =
+                dto.LiveStreamUrl?.Trim();
+
+            match.UpdatedAt =
+                DateTime.UtcNow;
 
             var updatedMatch =
                 await _matchRepository.UpdateAsync(match);

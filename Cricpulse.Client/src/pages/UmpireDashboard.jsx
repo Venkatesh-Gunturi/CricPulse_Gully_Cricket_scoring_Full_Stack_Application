@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { getMyMatches } from "../services/matchService";
 import MatchManagement from "../components/Match/MatchManagement";
 
-const UmpireDashboard = ({ onCreateMatch }) => {
+const UmpireDashboard = ({ onCreateMatch, onContinueScoring }) => {
   const [matches, setMatches] = useState([]);
   const [selectedStatus, setSelectedStatus] = useState("Scheduled");
   const [selectedMatch, setSelectedMatch] = useState(null);
@@ -10,6 +10,8 @@ const UmpireDashboard = ({ onCreateMatch }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
+  // Purpose:
+  // Load all matches belonging to the currently logged-in umpire.
   const loadMatches = async () => {
     try {
       setLoading(true);
@@ -19,7 +21,10 @@ const UmpireDashboard = ({ onCreateMatch }) => {
 
       setMatches(data);
     } catch (error) {
-      console.error("Failed to load umpire matches:", error);
+      console.error(
+        "Failed to load umpire matches:",
+        error
+      );
 
       setError("Failed to load your matches.");
     } finally {
@@ -35,6 +40,9 @@ const UmpireDashboard = ({ onCreateMatch }) => {
     (match) => match.status === selectedStatus
   );
 
+  // Purpose:
+  // Update the dashboard immediately after a match is edited,
+  // started, or cancelled.
   const handleMatchUpdated = (updatedMatch) => {
     setMatches((previousMatches) =>
       previousMatches.map((match) =>
@@ -47,6 +55,8 @@ const UmpireDashboard = ({ onCreateMatch }) => {
     setSelectedMatch(updatedMatch);
   };
 
+  // Purpose:
+  // Return the appropriate heading for the selected match category.
   const getStatusTitle = () => {
     switch (selectedStatus) {
       case "Scheduled":
@@ -205,32 +215,39 @@ const UmpireDashboard = ({ onCreateMatch }) => {
               {match.status === "Scheduled" && (
                 <button
                   className="btn btn-outline-primary"
-                  onClick={() =>
-                    setSelectedMatch(match)
-                  }
+                  onClick={() => {
+                    setSelectedMatch(
+                      selectedMatch?.id === match.id
+                        ? null
+                        : match
+                    );
+                  }}
                 >
-                  Manage
+                  {selectedMatch?.id === match.id
+                    ? "Close"
+                    : "Manage"}
                 </button>
               )}
 
               {match.status === "Live" && (
                 <button
-                  className="btn btn-outline-danger"
+                  className="btn btn-danger"
                   onClick={() =>
-                    setSelectedMatch(match)
+                    onContinueScoring(match)
                   }
                 >
-                  Manage
+                  ▶️ Continue Scoring
                 </button>
               )}
             </div>
 
-            {selectedMatch?.id === match.id && (
-              <MatchManagement
-                match={selectedMatch}
-                onMatchUpdated={handleMatchUpdated}
-              />
-            )}
+            {selectedMatch?.id === match.id &&
+              match.status === "Scheduled" && (
+                <MatchManagement
+                  match={selectedMatch}
+                  onMatchUpdated={handleMatchUpdated}
+                />
+              )}
           </div>
         </div>
       ))}

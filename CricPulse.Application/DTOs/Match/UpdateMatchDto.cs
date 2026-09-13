@@ -18,5 +18,7 @@
         public string Address { get; set; } = string.Empty;
 
         public string? LiveStreamUrl { get; set; }
+
+        public List<MatchPlayerDto> Players { get; set; } = new();
     }
 }

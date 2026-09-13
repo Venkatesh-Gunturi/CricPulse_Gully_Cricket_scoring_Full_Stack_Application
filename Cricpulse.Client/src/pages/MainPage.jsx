@@ -5,7 +5,7 @@ import MatchList from "../components/Match/MatchList";
 import {
   getCurrentLocation,
   getStateByLocation
-} from "../services/locationService";
+} from "../services/LocationService";
 
 const indianStates = [
   "Andaman and Nicobar Islands",
@@ -48,7 +48,9 @@ const indianStates = [
 
 function MainPage({
   onLogin,
-  onRegister
+  onRegister,
+  loggedInUser,
+  onCreateMatch
 }) {
   const [selectedStatus, setSelectedStatus] =
     useState("Scheduled");
@@ -110,20 +112,31 @@ function MainPage({
           </span>
 
           <div>
-            <button
-              className="btn btn-outline-light me-2"
-              onClick={onLogin}
-            >
-              Login
-            </button>
+            {loggedInUser ? (
+              <button
+                className="btn btn-warning"
+                onClick={onCreateMatch}
+              >
+                🏏 Create Match
+              </button>
+            ) : (
+              <>
+                <button
+                  className="btn btn-outline-light me-2"
+                  onClick={onLogin}
+                >
+                  Login
+                </button>
 
-            <button
-              className="btn btn-primary"
-              onClick={onRegister}
-            >
-              Register
-            </button>
-          </div>
+                <button
+                  className="btn btn-primary"
+                  onClick={onRegister}
+                >
+                  Register
+                </button>
+              </>
+              )}
+            </div>
         </div>
       </nav>
 

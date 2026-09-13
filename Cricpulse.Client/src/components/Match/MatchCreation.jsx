@@ -1,14 +1,14 @@
 import { useState } from "react";
 import { createMatch } from "../../services/matchService";
-import { getCurrentLocation } from "../../services/LocationService";
 import MatchPlayerAssignment from "./PlayerAssignment";
+import { getCurrentLocation } from "../../services/LocationService";
 
 const MatchCreation = () => {
   const [formData, setFormData] = useState({
     team1Name: "",
-    team1Logo: "logo_01",
+    team1Logo: "1",
     team2Name: "",
-    team2Logo: "logo_02",
+    team2Logo: "2",
     playersPerTeam: 11,
     overs: 20,
     matchDate: "",
@@ -98,10 +98,6 @@ const MatchCreation = () => {
       return "Venue name is required.";
     }
 
-    if (!formData.address.trim()) {
-      return "Address is required.";
-    }
-
     if (
       formData.latitude === "" ||
       formData.longitude === ""
@@ -137,12 +133,12 @@ const MatchCreation = () => {
       const players = [
         ...team1Players.map((player) => ({
           mobileNumber: player.mobileNumber,
-          team: formData.team1Name.trim()
+          team: "Team1"
         })),
 
         ...team2Players.map((player) => ({
           mobileNumber: player.mobileNumber,
-          team: formData.team2Name.trim()
+          team: "Team2"
         }))
       ];
 
@@ -160,7 +156,7 @@ const MatchCreation = () => {
         matchTime: `${formData.matchTime}:00`,
 
         venueName: formData.venueName.trim(),
-        address: formData.address.trim(),
+        address: formData.address.trim() || "",
 
         latitude: Number(formData.latitude),
         longitude: Number(formData.longitude),
@@ -229,11 +225,11 @@ const MatchCreation = () => {
             onChange={handleChange}
             style={{ width: "100%" }}
           >
-            <option value="logo_01">Logo 01</option>
-            <option value="logo_02">Logo 02</option>
-            <option value="logo_03">Logo 03</option>
-            <option value="logo_04">Logo 04</option>
-            <option value="logo_05">Logo 05</option>
+            {Array.from({ length: 10 }, (_, index) => index + 1).map((logo) => (
+              <option key={logo} value={logo}>
+                Logo {String(logo).padStart(2, "0")}
+              </option>
+            ))}
           </select>
         </div>
       </section>
@@ -260,15 +256,15 @@ const MatchCreation = () => {
 
           <select
             name="team2Logo"
-            value={formData.team2Logo}
+            value={formData.team1Logo}
             onChange={handleChange}
             style={{ width: "100%" }}
           >
-            <option value="logo_01">Logo 01</option>
-            <option value="logo_02">Logo 02</option>
-            <option value="logo_03">Logo 03</option>
-            <option value="logo_04">Logo 04</option>
-            <option value="logo_05">Logo 05</option>
+            {Array.from({ length: 10 }, (_, index) => index + 1).map((logo) => (
+              <option key={logo} value={logo}>
+                Logo {String(logo).padStart(2, "0")}
+              </option>
+            ))}
           </select>
         </div>
       </section>

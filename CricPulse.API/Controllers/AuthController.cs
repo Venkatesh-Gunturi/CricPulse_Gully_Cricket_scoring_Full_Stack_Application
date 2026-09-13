@@ -66,5 +66,28 @@ namespace CricPulse.API.Controllers
         }
 
 
+        // Purpose:
+        // Allow an authenticated registered user to become an umpire.
+        [Authorize]
+        [HttpPost("become-umpire")]
+        public async Task<IActionResult> BecomeUmpire()
+        {
+            var userIdClaim =
+                User.FindFirst(ClaimTypes.NameIdentifier);
+
+            if (userIdClaim == null)
+            {
+                return Unauthorized();
+            }
+
+            var userId = int.Parse(userIdClaim.Value);
+
+            var user =
+                await _authService.BecomeUmpireAsync(userId);
+
+            return Ok(user);
+        }
+
+
     }
 }

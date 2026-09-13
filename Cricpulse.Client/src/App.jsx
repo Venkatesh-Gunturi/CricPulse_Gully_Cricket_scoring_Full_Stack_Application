@@ -114,7 +114,13 @@ function App() {
         <MainPage
           onLogin={() => setShowLoginModal(true)}
           onRegister={() => setShowRegisterModal(true)}
+          loggedInUser={loggedInUser}
+          onCreateMatch={() => setShowMatchCreation(true)}
         />
+      )}
+
+      {showMatchCreation && (
+        <MatchCreation />
       )}
 
       {appMode === "umpire" &&
@@ -125,6 +131,9 @@ function App() {
                 onCreateMatch={() =>
                   setShowMatchCreation(true)
                 }
+                onContinueScoring={(match) => {
+                  console.log("Continue scoring:", match);
+                }}
               />
             ) : (
               <div className="container mt-4">

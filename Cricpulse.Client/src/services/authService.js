@@ -54,3 +54,21 @@ export const testAuth = async () => {
 
   return response.data;
 };
+
+// Purpose:
+// Promote the authenticated user to an umpire.
+export const becomeUmpire = async () => {
+  const token = localStorage.getItem("token");
+
+  const response = await axios.post(
+    `${API_URL}/become-umpire`,
+    {},
+    {
+      headers: {
+        Authorization: `Bearer ${token}`
+      }
+    }
+  );
+
+  return response.data;
+};

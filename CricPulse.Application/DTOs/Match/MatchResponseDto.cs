@@ -1,8 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace CricPulse.Application.DTOs.Match
 {
@@ -34,10 +31,22 @@ namespace CricPulse.Application.DTOs.Match
         public string? LiveStreamUrl { get; set; }
 
         public string Status { get; set; } = string.Empty;
-      
 
         public DateTime CreatedAt { get; set; }
         public DateTime? UpdatedAt { get; set; }
         public double? DistanceInKm { get; set; }
+
+        public List<MatchPlayerResponseDto> Players { get; set; } = new();
+    }
+
+    public class MatchPlayerResponseDto
+    {
+        public int PlayerId { get; set; }
+
+        public string MobileNumber { get; set; } = string.Empty;
+
+        public string DisplayName { get; set; } = string.Empty;
+
+        public string Team { get; set; } = string.Empty;
     }
 }

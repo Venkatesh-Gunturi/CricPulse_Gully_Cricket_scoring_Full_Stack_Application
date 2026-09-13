@@ -19,35 +19,69 @@ const createEmptySlot = () => ({
   verifying: false
 });
 
+// Purpose:
+// Convert existing match-player data into the internal slot structure.
+const createInitialSlots = (players) => {
+  if (!players || players.length === 0) {
+    return [createEmptySlot()];
+  }
+
+  return players.map((player) => ({
+    mobileNumber: player.mobileNumber,
+    playerId: player.playerId,
+    displayName: player.displayName,
+    verified: true,
+    onboardingRequired: false,
+    userId: null,
+    otp: "",
+    error: "",
+    submitting: false,
+    verifying: false
+  }));
+};
+
 const MatchPlayerAssignment = ({
   playersPerTeam,
   team1Players,
   team2Players,
   setTeam1Players,
-  setTeam2Players
+  setTeam2Players,
+  initialTeam1Players = [],
+  initialTeam2Players = []
 }) => {
-  const [team1Slots, setTeam1Slots] = useState([
-    createEmptySlot()
-  ]);
+  const [team1Slots, setTeam1Slots] = useState(() =>
+    createInitialSlots(initialTeam1Players)
+  );
 
-  const [team2Slots, setTeam2Slots] = useState([
-    createEmptySlot()
-  ]);
+  const [team2Slots, setTeam2Slots] = useState(() =>
+    createInitialSlots(initialTeam2Players)
+  );
 
-  // Purpose: Keep the number of available slots aligned with the selected team size.
-  useEffect(() => {
-    setTeam1Slots((current) => {
-      const verifiedPlayers = current.filter(
-        (slot) => slot.verified
-      );
+  // Purpose:
+// Synchronize Team 1 slots when the selected team size or initial edit lineup changes.
+useEffect(() => {
+  setTeam1Slots((current) => {
+    const hasInitialPlayers =
+      initialTeam1Players &&
+      initialTeam1Players.length > 0;
 
-      let updated = current.slice(0, playersPerTeam);
+    if (hasInitialPlayers) {
+      const initialSlots =
+        createInitialSlots(
+          initialTeam1Players
+        );
+
+      const updated =
+        initialSlots.slice(
+          0,
+          playersPerTeam
+        );
 
       if (
-        verifiedPlayers.length < playersPerTeam &&
-        updated.length === verifiedPlayers.length
+        updated.length < playersPerTeam &&
+        updated.every((slot) => slot.verified)
       ) {
-        updated = [...updated, createEmptySlot()];
+        updated.push(createEmptySlot());
       }
 
       setTeam1Players(
@@ -57,23 +91,59 @@ const MatchPlayerAssignment = ({
       );
 
       return updated;
-    });
-  }, [playersPerTeam]);
+    }
 
-  // Purpose: Keep the number of available slots aligned with the selected team size.
-  useEffect(() => {
-    setTeam2Slots((current) => {
-      const verifiedPlayers = current.filter(
-        (slot) => slot.verified
+    const updated =
+      current.slice(
+        0,
+        playersPerTeam
       );
 
-      let updated = current.slice(0, playersPerTeam);
+    if (
+      updated.length === 0 ||
+      (
+        updated.length < playersPerTeam &&
+        updated.every((slot) => slot.verified)
+      )
+    ) {
+      updated.push(createEmptySlot());
+    }
+
+    setTeam1Players(
+      updated
+        .filter((slot) => slot.verified)
+        .map(toPlayer)
+    );
+
+    return updated;
+  });
+}, [playersPerTeam, initialTeam1Players]);
+
+// Purpose:
+// Synchronize Team 2 slots when the selected team size or initial edit lineup changes.
+useEffect(() => {
+  setTeam2Slots((current) => {
+    const hasInitialPlayers =
+      initialTeam2Players &&
+      initialTeam2Players.length > 0;
+
+    if (hasInitialPlayers) {
+      const initialSlots =
+        createInitialSlots(
+          initialTeam2Players
+        );
+
+      const updated =
+        initialSlots.slice(
+          0,
+          playersPerTeam
+        );
 
       if (
-        verifiedPlayers.length < playersPerTeam &&
-        updated.length === verifiedPlayers.length
+        updated.length < playersPerTeam &&
+        updated.every((slot) => slot.verified)
       ) {
-        updated = [...updated, createEmptySlot()];
+        updated.push(createEmptySlot());
       }
 
       setTeam2Players(
@@ -83,10 +153,37 @@ const MatchPlayerAssignment = ({
       );
 
       return updated;
-    });
-  }, [playersPerTeam]);
+    }
 
-  // Purpose: Convert a verified slot into the player object used by MatchCreation.
+    const updated =
+      current.slice(
+        0,
+        playersPerTeam
+      );
+
+    if (
+      updated.length === 0 ||
+      (
+        updated.length < playersPerTeam &&
+        updated.every((slot) => slot.verified)
+      )
+    ) {
+      updated.push(createEmptySlot());
+    }
+
+    setTeam2Players(
+      updated
+        .filter((slot) => slot.verified)
+        .map(toPlayer)
+    );
+
+    return updated;
+  });
+}, [playersPerTeam, initialTeam2Players]);
+
+
+  // Purpose:
+  // Convert a verified slot into the player object used by the parent component.
   const toPlayer = (slot) => ({
     mobileNumber: slot.mobileNumber,
     playerId: slot.playerId,
@@ -94,7 +191,8 @@ const MatchPlayerAssignment = ({
     verified: true
   });
 
-  // Purpose: Extract the useful error message returned by the API.
+  // Purpose:
+  // Extract the useful error message returned by the API.
   const getErrorMessage = (error) => {
     const responseData = error?.response?.data;
 
@@ -109,7 +207,8 @@ const MatchPlayerAssignment = ({
     return "Something went wrong. Please try again.";
   };
 
-  // Purpose: Check whether a player is already assigned anywhere in either team.
+  // Purpose:
+  // Check whether a player is already assigned anywhere in either team.
   const isDuplicatePlayer = (
     playerId,
     mobileNumber,
@@ -142,7 +241,8 @@ const MatchPlayerAssignment = ({
     );
   };
 
-  // Purpose: Update a player's mobile number and reset any previous pending verification state.
+  // Purpose:
+  // Update a player's mobile number and reset previous verification state.
   const handleMobileChange = (team, index, value) => {
     const setter =
       team === "team1"
@@ -162,6 +262,9 @@ const MatchPlayerAssignment = ({
         return {
           ...slot,
           mobileNumber: value,
+          playerId: null,
+          displayName: "",
+          verified: false,
           onboardingRequired: false,
           userId: null,
           otp: "",
@@ -171,7 +274,8 @@ const MatchPlayerAssignment = ({
     );
   };
 
-  // Purpose: Update one property of a specific player slot.
+  // Purpose:
+  // Update one property of a specific player slot.
   const updateSlot = (team, index, changes) => {
     const setter =
       team === "team1"
@@ -187,7 +291,8 @@ const MatchPlayerAssignment = ({
     );
   };
 
-  // Purpose: Look up an existing player or start onboarding for an unregistered player.
+  // Purpose:
+  // Look up an existing player or start onboarding for an unregistered player.
   const handleSubmit = async (team, index) => {
     const slots =
       team === "team1"
@@ -196,9 +301,23 @@ const MatchPlayerAssignment = ({
 
     const slot = slots[index];
 
-    if (!slot?.mobileNumber.trim()) {
+    const mobileNumber =
+      slot?.mobileNumber?.trim() || "";
+
+    if (!mobileNumber) {
       updateSlot(team, index, {
         error: "Mobile number is required."
+      });
+
+      return;
+    }
+
+    if (
+      mobileNumber.length !== 10 ||
+      !/^[0-9]{10}$/.test(mobileNumber)
+    ) {
+      updateSlot(team, index, {
+        error: "Mobile number must contain exactly 10 digits."
       });
 
       return;
@@ -210,9 +329,8 @@ const MatchPlayerAssignment = ({
     });
 
     try {
-      const result = await lookupPlayerByMobile(
-        slot.mobileNumber.trim()
-      );
+      const result =
+        await lookupPlayerByMobile(mobileNumber);
 
       if (result.isRegistered) {
         if (!result.playerId) {
@@ -227,7 +345,7 @@ const MatchPlayerAssignment = ({
         if (
           isDuplicatePlayer(
             result.playerId,
-            slot.mobileNumber,
+            mobileNumber,
             team,
             index
           )
@@ -241,7 +359,7 @@ const MatchPlayerAssignment = ({
         }
 
         markPlayerVerified(team, index, {
-          mobileNumber: slot.mobileNumber.trim(),
+          mobileNumber,
           playerId: result.playerId,
           displayName:
             result.displayName || "Player"
@@ -251,9 +369,7 @@ const MatchPlayerAssignment = ({
       }
 
       const onboarding =
-        await startPlayerOnboarding(
-          slot.mobileNumber.trim()
-        );
+        await startPlayerOnboarding(mobileNumber);
 
       updateSlot(team, index, {
         submitting: false,
@@ -270,7 +386,8 @@ const MatchPlayerAssignment = ({
     }
   };
 
-  // Purpose: Verify a new player's OTP and then reload their player profile.
+  // Purpose:
+  // Verify a new player's OTP and reload their player profile.
   const handleVerifyOtp = async (team, index) => {
     const slots =
       team === "team1"
@@ -279,9 +396,19 @@ const MatchPlayerAssignment = ({
 
     const slot = slots[index];
 
-    if (!slot?.otp.trim()) {
+    const otp = slot?.otp?.trim() || "";
+
+    if (!otp) {
       updateSlot(team, index, {
         error: "OTP is required."
+      });
+
+      return;
+    }
+
+    if (!/^[0-9]{6}$/.test(otp)) {
+      updateSlot(team, index, {
+        error: "OTP must contain exactly 6 digits."
       });
 
       return;
@@ -295,7 +422,7 @@ const MatchPlayerAssignment = ({
     try {
       await verifyPlayerOnboarding(
         slot.userId,
-        slot.otp.trim()
+        otp
       );
 
       const result =
@@ -303,7 +430,10 @@ const MatchPlayerAssignment = ({
           slot.mobileNumber.trim()
         );
 
-      if (!result.isRegistered || !result.playerId) {
+      if (
+        !result.isRegistered ||
+        !result.playerId
+      ) {
         updateSlot(team, index, {
           verifying: false,
           error:
@@ -331,7 +461,8 @@ const MatchPlayerAssignment = ({
       }
 
       markPlayerVerified(team, index, {
-        mobileNumber: slot.mobileNumber.trim(),
+        mobileNumber:
+          slot.mobileNumber.trim(),
         playerId: result.playerId,
         displayName:
           result.displayName || "Player"
@@ -344,7 +475,8 @@ const MatchPlayerAssignment = ({
     }
   };
 
-  // Purpose: Mark a player as verified and reveal the next player slot.
+  // Purpose:
+  // Mark a player as verified and reveal the next available player slot.
   const markPlayerVerified = (team, index, player) => {
     const setter =
       team === "team1"
@@ -374,9 +506,10 @@ const MatchPlayerAssignment = ({
             : slot
       );
 
-      const verifiedPlayers = updated
-        .filter((slot) => slot.verified)
-        .map(toPlayer);
+      const verifiedPlayers =
+        updated
+          .filter((slot) => slot.verified)
+          .map(toPlayer);
 
       setPlayers(verifiedPlayers);
 
@@ -391,7 +524,8 @@ const MatchPlayerAssignment = ({
     });
   };
 
-  // Purpose: Remove a player and make the slot available again.
+  // Purpose:
+  // Remove a player and make the slot available again.
   const handleRemove = (team, index) => {
     const setter =
       team === "team1"
@@ -422,7 +556,8 @@ const MatchPlayerAssignment = ({
     });
   };
 
-  // Purpose: Render one team's player assignment slots.
+  // Purpose:
+  // Render one team's player assignment slots.
   const renderTeamSlots = (team, slots) => {
     const teamName =
       team === "team1"
