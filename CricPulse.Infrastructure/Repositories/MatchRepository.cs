@@ -158,14 +158,16 @@ namespace CricPulse.Infrastructure.Repositories
 
         // Purpose:
         // Load all matches belonging to an umpire together with their assigned players
-        // so the dashboard and match management screens can display the existing lineup.
-        public async Task<List<MatchEntity>> GetMatchesByUmpireAsync(int umpireId)
+        // and innings so the dashboard can correctly determine the current scoring state.
+        public async Task<List<MatchEntity>> GetMatchesByUmpireAsync(
+            int umpireId)
         {
             return await _context.Matches
                 .Where(m => m.UmpireId == umpireId)
                 .Include(m => m.MatchPlayers)
                     .ThenInclude(mp => mp.Player)
                         .ThenInclude(p => p.User)
+                .Include(m => m.Innings)
                 .OrderByDescending(m => m.MatchDate)
                 .ThenByDescending(m => m.MatchTime)
                 .ToListAsync();

@@ -20,5 +20,8 @@ namespace CricPulse.Application.Interfaces.Match
         Task<MatchEntity?> GetMatchForInningsAsync(int matchId);
 
         Task<List<MatchEntity>> GetPendingCompletionMatchesAsync();
+        Task<MatchEntity?> GetMatchForStatisticsAsync(int matchId);
+
+        Task DeleteCompletedMatchAsync(int matchId);
     }
 }

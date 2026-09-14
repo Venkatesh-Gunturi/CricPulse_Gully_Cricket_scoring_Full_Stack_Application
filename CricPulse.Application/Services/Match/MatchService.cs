@@ -295,7 +295,8 @@ namespace CricPulse.Application.Services.Match
         }
 
         // Purpose:
-        // Convert the domain match entity into the API response model used by the frontend.
+        // Map the domain match into the API response while exposing the persisted
+        // toss and innings state needed by the umpire scoring flow.
         private MatchResponseDto MapToResponse(MatchEntity match)
         {
             return new MatchResponseDto
@@ -320,6 +321,7 @@ namespace CricPulse.Application.Services.Match
 
                 Latitude = match.Latitude,
                 Longitude = match.Longitude,
+
                 State = match.State,
 
                 LiveStreamUrl = match.LiveStreamUrl,
@@ -329,15 +331,24 @@ namespace CricPulse.Application.Services.Match
                 CreatedAt = match.CreatedAt,
                 UpdatedAt = match.UpdatedAt,
 
+                DistanceInKm = null,
+
+                TossWinnerTeam = match.TossWinnerTeam,
+                TossDecision = match.TossDecision,
+                BattingFirstTeam = match.BattingFirstTeam,
+
+                HasStartedInnings =
+                    match.Innings != null &&
+                    match.Innings.Any(),
+
                 Players = match.MatchPlayers
-                    .Where(mp => mp.Player != null)
                     .Select(mp => new MatchPlayerResponseDto
                     {
-                        PlayerId = mp.Player.Id,
+                        MatchPlayerId=mp.Id,
+                        PlayerId = mp.PlayerId,
                         MobileNumber = mp.Player.User.MobileNumber,
                         DisplayName =
-                            $"{mp.Player.User.FirstName} {mp.Player.User.LastName}"
-                                .Trim(),
+                            $"{mp.Player.User.FirstName} {mp.Player.User.LastName}".Trim(),
                         Team = mp.Team
                     })
                     .ToList()

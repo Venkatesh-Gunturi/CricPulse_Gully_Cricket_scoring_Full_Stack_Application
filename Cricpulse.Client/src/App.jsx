@@ -6,11 +6,18 @@ import UmpireDashboard from "./pages/UmpireDashboard";
 import LoginModal from "./components/Auth/LoginModal";
 import RegisterModal from "./components/Auth/RegisterModal";
 import MatchCreation from "./components/Match/MatchCreation";
+import LiveScoring from "./pages/LiveScoring";
+import TossScreen from "./pages/TossScreen";
+import InningsSetup from "./pages/InningsSetup";
 
 function App() {
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [showRegisterModal, setShowRegisterModal] = useState(false);
   const [showMatchCreation, setShowMatchCreation] = useState(false);
+
+  const [scoringMatch, setScoringMatch] = useState(null);
+  const [tossResult, setTossResult] = useState(null);
+  const [inningsStarted, setInningsStarted] = useState(false);
 
   const [loggedInUser, setLoggedInUser] = useState(
     JSON.parse(localStorage.getItem("user"))
@@ -23,7 +30,10 @@ function App() {
   const handleLoginSuccess = (user) => {
     setLoggedInUser(user);
 
-    localStorage.setItem("user", JSON.stringify(user));
+    localStorage.setItem(
+      "user",
+      JSON.stringify(user)
+    );
 
     setShowLoginModal(false);
 
@@ -41,6 +51,44 @@ function App() {
     setLoggedInUser(null);
     setAppMode("normal");
     setShowMatchCreation(false);
+
+    setScoringMatch(null);
+    setTossResult(null);
+    setInningsStarted(false);
+  };
+
+  // Purpose:
+  // Initialize the correct scoring screen from the persisted match state
+  // when the umpire chooses to continue scoring.
+  const handleContinueScoring = (match) => {
+    setShowMatchCreation(false);
+    setScoringMatch(match);
+
+    if (match.battingFirstTeam) {
+      setTossResult({
+        tossWinnerTeam: match.tossWinnerTeam,
+        tossDecision: match.tossDecision,
+        battingFirstTeam: match.battingFirstTeam,
+        bowlingFirstTeam:
+          match.battingFirstTeam === match.team1Name
+            ? match.team2Name
+            : match.team1Name
+      });
+    } else {
+      setTossResult(null);
+    }
+
+    setInningsStarted(
+      match.hasStartedInnings === true
+    );
+  };
+
+  // Purpose:
+  // Clear the current scoring session and return the umpire to the dashboard.
+  const handleBackToDashboard = () => {
+    setScoringMatch(null);
+    setTossResult(null);
+    setInningsStarted(false);
   };
 
   return (
@@ -116,13 +164,17 @@ function App() {
               onLogin={() => setShowLoginModal(true)}
               onRegister={() => setShowRegisterModal(true)}
               loggedInUser={loggedInUser}
-              onCreateMatch={() => setShowMatchCreation(true)}
+              onCreateMatch={() =>
+                setShowMatchCreation(true)
+              }
             />
           ) : (
             <div className="container mt-4">
               <button
                 className="btn btn-secondary mb-3"
-                onClick={() => setShowMatchCreation(false)}
+                onClick={() =>
+                  setShowMatchCreation(false)
+                }
               >
                 ← Back
               </button>
@@ -133,34 +185,72 @@ function App() {
         </>
       )}
 
-      {appMode === "umpire" && loggedInUser?.isUmpire && (
-        <>
-          {!showMatchCreation ? (
-            <UmpireDashboard
-              onCreateMatch={() => setShowMatchCreation(true)}
-              onContinueScoring={(match) => {
-                console.log("Continue scoring:", match);
-              }}
-            />
-          ) : (
-            <div className="container mt-4">
-              <button
-                className="btn btn-secondary mb-3"
-                onClick={() => setShowMatchCreation(false)}
-              >
-                ← Back to My Matches
-              </button>
+      {appMode === "umpire" &&
+        loggedInUser?.isUmpire && (
+          <>
+            {scoringMatch &&
+              !tossResult ? (
+              <TossScreen
+                match={scoringMatch}
+                onTossComplete={(result) => {
+                  setTossResult(result);
+                }}
+              />
+            ) : scoringMatch &&
+              tossResult &&
+              !inningsStarted ? (
+              <InningsSetup
+                match={scoringMatch}
+                tossResult={tossResult}
+                onInningsStarted={() => {
+                  setInningsStarted(true);
+                }}
+              />
+            ) : scoringMatch ? (
+              <LiveScoring
+                match={{
+                  ...scoringMatch,
+                  battingTeamName:
+                    tossResult?.battingFirstTeam
+                }}
+                onBack={
+                  handleBackToDashboard
+                }
+              />
+            ) : !showMatchCreation ? (
+              <UmpireDashboard
+                onCreateMatch={() =>
+                  setShowMatchCreation(true)
+                }
+                onContinueScoring={
+                  handleContinueScoring
+                }
+              />
+            ) : (
+              <div className="container mt-4">
+                <button
+                  className="btn btn-secondary mb-3"
+                  onClick={() =>
+                    setShowMatchCreation(false)
+                  }
+                >
+                  ← Back to My Matches
+                </button>
 
-              <MatchCreation />
-            </div>
-          )}
-        </>
-      )}
+                <MatchCreation />
+              </div>
+            )}
+          </>
+        )}
 
       <LoginModal
         show={showLoginModal}
-        onClose={() => setShowLoginModal(false)}
-        onLoginSuccess={handleLoginSuccess}
+        onClose={() =>
+          setShowLoginModal(false)
+        }
+        onLoginSuccess={
+          handleLoginSuccess
+        }
         onRegister={() => {
           setShowLoginModal(false);
           setShowRegisterModal(true);
@@ -169,8 +259,12 @@ function App() {
 
       <RegisterModal
         show={showRegisterModal}
-        onClose={() => setShowRegisterModal(false)}
-        onRegistered={(registrationResult) => {
+        onClose={() =>
+          setShowRegisterModal(false)
+        }
+        onRegistered={(
+          registrationResult
+        ) => {
           setShowRegisterModal(false);
 
           localStorage.setItem(
@@ -180,10 +274,15 @@ function App() {
 
           localStorage.setItem(
             "user",
-            JSON.stringify(registrationResult.user)
+            JSON.stringify(
+              registrationResult.user
+            )
           );
 
-          setLoggedInUser(registrationResult.user);
+          setLoggedInUser(
+            registrationResult.user
+          );
+
           setAppMode("normal");
         }}
         onLogin={() => {

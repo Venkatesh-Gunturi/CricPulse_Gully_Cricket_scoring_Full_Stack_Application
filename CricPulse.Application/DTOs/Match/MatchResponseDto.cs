@@ -36,17 +36,13 @@ namespace CricPulse.Application.DTOs.Match
         public DateTime? UpdatedAt { get; set; }
         public double? DistanceInKm { get; set; }
 
+        public string? TossWinnerTeam { get; set; }
+        public string? TossDecision { get; set; }
+        public string? BattingFirstTeam { get; set; }
+        public bool HasStartedInnings { get; set; }
+
         public List<MatchPlayerResponseDto> Players { get; set; } = new();
     }
 
-    public class MatchPlayerResponseDto
-    {
-        public int PlayerId { get; set; }
-
-        public string MobileNumber { get; set; } = string.Empty;
-
-        public string DisplayName { get; set; } = string.Empty;
-
-        public string Team { get; set; } = string.Empty;
-    }
+    
 }

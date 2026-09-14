@@ -1,5 +1,5 @@
-﻿using CricPulse.Application.Interfaces.Match;
-using CricPulse.Domain.Enums;
+﻿using CricPulse.Application.Interfaces;
+using CricPulse.Application.Interfaces.Match;
 
 namespace CricPulse.Api.Services
 {
@@ -17,8 +17,8 @@ namespace CricPulse.Api.Services
         }
 
         // Purpose:
-        // Periodically complete matches whose 10-second completion grace period
-        // has expired without requiring any action from the umpire's browser.
+        // Automatically finalize matches whose completion grace period has expired
+        // by using the same completion workflow as manual umpire confirmation.
         protected override async Task ExecuteAsync(
             CancellationToken stoppingToken)
         {
@@ -32,24 +32,27 @@ namespace CricPulse.Api.Services
                         scope.ServiceProvider
                             .GetRequiredService<IScoringRepository>();
 
+                    var scoringService =
+                        scope.ServiceProvider
+                            .GetRequiredService<IMatchScoringService>();
+
                     var matches =
                         await scoringRepository
                             .GetPendingCompletionMatchesAsync();
 
                     foreach (var match in matches)
                     {
-                        match.Status = MatchStatus.Completed;
-                        match.CompletionDeadline = null;
-                        match.UpdatedAt = DateTime.UtcNow;
-                    }
+                        var completed =
+                            await scoringService.CompleteMatchAsync(
+                                match.UmpireId,
+                                match.Id);
 
-                    if (matches.Count > 0)
-                    {
-                        await scoringRepository.SaveChangesAsync();
-
-                        _logger.LogInformation(
-                            "Automatically completed {Count} match(es) after the completion grace period.",
-                            matches.Count);
+                        if (completed)
+                        {
+                            _logger.LogInformation(
+                                "Automatically completed match {MatchId} after the completion grace period.",
+                                match.Id);
+                        }
                     }
                 }
                 catch (Exception ex)

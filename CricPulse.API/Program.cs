@@ -49,6 +49,9 @@ builder.Services.AddScoped<IMatchScoringService, MatchScoringService>();
 builder.Services.AddScoped<IScoringRepository, ScoringRepository>();
 builder.Services.AddScoped<IPendingRegistrationRepository, PendingRegistrationRepository>();
 builder.Services.AddHostedService<MatchCompletionBackgroundService>();
+builder.Services.AddScoped<IPlayerStatisticsRepository, PlayerStatisticsRepository>();
+builder.Services.AddHostedService<ScheduledMatchCancellationBackgroundService>();
+
 
 //External location service to get the match state
 builder.Services.AddHttpClient<ILocationService, LocationService>(client =>

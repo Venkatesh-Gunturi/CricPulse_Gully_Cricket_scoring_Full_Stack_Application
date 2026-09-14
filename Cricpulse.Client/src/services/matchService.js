@@ -190,3 +190,76 @@ export const verifyPlayerOnboarding = async (
 
   return response.data;
 };
+
+// Purpose:
+// Persist the toss winner and the winner's BAT/BOWL decision for the match.
+export const recordToss = async (
+  matchId,
+  tossWinnerTeam,
+  tossDecision
+) => {
+  const token = localStorage.getItem("token");
+
+  const response = await axios.post(
+    `${API_URL}/record-toss`,
+    {
+      matchId,
+      tossWinnerTeam,
+      tossDecision
+    },
+    {
+      headers: {
+        Authorization: `Bearer ${token}`
+      }
+    }
+  );
+
+  return response.data;
+};
+
+// Purpose:
+// Start an innings by sending the selected striker, non-striker,
+// and bowler to the backend scoring workflow.
+export const startInnings = async (
+  matchId,
+  strikerMatchPlayerId,
+  nonStrikerMatchPlayerId,
+  bowlerMatchPlayerId
+) => {
+  const token = localStorage.getItem("token");
+
+  const response = await axios.post(
+    `${API_URL}/start-innings`,
+    {
+      matchId,
+      strikerMatchPlayerId,
+      nonStrikerMatchPlayerId,
+      bowlerMatchPlayerId
+    },
+    {
+      headers: {
+        Authorization: `Bearer ${token}`
+      }
+    }
+  );
+
+  return response.data;
+};
+
+// Purpose:
+// Fetch the current live match state, including the active innings,
+// selected players, score, overs, and ball history.
+export const getLiveMatch = async (matchId) => {
+  const token = localStorage.getItem("token");
+
+  const response = await axios.get(
+    `${API_URL}/live/${matchId}`,
+    {
+      headers: {
+        Authorization: `Bearer ${token}`
+      }
+    }
+  );
+
+  return response.data;
+};
