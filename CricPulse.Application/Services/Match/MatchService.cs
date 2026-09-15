@@ -1006,14 +1006,19 @@ namespace CricPulse.Application.Services.Match
                 MatchId = match.Id,
                 Team1Name = match.Team1Name,
                 Team2Name = match.Team2Name,
+
                 Team1Logo = match.Team1Logo,
                 Team2Logo = match.Team2Logo,
+
                 Status = match.Status.ToString(),
                 TossWinnerTeam = match.TossWinnerTeam,
                 TossDecision = match.TossDecision,
                 BattingFirstTeam = match.BattingFirstTeam,
+
                 InningsId = innings?.Id,
                 InningsNumber = innings?.InningsNumber,
+                InningsStatus = innings?.Status,
+
                 BattingTeam = innings?.BattingTeam,
                 BowlingTeam = innings?.BowlingTeam,
                 StrikerMatchPlayerId = innings?.StrikerMatchPlayerId,

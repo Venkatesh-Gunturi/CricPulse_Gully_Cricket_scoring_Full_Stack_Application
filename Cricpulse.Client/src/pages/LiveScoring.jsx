@@ -1,14 +1,18 @@
 import { useEffect, useMemo, useState } from "react";
-import { getLiveMatch } from "../services/matchService";
+import {
+  getLiveMatch,
+  scoreRuns
+} from "../services/matchService";
 
 const LiveScoring = ({ match, onBack }) => {
   const [liveMatch, setLiveMatch] = useState(null);
   const [showMenu, setShowMenu] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [scoring, setScoring] = useState(false);
   const [error, setError] = useState("");
 
   // Purpose:
-  // Load the latest live scoring state when the live scoring screen opens.
+  // Load the latest live match state when the live scoring screen opens.
   useEffect(() => {
     const loadLiveMatch = async () => {
       try {
@@ -24,10 +28,16 @@ const LiveScoring = ({ match, onBack }) => {
           error
         );
 
-        setError(
-          error.response?.data ||
-          "Unable to load live match."
-        );
+        const responseData =
+          error.response?.data;
+
+        if (typeof responseData === "string") {
+          setError(responseData);
+        } else if (responseData?.message) {
+          setError(responseData.message);
+        } else {
+          setError("Unable to load live match.");
+        }
       } finally {
         setLoading(false);
       }
@@ -37,8 +47,8 @@ const LiveScoring = ({ match, onBack }) => {
   }, [match.id]);
 
   // Purpose:
-  // Find a MatchPlayer from the original match lineup using its
-  // MatchPlayer ID returned by the live scoring API.
+  // Find a match player from the original match lineup using
+  // the MatchPlayer ID returned by the live scoring API.
   const getPlayer = (matchPlayerId) => {
     if (!matchPlayerId) {
       return null;
@@ -52,7 +62,7 @@ const LiveScoring = ({ match, onBack }) => {
   };
 
   // Purpose:
-  // Resolve the selected striker into the player's display information.
+  // Resolve the current striker from the live innings state.
   const striker = useMemo(() => {
     return getPlayer(
       liveMatch?.strikerMatchPlayerId
@@ -63,7 +73,7 @@ const LiveScoring = ({ match, onBack }) => {
   ]);
 
   // Purpose:
-  // Resolve the selected non-striker into the player's display information.
+  // Resolve the current non-striker from the live innings state.
   const nonStriker = useMemo(() => {
     return getPlayer(
       liveMatch?.nonStrikerMatchPlayerId
@@ -74,7 +84,7 @@ const LiveScoring = ({ match, onBack }) => {
   ]);
 
   // Purpose:
-  // Resolve the current bowler into the player's display information.
+  // Resolve the current bowler from the live innings state.
   const bowler = useMemo(() => {
     return getPlayer(
       liveMatch?.currentBowlerMatchPlayerId
@@ -85,24 +95,135 @@ const LiveScoring = ({ match, onBack }) => {
   ]);
 
   // Purpose:
-  // Calculate the current over notation from the number of legal
-  // deliveries bowled in the active innings.
-  const currentOver = useMemo(() => {
-    const legalBalls = liveMatch?.legalBalls ?? 0;
+  // Calculate the current striker's runs and legal balls faced.
+  const strikerStats = useMemo(() => {
+    const balls = liveMatch?.balls || [];
+    const playerId =
+      liveMatch?.strikerMatchPlayerId;
 
-    const completedOvers = Math.floor(
-      legalBalls / 6
+    const playerBalls = balls.filter(
+      (ball) =>
+        Number(ball.strikerMatchPlayerId) ===
+        Number(playerId)
     );
+
+    return {
+      runs: playerBalls.reduce(
+        (total, ball) =>
+          total +
+          (ball.runs ?? 0) -
+          (ball.extraRuns ?? 0),
+        0
+      ),
+      balls: playerBalls.filter(
+        (ball) => ball.isLegalDelivery
+      ).length
+    };
+  }, [
+    liveMatch?.balls,
+    liveMatch?.strikerMatchPlayerId
+  ]);
+
+  // Purpose:
+  // Calculate the non-striker's runs and legal balls faced.
+  const nonStrikerStats = useMemo(() => {
+    const balls = liveMatch?.balls || [];
+    const playerId =
+      liveMatch?.nonStrikerMatchPlayerId;
+
+    const playerBalls = balls.filter(
+      (ball) =>
+        Number(ball.strikerMatchPlayerId) ===
+        Number(playerId)
+    );
+
+    return {
+      runs: playerBalls.reduce(
+        (total, ball) =>
+          total +
+          (ball.runs ?? 0) -
+          (ball.extraRuns ?? 0),
+        0
+      ),
+      balls: playerBalls.filter(
+        (ball) => ball.isLegalDelivery
+      ).length
+    };
+  }, [
+    liveMatch?.balls,
+    liveMatch?.nonStrikerMatchPlayerId
+  ]);
+
+  // Purpose:
+  // Calculate the current bowler's overs, runs conceded,
+  // and wickets from the recorded deliveries.
+  const bowlerStats = useMemo(() => {
+    const balls = liveMatch?.balls || [];
+    const bowlerId =
+      liveMatch?.currentBowlerMatchPlayerId;
+
+    const bowlerBalls = balls.filter(
+      (ball) =>
+        Number(ball.bowlerMatchPlayerId) ===
+        Number(bowlerId)
+    );
+
+    const legalBalls = bowlerBalls.filter(
+      (ball) => ball.isLegalDelivery
+    ).length;
+
+    const runsConceded = bowlerBalls.reduce(
+      (total, ball) => {
+        // Byes and leg-byes are not charged to the bowler.
+        if (
+          ball.extraType === "BYE" ||
+          ball.extraType === "LEG BYE"
+        ) {
+          return total;
+        }
+
+        return total + (ball.runs ?? 0);
+      },
+      0
+    );
+
+    const wickets = bowlerBalls.filter(
+      (ball) =>
+        ball.wicketType &&
+        ball.wicketType !== "RUN OUT"
+    ).length;
+
+    return {
+      overs: `${Math.floor(legalBalls / 6)}.${legalBalls % 6}`,
+      runsConceded,
+      wickets
+    };
+  }, [
+    liveMatch?.balls,
+    liveMatch?.currentBowlerMatchPlayerId
+  ]);
+
+  // Purpose:
+  // Calculate the current over notation from the number of legal
+  // deliveries recorded in the innings.
+  const currentOver = useMemo(() => {
+    const legalBalls =
+      liveMatch?.legalBalls ?? 0;
+
+    const completedOvers =
+      Math.floor(legalBalls / 6);
 
     const ballsInCurrentOver =
       legalBalls % 6;
 
     return `${completedOvers}.${ballsInCurrentOver}`;
-  }, [liveMatch?.legalBalls]);
+  }, [
+    liveMatch?.legalBalls
+  ]);
 
   // Purpose:
-  // Get only the balls belonging to the current over so the live
-  // screen can display the delivery sequence.
+  // Get the deliveries belonging to the latest over so the
+  // current-over display can show the actual ball sequence.
   const currentOverBalls = useMemo(() => {
     const balls = liveMatch?.balls || [];
 
@@ -110,14 +231,65 @@ const LiveScoring = ({ match, onBack }) => {
       return [];
     }
 
-    const latestBall = balls[balls.length - 1];
+    const latestBall =
+      balls[balls.length - 1];
 
     return balls.filter(
       (ball) =>
         ball.overNumber ===
         latestBall.overNumber
     );
-  }, [liveMatch?.balls]);
+  }, [
+    liveMatch?.balls
+  ]);
+
+  // Purpose:
+  // Determine whether the current innings has finished using
+  // the authoritative innings status returned by the backend.
+  const inningsCompleted =
+    liveMatch?.inningsStatus === "Completed";
+
+  // Purpose:
+  // Record a normal bat run and reload the latest live state
+  // so all score information immediately reflects the delivery.
+  const handleScoreRuns = async (runs) => {
+    if (!liveMatch?.inningsId || scoring) {
+      return;
+    }
+
+    try {
+      setScoring(true);
+      setError("");
+
+      await scoreRuns(
+        liveMatch.inningsId,
+        runs
+      );
+
+      const updatedMatch =
+        await getLiveMatch(match.id);
+
+      setLiveMatch(updatedMatch);
+    } catch (error) {
+      console.error(
+        "Failed to score runs:",
+        error
+      );
+
+      const responseData =
+        error.response?.data;
+
+      if (typeof responseData === "string") {
+        setError(responseData);
+      } else if (responseData?.message) {
+        setError(responseData.message);
+      } else {
+        setError("Unable to record runs.");
+      }
+    } finally {
+      setScoring(false);
+    }
+  };
 
   if (loading) {
     return (
@@ -127,7 +299,7 @@ const LiveScoring = ({ match, onBack }) => {
     );
   }
 
-  if (error) {
+  if (error && !liveMatch) {
     return (
       <div className="container py-5 text-center">
         <div className="alert alert-danger">
@@ -213,6 +385,12 @@ const LiveScoring = ({ match, onBack }) => {
 
       <div className="container py-4">
 
+        {error && (
+          <div className="alert alert-danger">
+            {error}
+          </div>
+        )}
+
         {/* Score */}
         <div className="text-center mb-4">
 
@@ -230,9 +408,17 @@ const LiveScoring = ({ match, onBack }) => {
             {currentOver} overs
           </h5>
 
+          {inningsCompleted && (
+            <div className="alert alert-success mt-3">
+              <strong>
+                INNINGS COMPLETED
+              </strong>
+            </div>
+          )}
+
         </div>
 
-        {/* Current Players */}
+        {/* Active Players */}
         <div className="row g-3 mb-4">
 
           {/* Striker */}
@@ -250,7 +436,8 @@ const LiveScoring = ({ match, onBack }) => {
                 </h4>
 
                 <p className="mb-0">
-                  0 (0)
+                  {strikerStats.runs}{" "}
+                  ({strikerStats.balls})
                 </p>
 
               </div>
@@ -272,7 +459,8 @@ const LiveScoring = ({ match, onBack }) => {
                 </h4>
 
                 <p className="mb-0">
-                  0 (0)
+                  {nonStrikerStats.runs}{" "}
+                  ({nonStrikerStats.balls})
                 </p>
 
               </div>
@@ -285,16 +473,22 @@ const LiveScoring = ({ match, onBack }) => {
               <div className="card-body">
 
                 <h5 className="card-title">
-                  Bowler
+                  {inningsCompleted
+                    ? "Innings Completed"
+                    : "Bowler"}
                 </h5>
 
                 <h4>
-                  {bowler?.displayName ||
-                    "Unknown Player"}
+                  {inningsCompleted
+                    ? "Waiting for next innings"
+                    : bowler?.displayName ||
+                      "No Bowler Selected"}
                 </h4>
 
                 <p className="mb-0">
-                  0 - 0
+                  {inningsCompleted
+                    ? "First innings finished"
+                    : `${bowlerStats.overs} - ${bowlerStats.runsConceded} - ${bowlerStats.wickets}`}
                 </p>
 
               </div>
@@ -325,13 +519,9 @@ const LiveScoring = ({ match, onBack }) => {
                       key={ball.id}
                       className="badge bg-secondary fs-6 p-2"
                     >
-                      {ball.extraType ||
-                      ball.wicketType
-                        ? (
-                          ball.wicketType ||
-                          ball.extraType
-                        )
-                        : ball.runs}
+                      {ball.wicketType ||
+                        ball.extraType ||
+                        ball.runs}
                     </span>
                   )
                 )
@@ -364,6 +554,13 @@ const LiveScoring = ({ match, onBack }) => {
                         key={runs}
                         type="button"
                         className="btn btn-primary"
+                        disabled={
+                          scoring ||
+                          inningsCompleted
+                        }
+                        onClick={() =>
+                          handleScoreRuns(runs)
+                        }
                       >
                         {runs}
                       </button>
@@ -399,6 +596,7 @@ const LiveScoring = ({ match, onBack }) => {
                       key={extra}
                       type="button"
                       className="btn btn-warning"
+                      disabled
                     >
                       {extra}
                     </button>
@@ -435,6 +633,7 @@ const LiveScoring = ({ match, onBack }) => {
                       key={wicket}
                       type="button"
                       className="btn btn-danger"
+                      disabled
                     >
                       {wicket}
                     </button>
@@ -455,6 +654,7 @@ const LiveScoring = ({ match, onBack }) => {
           <button
             type="button"
             className="btn btn-secondary"
+            disabled
           >
             UNDO LAST BALL
           </button>

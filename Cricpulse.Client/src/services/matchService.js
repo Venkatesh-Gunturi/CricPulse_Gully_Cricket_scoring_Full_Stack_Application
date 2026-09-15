@@ -263,3 +263,27 @@ export const getLiveMatch = async (matchId) => {
 
   return response.data;
 };
+
+// Purpose:
+// Record runs scored directly from the bat for the current live innings.
+export const scoreRuns = async (
+  inningsId,
+  runs
+) => {
+  const token = localStorage.getItem("token");
+
+  const response = await axios.post(
+    `${API_URL}/score-runs`,
+    {
+      inningsId,
+      runs
+    },
+    {
+      headers: {
+        Authorization: `Bearer ${token}`
+      }
+    }
+  );
+
+  return response.data;
+};

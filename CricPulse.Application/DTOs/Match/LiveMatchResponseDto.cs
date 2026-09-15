@@ -29,7 +29,7 @@ namespace CricPulse.Application.DTOs.Match
         public int? TotalRuns { get; set; }
         public int? Wickets { get; set; }
         public int? LegalBalls { get; set; }
-
+        public string? InningsStatus { get; set; }
         public List<LiveBallDto> Balls { get; set; } = new();
     }
 

@@ -21,12 +21,14 @@ namespace CricPulse.Infrastructure.Repositories.Match
         }
 
         // Purpose:
-        // Load the innings together with its match, all match innings, and ball history
-        // so scoring operations can correctly determine targets, results, and undo state.
+        // Load the innings together with its match, players, all innings, and ball history
+        // so scoring operations can validate active players and correctly update match state.
         public async Task<InningsEntity?> GetInningsForScoringAsync(
             int inningsId)
         {
             return await _context.Innings
+                .Include(i => i.Match)
+                    .ThenInclude(m => m.MatchPlayers)
                 .Include(i => i.Match)
                     .ThenInclude(m => m.Innings)
                 .Include(i => i.Balls)
