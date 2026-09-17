@@ -16,6 +16,11 @@ namespace CricPulse.Application.DTOs.Match
         public string? TossDecision { get; set; }
         public string? BattingFirstTeam { get; set; }
 
+        // Purpose:
+        // Provide the completed first-innings score so the second innings
+        // can calculate the target directly from the persisted match state.
+        public int? FirstInningsTotalRuns { get; set; }
+
         public int? InningsId { get; set; }
         public int? InningsNumber { get; set; }
 
@@ -30,6 +35,7 @@ namespace CricPulse.Application.DTOs.Match
         public int? Wickets { get; set; }
         public int? LegalBalls { get; set; }
         public string? InningsStatus { get; set; }
+
         public List<LiveBallDto> Balls { get; set; } = new();
     }
 
@@ -38,16 +44,18 @@ namespace CricPulse.Application.DTOs.Match
         public int Id { get; set; }
         public int OverNumber { get; set; }
         public int BallNumber { get; set; }
+
         public int StrikerMatchPlayerId { get; set; }
         public int NonStrikerMatchPlayerId { get; set; }
         public int BowlerMatchPlayerId { get; set; }
+
         public int Runs { get; set; }
         public bool IsLegalDelivery { get; set; }
+
         public string? ExtraType { get; set; }
         public int ExtraRuns { get; set; }
+
         public string? WicketType { get; set; }
         public int? DismissedMatchPlayerId { get; set; }
-
-       
     }
 }

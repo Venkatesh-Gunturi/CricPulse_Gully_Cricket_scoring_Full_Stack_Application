@@ -1,10 +1,16 @@
 import { useEffect, useMemo, useState } from "react";
+
 import {
   getLiveMatch,
   scoreRuns
 } from "../services/matchService";
 
-const LiveScoring = ({ match, onBack }) => {
+const LiveScoring = ({
+  match,
+  firstInningsTotalRuns,
+  onBack,
+  onFirstInningsCompleted
+}) => {
   const [liveMatch, setLiveMatch] = useState(null);
   const [showMenu, setShowMenu] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -250,6 +256,130 @@ const LiveScoring = ({ match, onBack }) => {
     liveMatch?.inningsStatus === "Completed";
 
   // Purpose:
+  // Determine whether the current innings is the second innings.
+  const isSecondInnings =
+    Number(liveMatch?.inningsNumber) === 2;
+
+  // Purpose:
+  // Calculate the current run rate from the actual legal balls
+  // and runs recorded by the backend.
+  const currentRunRate = useMemo(() => {
+    const runs =
+      liveMatch?.totalRuns ?? 0;
+
+    const legalBalls =
+      liveMatch?.legalBalls ?? 0;
+
+    if (legalBalls === 0) {
+      return 0;
+    }
+
+    return runs / (legalBalls / 6);
+  }, [
+    liveMatch?.totalRuns,
+    liveMatch?.legalBalls
+  ]);
+
+  // Purpose:
+  // Calculate the second-innings target directly from the persisted
+  // first-innings score returned by the live-match API.
+  const targetRuns = useMemo(() => {
+    if (!isSecondInnings) {
+      return null;
+    }
+
+    if (
+      liveMatch?.firstInningsTotalRuns === null ||
+      liveMatch?.firstInningsTotalRuns === undefined
+    ) {
+      return null;
+    }
+
+    return Number(
+      liveMatch.firstInningsTotalRuns
+    ) + 1;
+  }, [
+    isSecondInnings,
+    liveMatch?.firstInningsTotalRuns
+  ]);
+
+  // Purpose:
+  // Calculate required runs, remaining legal balls, and
+  // required run rate for the second innings chase.
+  const chaseStats = useMemo(() => {
+    if (!isSecondInnings) {
+      return null;
+    }
+
+    const currentRuns =
+      liveMatch?.totalRuns ?? 0;
+
+    const legalBalls =
+      liveMatch?.legalBalls ?? 0;
+
+    const totalBalls =
+      (match.overs ?? 0) * 6;
+
+    const remainingBalls = Math.max(
+      totalBalls - legalBalls,
+      0
+    );
+
+    const requiredRuns =
+      targetRuns !== null
+        ? Math.max(
+            targetRuns - currentRuns,
+            0
+          )
+        : 0;
+
+    const requiredRunRate =
+      remainingBalls > 0
+        ? requiredRuns /
+          (remainingBalls / 6)
+        : 0;
+
+    return {
+      requiredRuns,
+      remainingBalls,
+      requiredRunRate
+    };
+  }, [
+    isSecondInnings,
+    liveMatch?.totalRuns,
+    liveMatch?.legalBalls,
+    match.overs,
+    targetRuns
+  ]);
+
+  // Purpose:
+  // Notify the parent application when the first innings has completed
+  // so the application can display the next stage of the match flow.
+  useEffect(() => {
+    if (
+      !inningsCompleted ||
+      !onFirstInningsCompleted ||
+      !liveMatch
+    ) {
+      return;
+    }
+
+    onFirstInningsCompleted({
+      battingTeam: liveMatch.battingTeam,
+      totalRuns: liveMatch.totalRuns ?? 0,
+      wickets: liveMatch.wickets ?? 0,
+      overs: match.overs
+    });
+  }, [
+    inningsCompleted,
+    liveMatch?.battingTeam,
+    liveMatch?.totalRuns,
+    liveMatch?.wickets,
+    match.overs,
+    onFirstInningsCompleted
+  ]);
+
+  // Purpose:
   // Record a normal bat run and reload the latest live state
   // so all score information immediately reflects the delivery.
   const handleScoreRuns = async (runs) => {
@@ -380,6 +510,7 @@ const LiveScoring = ({ match, onBack }) => {
             )}
 
           </div>
+
         </div>
       </nav>
 
@@ -391,31 +522,97 @@ const LiveScoring = ({ match, onBack }) => {
           </div>
         )}
 
-        {/* Score */}
-        <div className="text-center mb-4">
+        {/* Score Header */}
+        <div className="card mb-4">
+          <div className="card-body">
 
-          <h2>
-            {liveMatch.battingTeam}
-          </h2>
+            <div className="row align-items-center">
 
-          <h1>
-            {liveMatch.totalRuns ?? 0}
-            {" / "}
-            {liveMatch.wickets ?? 0}
-          </h1>
+              {/* Score Box */}
+              <div className="col-md-5 text-center">
 
-          <h5>
-            {currentOver} overs
-          </h5>
+                <h2 className="mb-3">
+                  {liveMatch.battingTeam}
+                </h2>
 
-          {inningsCompleted && (
-            <div className="alert alert-success mt-3">
-              <strong>
-                INNINGS COMPLETED
-              </strong>
+                <h1 className="display-4 fw-bold mb-2">
+                  {liveMatch.totalRuns ?? 0}
+                  {" / "}
+                  {liveMatch.wickets ?? 0}
+                </h1>
+
+                <h5 className="text-muted">
+                  {currentOver} overs
+                </h5>
+
+              </div>
+
+              {/* First innings statistics */}
+              {!isSecondInnings && (
+                <div className="col-md-7 text-center">
+
+                  <h4 className="mb-3">
+                    Current Run Rate
+                  </h4>
+
+                  <h2>
+                    CRR -{" "}
+                    {currentRunRate.toFixed(2)}
+                  </h2>
+
+                </div>
+              )}
+
+              {/* Second innings chase statistics */}
+              {isSecondInnings && (
+                <div className="col-md-7 text-center">
+
+                  <h4 className="mb-3">
+                    {targetRuns !== null
+                      ? `Required ${chaseStats.requiredRuns} runs to win in ${chaseStats.remainingBalls} balls`
+                      : "Target unavailable"}
+                  </h4>
+
+                  <div className="row">
+
+                    <div className="col-6">
+                      <h5 className="text-muted">
+                        CRR
+                      </h5>
+
+                      <h3>
+                        {currentRunRate.toFixed(2)}
+                      </h3>
+                    </div>
+
+                    <div className="col-6">
+                      <h5 className="text-muted">
+                        RRR
+                      </h5>
+
+                      <h3>
+                        {chaseStats.requiredRunRate.toFixed(
+                          2
+                        )}
+                      </h3>
+                    </div>
+
+                  </div>
+
+                </div>
+              )}
+
             </div>
-          )}
 
+            {inningsCompleted && (
+              <div className="alert alert-success mt-4 mb-0 text-center">
+                <strong>
+                  INNINGS COMPLETED
+                </strong>
+              </div>
+            )}
+
+          </div>
         </div>
 
         {/* Active Players */}
@@ -530,7 +727,6 @@ const LiveScoring = ({ match, onBack }) => {
             </div>
 
           </div>
-
         </div>
 
         {/* Scoring Controls */}
@@ -570,7 +766,6 @@ const LiveScoring = ({ match, onBack }) => {
                 </div>
 
               </div>
-
             </div>
           </div>
 
@@ -605,7 +800,6 @@ const LiveScoring = ({ match, onBack }) => {
                 </div>
 
               </div>
-
             </div>
           </div>
 
@@ -642,7 +836,6 @@ const LiveScoring = ({ match, onBack }) => {
                 </div>
 
               </div>
-
             </div>
           </div>
 

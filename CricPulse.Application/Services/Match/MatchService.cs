@@ -983,8 +983,8 @@ namespace CricPulse.Application.Services.Match
 
 
         // Purpose:
-        // Load the live match and map its current innings, teams, and ball history
-        // into a response that the live screens can consume.
+        // Load the live match and map its current innings, teams, first-innings score,
+        // and ball history into a response that the live screens can consume.
         public async Task<LiveMatchResponseDto?> GetLiveMatchAsync(
             int matchId)
         {
@@ -992,7 +992,8 @@ namespace CricPulse.Application.Services.Match
                 .GetLiveMatchAsync(matchId);
 
             if (match == null ||
-                match.Status != MatchStatus.Live)
+                (match.Status != MatchStatus.Live &&
+                match.Status != MatchStatus.PendingCompletion))
             {
                 return null;
             }
@@ -1001,9 +1002,16 @@ namespace CricPulse.Application.Services.Match
                 .OrderByDescending(i => i.InningsNumber)
                 .FirstOrDefault();
 
+            // Purpose:
+            // Retrieve the persisted first-innings score so the second innings
+            // target does not depend on temporary frontend state.
+            var firstInnings = match.Innings
+                .FirstOrDefault(i => i.InningsNumber == 1);
+
             var response = new LiveMatchResponseDto
             {
                 MatchId = match.Id,
+
                 Team1Name = match.Team1Name,
                 Team2Name = match.Team2Name,
 
@@ -1011,9 +1019,13 @@ namespace CricPulse.Application.Services.Match
                 Team2Logo = match.Team2Logo,
 
                 Status = match.Status.ToString(),
+
                 TossWinnerTeam = match.TossWinnerTeam,
                 TossDecision = match.TossDecision,
                 BattingFirstTeam = match.BattingFirstTeam,
+
+                FirstInningsTotalRuns =
+                    firstInnings?.TotalRuns,
 
                 InningsId = innings?.Id,
                 InningsNumber = innings?.InningsNumber,
@@ -1021,10 +1033,16 @@ namespace CricPulse.Application.Services.Match
 
                 BattingTeam = innings?.BattingTeam,
                 BowlingTeam = innings?.BowlingTeam,
-                StrikerMatchPlayerId = innings?.StrikerMatchPlayerId,
-                NonStrikerMatchPlayerId = innings?.NonStrikerMatchPlayerId,
+
+                StrikerMatchPlayerId =
+                    innings?.StrikerMatchPlayerId,
+
+                NonStrikerMatchPlayerId =
+                    innings?.NonStrikerMatchPlayerId,
+
                 CurrentBowlerMatchPlayerId =
                     innings?.CurrentBowlerMatchPlayerId,
+
                 TotalRuns = innings?.TotalRuns,
                 Wickets = innings?.Wickets,
                 LegalBalls = innings?.LegalBalls
@@ -1039,14 +1057,24 @@ namespace CricPulse.Application.Services.Match
                         Id = b.Id,
                         OverNumber = b.OverNumber,
                         BallNumber = b.BallNumber,
-                        StrikerMatchPlayerId = b.StrikerMatchPlayerId,
-                        NonStrikerMatchPlayerId = b.NonStrikerMatchPlayerId,
-                        BowlerMatchPlayerId = b.BowlerMatchPlayerId,
+
+                        StrikerMatchPlayerId =
+                            b.StrikerMatchPlayerId,
+
+                        NonStrikerMatchPlayerId =
+                            b.NonStrikerMatchPlayerId,
+
+                        BowlerMatchPlayerId =
+                            b.BowlerMatchPlayerId,
+
                         Runs = b.Runs,
                         IsLegalDelivery = b.IsLegalDelivery,
+
                         ExtraType = b.ExtraType,
                         ExtraRuns = b.ExtraRuns,
+
                         WicketType = b.Wicket?.WicketType,
+
                         DismissedMatchPlayerId =
                             b.Wicket?.DismissedMatchPlayerId
                     })

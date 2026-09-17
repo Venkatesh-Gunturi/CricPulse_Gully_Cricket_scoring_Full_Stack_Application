@@ -9,6 +9,8 @@ import MatchCreation from "./components/Match/MatchCreation";
 import LiveScoring from "./pages/LiveScoring";
 import TossScreen from "./pages/TossScreen";
 import InningsSetup from "./pages/InningsSetup";
+import SecondInningsSetup from "./pages/SecondInningsSetup";
+import FirstInningsCompleted from "./pages/FirstInningsCompleted";
 
 function App() {
   const [showLoginModal, setShowLoginModal] = useState(false);
@@ -18,6 +20,15 @@ function App() {
   const [scoringMatch, setScoringMatch] = useState(null);
   const [tossResult, setTossResult] = useState(null);
   const [inningsStarted, setInningsStarted] = useState(false);
+
+  const [firstInningsCompleted, setFirstInningsCompleted] =
+    useState(false);
+
+  const [firstInningsData, setFirstInningsData] =
+    useState(null);
+
+  const [showSecondInningsSetup, setShowSecondInningsSetup] =
+    useState(false);
 
   const [loggedInUser, setLoggedInUser] = useState(
     JSON.parse(localStorage.getItem("user"))
@@ -55,10 +66,13 @@ function App() {
     setScoringMatch(null);
     setTossResult(null);
     setInningsStarted(false);
+    setFirstInningsCompleted(false);
+    setFirstInningsData(null);
+    setShowSecondInningsSetup(false);
   };
 
   // Purpose:
-  // Initialize the correct scoring screen from the persisted match state
+  // Initialize the correct scoring stage from the persisted match state
   // when the umpire chooses to continue scoring.
   const handleContinueScoring = (match) => {
     setShowMatchCreation(false);
@@ -78,6 +92,10 @@ function App() {
       setTossResult(null);
     }
 
+    setFirstInningsCompleted(false);
+    setFirstInningsData(null);
+    setShowSecondInningsSetup(false);
+
     setInningsStarted(
       match.hasStartedInnings === true
     );
@@ -89,6 +107,17 @@ function App() {
     setScoringMatch(null);
     setTossResult(null);
     setInningsStarted(false);
+    setFirstInningsCompleted(false);
+    setFirstInningsData(null);
+    setShowSecondInningsSetup(false);
+  };
+
+  // Purpose:
+  // Move from the second innings setup screen back to live scoring
+  // while preserving the first innings score for the chase target.
+  const handleSecondInningsStarted = () => {
+    setFirstInningsCompleted(false);
+    setShowSecondInningsSetup(false);
   };
 
   return (
@@ -161,8 +190,12 @@ function App() {
         <>
           {!showMatchCreation ? (
             <MainPage
-              onLogin={() => setShowLoginModal(true)}
-              onRegister={() => setShowRegisterModal(true)}
+              onLogin={() =>
+                setShowLoginModal(true)
+              }
+              onRegister={() =>
+                setShowRegisterModal(true)
+              }
               loggedInUser={loggedInUser}
               onCreateMatch={() =>
                 setShowMatchCreation(true)
@@ -206,16 +239,70 @@ function App() {
                   setInningsStarted(true);
                 }}
               />
+            ) : scoringMatch &&
+              firstInningsCompleted &&
+              !showSecondInningsSetup ? (
+              <FirstInningsCompleted
+                battingTeam={
+                  tossResult.bowlingFirstTeam
+                }
+                targetRuns={
+                  (firstInningsData?.totalRuns ?? 0) + 1
+                }
+                wickets={
+                  scoringMatch.playersPerTeam - 1
+                }
+                overs={scoringMatch.overs}
+                onUndoLastBall={() => {
+                  // Functionality will be added later.
+                }}
+                onCompleteInnings={() => {
+                  setShowSecondInningsSetup(true);
+                }}
+              />
+            ) : scoringMatch &&
+              firstInningsCompleted &&
+              showSecondInningsSetup ? (
+              <SecondInningsSetup
+                match={{
+                  ...scoringMatch,
+                  firstInningsBattingTeam:
+                    tossResult.battingFirstTeam,
+                  firstInningsBowlingTeam:
+                    tossResult.bowlingFirstTeam
+                }}
+                onInningsStarted={
+                  handleSecondInningsStarted
+                }
+              />
             ) : scoringMatch ? (
               <LiveScoring
                 match={{
                   ...scoringMatch,
                   battingTeamName:
-                    tossResult?.battingFirstTeam
+                    tossResult?.battingFirstTeam,
+                  firstInningsTotalRuns:
+                    firstInningsData?.totalRuns ?? null
                 }}
+                firstInningsTotalRuns={
+                  firstInningsData?.totalRuns ?? null
+                }
                 onBack={
                   handleBackToDashboard
                 }
+                onFirstInningsCompleted={(innings) => {
+                  setFirstInningsCompleted(true);
+                  setFirstInningsData(innings);
+
+                  // Purpose:
+                  // Persist the first innings score inside the current
+                  // scoring match so it survives the second-innings transition.
+                  setScoringMatch((currentMatch) => ({
+                    ...currentMatch,
+                    firstInningsTotalRuns:
+                      innings.totalRuns
+                  }));
+                }}
               />
             ) : !showMatchCreation ? (
               <UmpireDashboard
