@@ -1,8 +1,18 @@
-import { useEffect, useMemo, useState } from "react";
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState
+} from "react";
+
+import NoBallScoringModal from "../components/Match/NoBallScoringModal";
+import ExtraScoringModal from "../components/Match/ExtraScoringModal";
 
 import {
   getLiveMatch,
-  scoreRuns
+  scoreRuns,
+  scoreExtra,
+  cancelMatch
 } from "../services/matchService";
 
 const LiveScoring = ({
@@ -16,6 +26,37 @@ const LiveScoring = ({
   const [loading, setLoading] = useState(true);
   const [scoring, setScoring] = useState(false);
   const [error, setError] = useState("");
+  const [selectedExtra, setSelectedExtra] = useState(null);
+const [showNoBallModal, setShowNoBallModal] = useState(false);
+  // Reference for the three-dot menu.
+  // Used to detect clicks outside the menu.
+  const menuRef = useRef(null);
+
+  // Purpose:
+  // Close the three-dot menu when the user clicks anywhere
+  // outside the menu.
+  useEffect(() => {
+    const handleOutsideClick = (event) => {
+      if (
+        menuRef.current &&
+        !menuRef.current.contains(event.target)
+      ) {
+        setShowMenu(false);
+      }
+    };
+
+    document.addEventListener(
+      "mousedown",
+      handleOutsideClick
+    );
+
+    return () => {
+      document.removeEventListener(
+        "mousedown",
+        handleOutsideClick
+      );
+    };
+  }, []);
 
   // Purpose:
   // Load the latest live match state when the live scoring screen opens.
@@ -104,6 +145,7 @@ const LiveScoring = ({
   // Calculate the current striker's runs and legal balls faced.
   const strikerStats = useMemo(() => {
     const balls = liveMatch?.balls || [];
+
     const playerId =
       liveMatch?.strikerMatchPlayerId;
 
@@ -121,6 +163,7 @@ const LiveScoring = ({
           (ball.extraRuns ?? 0),
         0
       ),
+
       balls: playerBalls.filter(
         (ball) => ball.isLegalDelivery
       ).length
@@ -134,6 +177,7 @@ const LiveScoring = ({
   // Calculate the non-striker's runs and legal balls faced.
   const nonStrikerStats = useMemo(() => {
     const balls = liveMatch?.balls || [];
+
     const playerId =
       liveMatch?.nonStrikerMatchPlayerId;
 
@@ -151,6 +195,7 @@ const LiveScoring = ({
           (ball.extraRuns ?? 0),
         0
       ),
+
       balls: playerBalls.filter(
         (ball) => ball.isLegalDelivery
       ).length
@@ -165,6 +210,7 @@ const LiveScoring = ({
   // and wickets from the recorded deliveries.
   const bowlerStats = useMemo(() => {
     const balls = liveMatch?.balls || [];
+
     const bowlerId =
       liveMatch?.currentBowlerMatchPlayerId;
 
@@ -200,8 +246,12 @@ const LiveScoring = ({
     ).length;
 
     return {
-      overs: `${Math.floor(legalBalls / 6)}.${legalBalls % 6}`,
+      overs: `${Math.floor(
+        legalBalls / 6
+      )}.${legalBalls % 6}`,
+
       runsConceded,
+
       wickets
     };
   }, [
@@ -295,9 +345,11 @@ const LiveScoring = ({
       return null;
     }
 
-    return Number(
-      liveMatch.firstInningsTotalRuns
-    ) + 1;
+    return (
+      Number(
+        liveMatch.firstInningsTotalRuns
+      ) + 1
+    );
   }, [
     isSecondInnings,
     liveMatch?.firstInningsTotalRuns
@@ -365,10 +417,17 @@ const LiveScoring = ({
     }
 
     onFirstInningsCompleted({
-      battingTeam: liveMatch.battingTeam,
-      totalRuns: liveMatch.totalRuns ?? 0,
-      wickets: liveMatch.wickets ?? 0,
-      overs: match.overs
+      battingTeam:
+        liveMatch.battingTeam,
+
+      totalRuns:
+        liveMatch.totalRuns ?? 0,
+
+      wickets:
+        liveMatch.wickets ?? 0,
+
+      overs:
+        match.overs
     });
   }, [
     inningsCompleted,
@@ -383,7 +442,11 @@ const LiveScoring = ({
   // Record a normal bat run and reload the latest live state
   // so all score information immediately reflects the delivery.
   const handleScoreRuns = async (runs) => {
-    if (!liveMatch?.inningsId || scoring) {
+    if (
+      !liveMatch?.inningsId ||
+      scoring ||
+      inningsCompleted
+    ) {
       return;
     }
 
@@ -421,10 +484,115 @@ const LiveScoring = ({
     }
   };
 
+  // Purpose:
+  // Record an extra delivery and reload the latest live state.
+  const handleScoreExtra = async (
+    extraType,
+    runs,
+    batterRuns = 0
+  ) => {
+    if (
+      !liveMatch?.inningsId ||
+      scoring ||
+      inningsCompleted
+    ) {
+      return;
+    }
+
+    try {
+      setScoring(true);
+      setError("");
+
+      await scoreExtra(
+        liveMatch.inningsId,
+        extraType,
+        runs,
+        batterRuns
+      );
+
+      const updatedMatch =
+        await getLiveMatch(match.id);
+
+      setLiveMatch(updatedMatch);
+
+      setSelectedExtra(null);
+      setShowNoBallModal(false);
+    } catch (error) {
+      console.error(
+        "Failed to score extra:",
+        error
+      );
+
+      const responseData =
+        error.response?.data;
+
+      if (typeof responseData === "string") {
+        setError(responseData);
+      } else if (responseData?.message) {
+        setError(responseData.message);
+      } else {
+        setError("Unable to record extra.");
+      }
+    } finally {
+      setScoring(false);
+    }
+  };
+
+  // Purpose:
+  // Cancel the current match after confirmation.
+  // After successful cancellation, return to the dashboard.
+  const handleCancelMatch = async () => {
+    if (
+      !match?.id ||
+      scoring
+    ) {
+      return;
+    }
+
+    const confirmed = window.confirm(
+      "Are you sure you want to cancel this match?"
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    try {
+      setScoring(true);
+      setError("");
+
+      await cancelMatch(match.id);
+
+      setShowMenu(false);
+
+      onBack();
+    } catch (error) {
+      console.error(
+        "Failed to cancel match:",
+        error
+      );
+
+      const responseData =
+        error.response?.data;
+
+      if (typeof responseData === "string") {
+        setError(responseData);
+      } else if (responseData?.message) {
+        setError(responseData.message);
+      } else {
+        setError("Unable to cancel match.");
+      }
+    } finally {
+      setScoring(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="container py-5 text-center">
-        <h4>Loading live match...</h4>
+        <h4>
+          Loading live match...
+        </h4>
       </div>
     );
   }
@@ -432,6 +600,7 @@ const LiveScoring = ({
   if (error && !liveMatch) {
     return (
       <div className="container py-5 text-center">
+
         <div className="alert alert-danger">
           {error}
         </div>
@@ -443,6 +612,7 @@ const LiveScoring = ({
         >
           ← Back to Dashboard
         </button>
+
       </div>
     );
   }
@@ -450,6 +620,7 @@ const LiveScoring = ({
   if (!liveMatch) {
     return (
       <div className="container py-5 text-center">
+
         <div className="alert alert-warning">
           Live match data is unavailable.
         </div>
@@ -461,6 +632,7 @@ const LiveScoring = ({
         >
           ← Back to Dashboard
         </button>
+
       </div>
     );
   }
@@ -470,6 +642,7 @@ const LiveScoring = ({
 
       {/* Match Header */}
       <nav className="navbar navbar-dark bg-dark">
+
         <div className="container-fluid">
 
           <span className="navbar-brand mb-0 h1">
@@ -478,7 +651,11 @@ const LiveScoring = ({
             {liveMatch.team2Name}
           </span>
 
-          <div className="position-relative">
+          {/* Three-dot menu */}
+          <div
+            className="position-relative"
+            ref={menuRef}
+          >
 
             <button
               type="button"
@@ -488,6 +665,7 @@ const LiveScoring = ({
                   (current) => !current
                 )
               }
+              disabled={scoring}
             >
               ⋮
             </button>
@@ -500,12 +678,16 @@ const LiveScoring = ({
                   zIndex: 1000
                 }}
               >
+
                 <button
                   type="button"
                   className="btn btn-link text-danger text-decoration-none w-100 text-start"
+                  onClick={handleCancelMatch}
+                  disabled={scoring}
                 >
                   Cancel Match
                 </button>
+
               </div>
             )}
 
@@ -516,6 +698,7 @@ const LiveScoring = ({
 
       <div className="container py-4">
 
+        {/* Error */}
         {error && (
           <div className="alert alert-danger">
             {error}
@@ -524,6 +707,7 @@ const LiveScoring = ({
 
         {/* Score Header */}
         <div className="card mb-4">
+
           <div className="card-body">
 
             <div className="row align-items-center">
@@ -576,6 +760,7 @@ const LiveScoring = ({
                   <div className="row">
 
                     <div className="col-6">
+
                       <h5 className="text-muted">
                         CRR
                       </h5>
@@ -583,9 +768,11 @@ const LiveScoring = ({
                       <h3>
                         {currentRunRate.toFixed(2)}
                       </h3>
+
                     </div>
 
                     <div className="col-6">
+
                       <h5 className="text-muted">
                         RRR
                       </h5>
@@ -595,6 +782,7 @@ const LiveScoring = ({
                           2
                         )}
                       </h3>
+
                     </div>
 
                   </div>
@@ -606,9 +794,11 @@ const LiveScoring = ({
 
             {inningsCompleted && (
               <div className="alert alert-success mt-4 mb-0 text-center">
+
                 <strong>
                   INNINGS COMPLETED
                 </strong>
+
               </div>
             )}
 
@@ -620,7 +810,9 @@ const LiveScoring = ({
 
           {/* Striker */}
           <div className="col-md-4">
+
             <div className="card h-100">
+
               <div className="card-body">
 
                 <h5 className="card-title">
@@ -643,7 +835,9 @@ const LiveScoring = ({
 
           {/* Non-Striker */}
           <div className="col-md-4">
+
             <div className="card h-100">
+
               <div className="card-body">
 
                 <h5 className="card-title">
@@ -666,7 +860,9 @@ const LiveScoring = ({
 
           {/* Bowler */}
           <div className="col-md-4">
+
             <div className="card h-100">
+
               <div className="card-body">
 
                 <h5 className="card-title">
@@ -734,6 +930,7 @@ const LiveScoring = ({
 
           {/* Runs */}
           <div className="col-md-4">
+
             <div className="card">
 
               <div className="card-body">
@@ -771,6 +968,7 @@ const LiveScoring = ({
 
           {/* Extras */}
           <div className="col-md-4">
+
             <div className="card">
 
               <div className="card-body">
@@ -779,23 +977,59 @@ const LiveScoring = ({
                   EXTRAS
                 </h4>
 
+                {/* Same alignment as Runs and Wickets */}
                 <div className="d-grid gap-2">
 
-                  {[
-                    "WIDE",
-                    "NO BALL",
-                    "BYE",
-                    "LEG BYE"
-                  ].map((extra) => (
-                    <button
-                      key={extra}
-                      type="button"
-                      className="btn btn-warning"
-                      disabled
-                    >
-                      {extra}
-                    </button>
-                  ))}
+                  <button
+                    type="button"
+                    className="btn btn-warning"
+                    disabled={
+                      scoring ||
+                      inningsCompleted
+                    }
+                    onClick={() =>
+                      setSelectedExtra("WIDE")
+                    }
+                  >
+                    WIDE
+                  </button>
+
+                 <button
+                    type="button"
+                    className="btn btn-warning"
+                    disabled={scoring || inningsCompleted}
+                    onClick={() => setShowNoBallModal(true)}
+                  >
+                    NO BALL
+                  </button>
+
+                  <button
+                    type="button"
+                    className="btn btn-warning"
+                    disabled={
+                      scoring ||
+                      inningsCompleted
+                    }
+                    onClick={() =>
+                      setSelectedExtra("BYE")
+                    }
+                  >
+                    BYE
+                  </button>
+
+                  <button
+                    type="button"
+                    className="btn btn-warning"
+                    disabled={
+                      scoring ||
+                      inningsCompleted
+                    }
+                    onClick={() =>
+                      setSelectedExtra("LEG BYE")
+                    }
+                  >
+                    LEG BYE
+                  </button>
 
                 </div>
 
@@ -805,6 +1039,7 @@ const LiveScoring = ({
 
           {/* Wickets */}
           <div className="col-md-4">
+
             <div className="card">
 
               <div className="card-body">
@@ -822,16 +1057,18 @@ const LiveScoring = ({
                     "LBW",
                     "STUMPED",
                     "HIT WICKET"
-                  ].map((wicket) => (
-                    <button
-                      key={wicket}
-                      type="button"
-                      className="btn btn-danger"
-                      disabled
-                    >
-                      {wicket}
-                    </button>
-                  ))}
+                  ].map(
+                    (wicket) => (
+                      <button
+                        key={wicket}
+                        type="button"
+                        className="btn btn-danger"
+                        disabled
+                      >
+                        {wicket}
+                      </button>
+                    )
+                  )}
 
                 </div>
 
@@ -867,6 +1104,31 @@ const LiveScoring = ({
 
         </div>
 
+        {/* Extra Scoring Modal */}
+        {selectedExtra && (
+          <ExtraScoringModal
+            extraType={selectedExtra}
+            loading={scoring}
+            onClose={() => {
+              if (!scoring) {
+                setSelectedExtra(null);
+              }
+            }}
+            onConfirm={handleScoreExtra}
+          />
+        )}
+
+        {showNoBallModal && (
+          <NoBallScoringModal
+            loading={scoring}
+            onClose={() => {
+              if (!scoring) {
+                setShowNoBallModal(false);
+              }
+            }}
+            onConfirm={handleScoreExtra}
+          />
+        )}
       </div>
     </div>
   );

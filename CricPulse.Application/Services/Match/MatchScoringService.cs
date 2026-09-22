@@ -552,9 +552,10 @@ namespace CricPulse.Application.Services
         // Purpose:
         // Record an extra delivery while validating the active players against the
         // innings teams and automatically completing the innings or match when required.
+       
         public async Task<bool> ScoreExtraAsync(
-            int umpireId,
-            ScoreExtraDto dto)
+    int umpireId,
+    ScoreExtraDto dto)
         {
             var innings = await _scoringRepository
                 .GetInningsForScoringAsync(dto.InningsId);
@@ -639,10 +640,15 @@ namespace CricPulse.Application.Services
                     return false;
                 }
             }
+            else if (extraType == "BYE" ||
+                     extraType == "LEG BYE")
+            {
+                // All bye / leg-bye runs are extras.
+                extraRuns = dto.Runs;
+            }
             else
             {
-                // BYE / LEG BYE
-                extraRuns = dto.Runs;
+                return false;
             }
 
             var strikerId = innings.StrikerMatchPlayerId;
@@ -746,8 +752,36 @@ namespace CricPulse.Application.Services
                 innings.LegalBalls++;
             }
 
-            // Odd total runs rotate the strike.
-            if (dto.Runs % 2 != 0)
+            // Determine the number of completed runs that caused
+            // the batters to change ends.
+            int completedRuns;
+
+            if (extraType == "WIDE")
+            {
+                // The first run is the automatic wide penalty.
+                // Only additional runs represent completed runs.
+                completedRuns = dto.Runs - 1;
+            }
+            else if (extraType == "NO BALL")
+            {
+                // The first run is the mandatory no-ball extra.
+                // Any additional runs represent completed runs,
+                // whether they came from the bat or were taken as byes.
+                completedRuns = dto.Runs - 1;
+            }
+            else if (extraType == "BYE" ||
+                     extraType == "LEG BYE")
+            {
+                // Every bye / leg-bye run is a completed run.
+                completedRuns = dto.Runs;
+            }
+            else
+            {
+                completedRuns = 0;
+            }
+
+            // Odd completed runs rotate the strike.
+            if (completedRuns % 2 != 0)
             {
                 innings.StrikerMatchPlayerId = nonStrikerId;
                 innings.NonStrikerMatchPlayerId = strikerId;
@@ -782,9 +816,9 @@ namespace CricPulse.Application.Services
                     if (firstInnings != null)
                     {
                         innings.Match.Result =
-                         CalculateMatchResult(
-                             innings.Match,
-                             innings);
+                            CalculateMatchResult(
+                                innings.Match,
+                                innings);
 
                         innings.Match.Status =
                             MatchStatus.PendingCompletion;
@@ -818,6 +852,8 @@ namespace CricPulse.Application.Services
 
             return true;
         }
+
+
 
         // Purpose:
         // Undo the immediately previous scoring action and restore the innings and match

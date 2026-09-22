@@ -287,3 +287,33 @@ export const scoreRuns = async (
 
   return response.data;
 };
+
+
+
+// Purpose:
+// Record an extra delivery such as wide, no-ball, bye, or leg-bye.
+export const scoreExtra = async (
+  inningsId,
+  extraType,
+  runs,
+  batterRuns = 0
+) => {
+  const token = localStorage.getItem("token");
+
+  const response = await axios.post(
+    `${API_URL}/score-extra`,
+    {
+      inningsId,
+      extraType,
+      runs,
+      batterRuns
+    },
+    {
+      headers: {
+        Authorization: `Bearer ${token}`
+      }
+    }
+  );
+
+  return response.data;
+};
