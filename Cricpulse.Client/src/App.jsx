@@ -11,6 +11,7 @@ import TossScreen from "./pages/TossScreen";
 import InningsSetup from "./pages/InningsSetup";
 import SecondInningsSetup from "./pages/SecondInningsSetup";
 import FirstInningsCompleted from "./pages/FirstInningsCompleted";
+import MatchCompleted from "./pages/MatchCompleted";
 
 function App() {
   const [showLoginModal, setShowLoginModal] = useState(false);
@@ -29,6 +30,12 @@ function App() {
 
   const [showSecondInningsSetup, setShowSecondInningsSetup] =
     useState(false);
+
+  const [matchCompleted, setMatchCompleted] =
+    useState(false);
+
+  const [completedMatchData, setCompletedMatchData] =
+    useState(null);
 
   const [loggedInUser, setLoggedInUser] = useState(
     JSON.parse(localStorage.getItem("user"))
@@ -69,6 +76,9 @@ function App() {
     setFirstInningsCompleted(false);
     setFirstInningsData(null);
     setShowSecondInningsSetup(false);
+
+    setMatchCompleted(false);
+    setCompletedMatchData(null);
   };
 
   // Purpose:
@@ -76,6 +86,7 @@ function App() {
   // when the umpire chooses to continue scoring.
   const handleContinueScoring = (match) => {
     setShowMatchCreation(false);
+
     setScoringMatch(match);
 
     if (match.battingFirstTeam) {
@@ -96,6 +107,9 @@ function App() {
     setFirstInningsData(null);
     setShowSecondInningsSetup(false);
 
+    setMatchCompleted(false);
+    setCompletedMatchData(null);
+
     setInningsStarted(
       match.hasStartedInnings === true
     );
@@ -110,6 +124,9 @@ function App() {
     setFirstInningsCompleted(false);
     setFirstInningsData(null);
     setShowSecondInningsSetup(false);
+
+    setMatchCompleted(false);
+    setCompletedMatchData(null);
   };
 
   // Purpose:
@@ -218,117 +235,123 @@ function App() {
         </>
       )}
 
-      {appMode === "umpire" &&
-        loggedInUser?.isUmpire && (
-          <>
-            {scoringMatch &&
-              !tossResult ? (
-              <TossScreen
-                match={scoringMatch}
-                onTossComplete={(result) => {
-                  setTossResult(result);
-                }}
-              />
-            ) : scoringMatch &&
-              tossResult &&
-              !inningsStarted ? (
-              <InningsSetup
-                match={scoringMatch}
-                tossResult={tossResult}
-                onInningsStarted={() => {
-                  setInningsStarted(true);
-                }}
-              />
-            ) : scoringMatch &&
-              firstInningsCompleted &&
-              !showSecondInningsSetup ? (
-              <FirstInningsCompleted
-                battingTeam={
-                  tossResult.bowlingFirstTeam
-                }
-                targetRuns={
-                  (firstInningsData?.totalRuns ?? 0) + 1
-                }
-                wickets={
-                  scoringMatch.playersPerTeam - 1
-                }
-                overs={scoringMatch.overs}
-                onUndoLastBall={() => {
-                  // Functionality will be added later.
-                }}
-                onCompleteInnings={() => {
-                  setShowSecondInningsSetup(true);
-                }}
-              />
-            ) : scoringMatch &&
-              firstInningsCompleted &&
-              showSecondInningsSetup ? (
-              <SecondInningsSetup
-                match={{
-                  ...scoringMatch,
-                  firstInningsBattingTeam:
-                    tossResult.battingFirstTeam,
-                  firstInningsBowlingTeam:
-                    tossResult.bowlingFirstTeam
-                }}
-                onInningsStarted={
-                  handleSecondInningsStarted
-                }
-              />
-            ) : scoringMatch ? (
-              <LiveScoring
-                match={{
-                  ...scoringMatch,
-                  battingTeamName:
-                    tossResult?.battingFirstTeam,
-                  firstInningsTotalRuns:
-                    firstInningsData?.totalRuns ?? null
-                }}
-                firstInningsTotalRuns={
-                  firstInningsData?.totalRuns ?? null
-                }
-                onBack={
-                  handleBackToDashboard
-                }
-                onFirstInningsCompleted={(innings) => {
-                  setFirstInningsCompleted(true);
-                  setFirstInningsData(innings);
+    {appMode === "umpire" &&
+  loggedInUser?.isUmpire && (
+    <>
+      {matchCompleted && completedMatchData ? (
+        <MatchCompleted
+          match={completedMatchData}
+          onBack={handleBackToDashboard}
+        />
+      ) : scoringMatch && !tossResult ? (
+        <TossScreen
+          match={scoringMatch}
+          onTossComplete={(result) => {
+            setTossResult(result);
+          }}
+        />
+      ) : scoringMatch &&
+        tossResult &&
+        !inningsStarted ? (
+        <InningsSetup
+          match={scoringMatch}
+          tossResult={tossResult}
+          onInningsStarted={() => {
+            setInningsStarted(true);
+          }}
+        />
+      ) : scoringMatch &&
+        firstInningsCompleted &&
+        !showSecondInningsSetup ? (
+        <FirstInningsCompleted
+          battingTeam={
+            tossResult.bowlingFirstTeam
+          }
+          targetRuns={
+            (firstInningsData?.totalRuns ?? 0) + 1
+          }
+          wickets={
+            scoringMatch.playersPerTeam - 1
+          }
+          overs={scoringMatch.overs}
+          onUndoLastBall={() => {
+            // Functionality will be added later.
+          }}
+          onCompleteInnings={() => {
+            setShowSecondInningsSetup(true);
+          }}
+        />
+      ) : scoringMatch &&
+        firstInningsCompleted &&
+        showSecondInningsSetup ? (
+        <SecondInningsSetup
+          match={{
+            ...scoringMatch,
+            firstInningsBattingTeam:
+              tossResult.battingFirstTeam,
+            firstInningsBowlingTeam:
+              tossResult.bowlingFirstTeam
+          }}
+          onInningsStarted={
+            handleSecondInningsStarted
+          }
+        />
+      ) : scoringMatch ? (
+        <LiveScoring
+          match={{
+            ...scoringMatch,
+            battingTeamName:
+              tossResult?.battingFirstTeam,
+            firstInningsTotalRuns:
+              firstInningsData?.totalRuns ?? null
+          }}
+          onBack={
+            handleBackToDashboard
+          }
+          onFirstInningsCompleted={(innings) => {
+            setFirstInningsCompleted(true);
+            setFirstInningsData(innings);
 
-                  // Purpose:
-                  // Persist the first innings score inside the current
-                  // scoring match so it survives the second-innings transition.
-                  setScoringMatch((currentMatch) => ({
-                    ...currentMatch,
-                    firstInningsTotalRuns:
-                      innings.totalRuns
-                  }));
-                }}
-              />
-            ) : !showMatchCreation ? (
-              <UmpireDashboard
-                onCreateMatch={() =>
-                  setShowMatchCreation(true)
-                }
-                onContinueScoring={
-                  handleContinueScoring
-                }
-              />
-            ) : (
-              <div className="container mt-4">
-                <button
-                  className="btn btn-secondary mb-3"
-                  onClick={() =>
-                    setShowMatchCreation(false)
-                  }
-                >
-                  ← Back to My Matches
-                </button>
+            setScoringMatch((currentMatch) => ({
+              ...currentMatch,
+              firstInningsTotalRuns:
+                innings.totalRuns
+            }));
+          }}
+         onMatchCompleted={(completedMatch) => {
+  setCompletedMatchData({
+    ...scoringMatch,
+    ...completedMatch
+  });
 
-                <MatchCreation />
-              </div>
-            )}
-          </>
-        )}
+  setMatchCompleted(true);
+}}
+        />
+      ) : !showMatchCreation ? (
+        <UmpireDashboard
+          onCreateMatch={() => {
+            setShowMatchCreation(true);
+          }}
+          onContinueScoring={
+            handleContinueScoring
+          }
+        />
+      ) : (
+        <div className="container mt-4">
+          <button
+            className="btn btn-secondary mb-3"
+            onClick={() =>
+              setShowMatchCreation(false)
+            }
+          >
+            ← Back to My Matches
+          </button>
+
+          <MatchCreation />
+        </div>
+      )}
+    </>
+  )}
 
       <LoginModal
         show={showLoginModal}

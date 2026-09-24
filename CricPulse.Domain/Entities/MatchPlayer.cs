@@ -1,4 +1,5 @@
-﻿namespace CricPulse.Domain.Entities
+﻿using WicketEntity = CricPulse.Domain.Entities;
+namespace CricPulse.Domain.Entities
 {
     public class MatchPlayer
     {

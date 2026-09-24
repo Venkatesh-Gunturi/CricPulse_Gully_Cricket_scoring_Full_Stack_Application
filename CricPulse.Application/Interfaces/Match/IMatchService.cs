@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using MatchEntity=CricPulse.Domain.Entities.Match;
+using CricPulse.Domain.Entities;
 using CricPulse.Application.DTOs.Match;
 
 namespace CricPulse.Application.Interfaces.Match

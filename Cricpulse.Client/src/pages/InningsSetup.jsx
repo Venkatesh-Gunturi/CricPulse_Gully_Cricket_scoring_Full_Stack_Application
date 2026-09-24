@@ -12,128 +12,325 @@ const InningsSetup = ({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  const battingTeamName = tossResult.battingFirstTeam;
-  const bowlingTeamName = tossResult.bowlingFirstTeam;
+  const battingTeamName =
+    tossResult?.battingFirstTeam;
 
-  // Purpose:
-  // Convert the actual batting team name into the Team1/Team2 code
-  // used by MatchPlayer records.
+  const bowlingTeamName =
+    tossResult?.bowlingFirstTeam;
+
+  /*
+   * Determine whether a player belongs to Team 1.
+   *
+   * MatchPlayer.Team is stored as "Team1" / "Team2".
+   */
+  const isTeam1Player = (player) => {
+    return (
+      player?.team === "Team1" ||
+      player?.team === match?.team1Name
+    );
+  };
+
+  /*
+   * Convert an actual team name into the MatchPlayer
+   * team identifier used by the backend.
+   */
+  const getTeamCode = (teamName) => {
+    if (!teamName) {
+      return null;
+    }
+
+    if (
+      teamName === match?.team1Name
+    ) {
+      return "Team1";
+    }
+
+    if (
+      teamName === match?.team2Name
+    ) {
+      return "Team2";
+    }
+
+    return null;
+  };
+
   const battingTeamCode =
-    battingTeamName === match.team1Name
-      ? "Team1"
-      : "Team2";
+    getTeamCode(battingTeamName);
 
-  // Purpose:
-  // Convert the actual bowling team name into the Team1/Team2 code
-  // used by MatchPlayer records.
   const bowlingTeamCode =
-    bowlingTeamName === match.team1Name
-      ? "Team1"
-      : "Team2";
+    getTeamCode(bowlingTeamName);
 
-  // Purpose:
-  // Get all players belonging to the team batting this innings.
+  /*
+   * Players belonging to the batting team.
+   */
   const battingPlayers = useMemo(() => {
-    return (match.players || []).filter(
-      (player) => player.team === battingTeamCode
-    );
-  }, [match.players, battingTeamCode]);
+    if (!battingTeamCode) {
+      return [];
+    }
 
-  // Purpose:
-  // Get all players belonging to the team bowling this innings.
+    return (match?.players || []).filter(
+      (player) =>
+        player?.team === battingTeamCode
+    );
+  }, [
+    match?.players,
+    battingTeamCode
+  ]);
+
+  /*
+   * Players belonging to the bowling team.
+   */
   const bowlingPlayers = useMemo(() => {
-    return (match.players || []).filter(
-      (player) => player.team === bowlingTeamCode
-    );
-  }, [match.players, bowlingTeamCode]);
+    if (!bowlingTeamCode) {
+      return [];
+    }
 
-  // Purpose:
-  // Prevent the selected striker from appearing as an available
-  // non-striker.
+    return (match?.players || []).filter(
+      (player) =>
+        player?.team === bowlingTeamCode
+    );
+  }, [
+    match?.players,
+    bowlingTeamCode
+  ]);
+
+  /*
+   * Do not allow the striker to also be selected
+   * as the non-striker.
+   */
   const availableNonStrikers = useMemo(() => {
     return battingPlayers.filter(
       (player) =>
-       String(player.matchPlayerId) !== String(strikerId)
+        String(player.matchPlayerId) !==
+        String(strikerId)
     );
-  }, [battingPlayers, strikerId]);
+  }, [
+    battingPlayers,
+    strikerId
+  ]);
 
- // Purpose:
-// Validate the selected players, call the backend to start the innings,
-// and expose the actual API error so failures can be diagnosed correctly.
-const handleStartInnings = async () => {
-  setError("");
+  const handleStartInnings = async () => {
+    setError("");
 
-  if (!strikerId) {
-    setError("Please select the striker.");
-    return;
-  }
-
-  if (!nonStrikerId) {
-    setError("Please select the non-striker.");
-    return;
-  }
-
-  if (!bowlerId) {
-    setError("Please select the bowler.");
-    return;
-  }
-
-  if (strikerId === nonStrikerId) {
-    setError("Striker and non-striker must be different.");
-    return;
-  }
-
-  try {
-    setLoading(true);
-
-    console.log("Starting innings with:", {
-      matchId: match.id,
-      strikerMatchPlayerId: Number(strikerId),
-      nonStrikerMatchPlayerId: Number(nonStrikerId),
-      bowlerMatchPlayerId: Number(bowlerId)
-    });
-
-    const result = await startInnings(
-      match.id,
-      Number(strikerId),
-      Number(nonStrikerId),
-      Number(bowlerId)
-    );
-
-    console.log("Start innings response:", result);
-
-    onInningsStarted(result);
-  } catch (error) {
-    console.error("Failed to start innings:", error);
-    console.error("Status:", error.response?.status);
-    console.error("Response:", error.response?.data);
-
-    const responseData = error.response?.data;
-
-    if (typeof responseData === "string") {
-      setError(responseData);
-    } else if (responseData?.message) {
-      setError(responseData.message);
-    } else if (responseData?.title) {
-      setError(responseData.title);
-    } else {
+    if (!battingTeamName) {
       setError(
-        `Unable to start innings. Status: ${
-          error.response?.status || "unknown"
-        }`
+        "Batting team information is missing."
       );
+      return;
     }
-  } finally {
-    setLoading(false);
-  }
-};
+
+    if (!bowlingTeamName) {
+      setError(
+        "Bowling team information is missing."
+      );
+      return;
+    }
+
+    if (!battingTeamCode) {
+      setError(
+        `Unable to identify batting team "${battingTeamName}".`
+      );
+      return;
+    }
+
+    if (!bowlingTeamCode) {
+      setError(
+        `Unable to identify bowling team "${bowlingTeamName}".`
+      );
+      return;
+    }
+
+    if (!strikerId) {
+      setError(
+        "Please select the striker."
+      );
+      return;
+    }
+
+    if (!nonStrikerId) {
+      setError(
+        "Please select the non-striker."
+      );
+      return;
+    }
+
+    if (!bowlerId) {
+      setError(
+        "Please select the bowler."
+      );
+      return;
+    }
+
+    if (
+      String(strikerId) ===
+      String(nonStrikerId)
+    ) {
+      setError(
+        "Striker and non-striker must be different."
+      );
+      return;
+    }
+
+    const selectedStriker =
+      battingPlayers.find(
+        (player) =>
+          String(player.matchPlayerId) ===
+          String(strikerId)
+      );
+
+    const selectedNonStriker =
+      battingPlayers.find(
+        (player) =>
+          String(player.matchPlayerId) ===
+          String(nonStrikerId)
+      );
+
+    const selectedBowler =
+      bowlingPlayers.find(
+        (player) =>
+          String(player.matchPlayerId) ===
+          String(bowlerId)
+      );
+
+    if (!selectedStriker) {
+      setError(
+        "Selected striker does not belong to the batting team."
+      );
+      return;
+    }
+
+    if (!selectedNonStriker) {
+      setError(
+        "Selected non-striker does not belong to the batting team."
+      );
+      return;
+    }
+
+    if (!selectedBowler) {
+      setError(
+        "Selected bowler does not belong to the bowling team."
+      );
+      return;
+    }
+
+    try {
+      setLoading(true);
+
+      const request = {
+        matchId: match.id,
+        inningsNumber: 1,
+        strikerMatchPlayerId:
+          Number(strikerId),
+        nonStrikerMatchPlayerId:
+          Number(nonStrikerId),
+        bowlerMatchPlayerId:
+          Number(bowlerId)
+      };
+
+      console.log(
+        "Starting first innings:",
+        request
+      );
+
+      console.log(
+        "Batting team:",
+        battingTeamName,
+        battingTeamCode
+      );
+
+      console.log(
+        "Bowling team:",
+        bowlingTeamName,
+        bowlingTeamCode
+      );
+
+      console.log(
+        "Selected striker:",
+        selectedStriker
+      );
+
+      console.log(
+        "Selected non-striker:",
+        selectedNonStriker
+      );
+
+      console.log(
+        "Selected bowler:",
+        selectedBowler
+      );
+
+      const result =
+        await startInnings(
+          request.matchId,
+          request.inningsNumber,
+          request.strikerMatchPlayerId,
+          request.nonStrikerMatchPlayerId,
+          request.bowlerMatchPlayerId
+        );
+
+      console.log(
+        "Start innings response:",
+        result
+      );
+
+      onInningsStarted(result);
+    } catch (error) {
+      console.error(
+        "Failed to start innings:",
+        error
+      );
+
+      console.error(
+        "Status:",
+        error.response?.status
+      );
+
+      console.error(
+        "Response:",
+        error.response?.data
+      );
+
+      const responseData =
+        error.response?.data;
+
+      if (
+        typeof responseData ===
+        "string"
+      ) {
+        setError(responseData);
+      } else if (
+        responseData?.message
+      ) {
+        setError(
+          responseData.message
+        );
+      } else if (
+        responseData?.title
+      ) {
+        setError(
+          responseData.title
+        );
+      } else {
+        setError(
+          `Unable to start innings. Status: ${
+            error.response?.status ||
+            "unknown"
+          }`
+        );
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <div className="container py-4">
 
       <div className="text-center mb-4">
         <h2>
-          {match.team1Name} &nbsp; VS &nbsp; {match.team2Name}
+          {match.team1Name}
+          &nbsp; VS &nbsp;
+          {match.team2Name}
         </h2>
 
         <h4 className="mt-3">
@@ -166,10 +363,14 @@ const handleStartInnings = async () => {
               className="form-select"
               value={strikerId}
               onChange={(event) => {
-                setStrikerId(event.target.value);
+                const value =
+                  event.target.value;
+
+                setStrikerId(value);
 
                 if (
-                  event.target.value === nonStrikerId
+                  value ===
+                  nonStrikerId
                 ) {
                   setNonStrikerId("");
                 }
@@ -181,14 +382,20 @@ const handleStartInnings = async () => {
                 Select striker
               </option>
 
-              {battingPlayers.map((player) => (
-                <option
-                  key={player.matchPlayerId}
-                 value={player.matchPlayerId}
-                >
-                  {player.displayName}
-                </option>
-              ))}
+              {battingPlayers.map(
+                (player) => (
+                  <option
+                    key={
+                      player.matchPlayerId
+                    }
+                    value={
+                      player.matchPlayerId
+                    }
+                  >
+                    {player.displayName}
+                  </option>
+                )
+              )}
             </select>
           </div>
 
@@ -201,7 +408,9 @@ const handleStartInnings = async () => {
               className="form-select"
               value={nonStrikerId}
               onChange={(event) => {
-                setNonStrikerId(event.target.value);
+                setNonStrikerId(
+                  event.target.value
+                );
                 setError("");
               }}
             >
@@ -209,14 +418,20 @@ const handleStartInnings = async () => {
                 Select non-striker
               </option>
 
-              {availableNonStrikers.map((player) => (
-                <option
-                   key={player.matchPlayerId}
-                   value={player.matchPlayerId}
-                >
-                  {player.displayName}
-                </option>
-              ))}
+              {availableNonStrikers.map(
+                (player) => (
+                  <option
+                    key={
+                      player.matchPlayerId
+                    }
+                    value={
+                      player.matchPlayerId
+                    }
+                  >
+                    {player.displayName}
+                  </option>
+                )
+              )}
             </select>
           </div>
 
@@ -241,7 +456,9 @@ const handleStartInnings = async () => {
               className="form-select"
               value={bowlerId}
               onChange={(event) => {
-                setBowlerId(event.target.value);
+                setBowlerId(
+                  event.target.value
+                );
                 setError("");
               }}
             >
@@ -249,14 +466,20 @@ const handleStartInnings = async () => {
                 Select bowler
               </option>
 
-              {bowlingPlayers.map((player) => (
-                <option
-                  key={player.matchPlayerId}
-                  value={player.matchPlayerId}
-                >
-                  {player.displayName}
-                </option>
-              ))}
+              {bowlingPlayers.map(
+                (player) => (
+                  <option
+                    key={
+                      player.matchPlayerId
+                    }
+                    value={
+                      player.matchPlayerId
+                    }
+                  >
+                    {player.displayName}
+                  </option>
+                )
+              )}
             </select>
           </div>
 
@@ -270,7 +493,9 @@ const handleStartInnings = async () => {
             <button
               type="button"
               className="btn btn-success btn-lg"
-              onClick={handleStartInnings}
+              onClick={
+                handleStartInnings
+              }
               disabled={loading}
             >
               {loading

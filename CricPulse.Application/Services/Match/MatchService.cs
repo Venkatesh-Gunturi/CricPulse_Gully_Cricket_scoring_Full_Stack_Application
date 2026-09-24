@@ -985,15 +985,19 @@ namespace CricPulse.Application.Services.Match
         // Purpose:
         // Load the live match and map its current innings, teams, first-innings score,
         // and ball history into a response that the live screens can consume.
-        public async Task<LiveMatchResponseDto?> GetLiveMatchAsync(
-            int matchId)
+        public async Task<LiveMatchResponseDto?> GetLiveMatchAsync(int matchId)
         {
             var match = await _matchRepository
                 .GetLiveMatchAsync(matchId);
 
-            if (match == null ||
-                (match.Status != MatchStatus.Live &&
-                match.Status != MatchStatus.PendingCompletion))
+            if (match == null)
+            {
+                return null;
+            }
+
+            if (match.Status != MatchStatus.Live &&
+                match.Status != MatchStatus.PendingCompletion &&
+                match.Status != MatchStatus.Completed)
             {
                 return null;
             }
@@ -1002,9 +1006,6 @@ namespace CricPulse.Application.Services.Match
                 .OrderByDescending(i => i.InningsNumber)
                 .FirstOrDefault();
 
-            // Purpose:
-            // Retrieve the persisted first-innings score so the second innings
-            // target does not depend on temporary frontend state.
             var firstInnings = match.Innings
                 .FirstOrDefault(i => i.InningsNumber == 1);
 
@@ -1013,26 +1014,57 @@ namespace CricPulse.Application.Services.Match
                 MatchId = match.Id,
 
                 Team1Name = match.Team1Name,
-                Team2Name = match.Team2Name,
-
                 Team1Logo = match.Team1Logo,
+
+                Team2Name = match.Team2Name,
                 Team2Logo = match.Team2Logo,
 
+                PlayersPerTeam = match.PlayersPerTeam,
+                Overs = match.Overs,
+
+                MatchDate = match.MatchDate,
+                MatchTime = match.MatchTime,
+
+                VenueName = match.VenueName,
+                Address = match.Address,
+                State = match.State,
+
+                Latitude = match.Latitude,
+                Longitude = match.Longitude,
+
+                LiveStreamUrl = match.LiveStreamUrl,
+
                 Status = match.Status.ToString(),
+                StartedAt = match.StartedAt,
+                CreatedAt = match.CreatedAt,
 
                 TossWinnerTeam = match.TossWinnerTeam,
                 TossDecision = match.TossDecision,
                 BattingFirstTeam = match.BattingFirstTeam,
 
+                Result = match.Result.ToString(),
+                CompletionDeadline = match.CompletionDeadline,
+
                 FirstInningsTotalRuns =
                     firstInnings?.TotalRuns,
 
-                InningsId = innings?.Id,
-                InningsNumber = innings?.InningsNumber,
-                InningsStatus = innings?.Status,
+                FirstInningsWickets =
+                    firstInnings?.Wickets,
 
-                BattingTeam = innings?.BattingTeam,
-                BowlingTeam = innings?.BowlingTeam,
+                FirstInningsLegalBalls =
+                    firstInnings?.LegalBalls,
+
+                InningsId =
+                    innings?.Id,
+
+                InningsNumber =
+                    innings?.InningsNumber,
+
+                BattingTeam =
+                    innings?.BattingTeam,
+
+                BowlingTeam =
+                    innings?.BowlingTeam,
 
                 StrikerMatchPlayerId =
                     innings?.StrikerMatchPlayerId,
@@ -1043,10 +1075,65 @@ namespace CricPulse.Application.Services.Match
                 CurrentBowlerMatchPlayerId =
                     innings?.CurrentBowlerMatchPlayerId,
 
-                TotalRuns = innings?.TotalRuns,
-                Wickets = innings?.Wickets,
-                LegalBalls = innings?.LegalBalls
+                TotalRuns =
+                    innings?.TotalRuns,
+
+                Wickets =
+                    innings?.Wickets,
+
+                LegalBalls =
+                    innings?.LegalBalls,
+
+                InningsStatus =
+                    innings?.Status,
+
+                IsFreeHit =
+                    innings?.IsFreeHit ?? false
             };
+
+            // ================================================================
+            // MATCH PLAYERS
+            // ================================================================
+
+            response.Players = match.MatchPlayers
+                .Select(mp => new LiveMatchPlayerDto
+                {
+                    MatchPlayerId = mp.Id,
+
+                    PlayerId = mp.PlayerId,
+
+                    PlayerName =
+                        $"{mp.Player.User.FirstName} {mp.Player.User.LastName}"
+                            .Trim(),
+
+                    MobileNumber =
+                        mp.Player.User.MobileNumber,
+
+                    Team = mp.Team,
+
+                    // The first player assigned to each team is the captain
+                    // in the current CricPulse match-assignment design.
+                    IsCaptain =
+                        match.MatchPlayers
+                            .Where(x =>
+                                x.Team.Equals(
+                                    mp.Team,
+                                    StringComparison.OrdinalIgnoreCase))
+                            .OrderBy(x => x.Id)
+                            .FirstOrDefault()?.Id == mp.Id,
+
+                    IsDismissed =
+                        match.Innings
+                            .SelectMany(i => i.Balls)
+                            .Where(b => b.Wicket != null)
+                            .Any(b =>
+                                b.Wicket!.DismissedMatchPlayerId == mp.Id)
+                })
+                .ToList();
+
+            // ================================================================
+            // BALL HISTORY
+            // ================================================================
 
             if (innings != null)
             {
@@ -1055,8 +1142,12 @@ namespace CricPulse.Application.Services.Match
                     .Select(b => new LiveBallDto
                     {
                         Id = b.Id,
-                        OverNumber = b.OverNumber,
-                        BallNumber = b.BallNumber,
+
+                        OverNumber =
+                            b.OverNumber,
+
+                        BallNumber =
+                            b.BallNumber,
 
                         StrikerMatchPlayerId =
                             b.StrikerMatchPlayerId,
@@ -1067,18 +1158,66 @@ namespace CricPulse.Application.Services.Match
                         BowlerMatchPlayerId =
                             b.BowlerMatchPlayerId,
 
-                        Runs = b.Runs,
-                        IsLegalDelivery = b.IsLegalDelivery,
+                        Runs =
+                            b.Runs,
 
-                        ExtraType = b.ExtraType,
-                        ExtraRuns = b.ExtraRuns,
+                        BatterRuns =
+                            b.BatterRuns,
 
-                        WicketType = b.Wicket?.WicketType,
+                        IsLegalDelivery =
+                            b.IsLegalDelivery,
+
+                        ExtraType =
+                            b.ExtraType,
+
+                        ExtraRuns =
+                            b.ExtraRuns,
+
+                        Notation =
+                            b.Notation,
+
+                        WicketType =
+                            b.Wicket?.WicketType,
 
                         DismissedMatchPlayerId =
-                            b.Wicket?.DismissedMatchPlayerId
+                            b.Wicket?.DismissedMatchPlayerId,
+
+                        CaughtByMatchPlayerId =
+                            b.Wicket?.CaughtByMatchPlayerId,
+
+                        StumpedByMatchPlayerId =
+                            b.Wicket?.StumpedByMatchPlayerId,
+
+                        RunsCompleted =
+                            b.Wicket?.RunsCompleted ?? 0,
+
+                        DismissedPlayerWasStriker =
+                            b.Wicket?.DismissedPlayerWasStriker ?? false,
+
+                        DidBattersCross =
+                            b.Wicket?.DidBattersCross ?? false,
+
+                        FreeHitAfterDelivery =
+                            b.FreeHitAfterDelivery,
+
+                        CreatedAt =
+                            b.CreatedAt
                     })
                     .ToList();
+
+                // ============================================================
+                // CURRENT OVER
+                // ============================================================
+
+                response.CurrentOverNumber =
+                    innings.LegalBalls / 6;
+
+                response.CurrentOverBalls =
+                    response.Balls
+                        .Where(b =>
+                            b.OverNumber ==
+                            response.CurrentOverNumber)
+                        .ToList();
             }
 
             return response;

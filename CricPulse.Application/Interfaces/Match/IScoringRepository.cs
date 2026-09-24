@@ -4,23 +4,45 @@ namespace CricPulse.Application.Interfaces.Match
 {
     public interface IScoringRepository
     {
-        Task<Innings?> GetInningsForScoringAsync(int inningsId);
-        Task AddBallAsync(Ball ball);
-        Task AddWicketAsync(Wicket wicket);
-        Task SaveChangesAsync();
+        // ================================================================
+        // INNINGS / SCORING
+        // ================================================================
 
-        // Purpose:
-        // Remove the specified scoring action and its associated wicket, if any,
-        // so the latest scoring action can be safely undone.
+        Task<Innings?> GetInningsForScoringAsync(int inningsId);
+
+        Task AddBallAsync(Ball ball);
+
+        Task AddWicketAsync(Wicket wicket);
+
         Task RemoveBallAsync(Ball ball);
 
+        Task SaveChangesAsync();
+
+        // ================================================================
+        // MATCH / TOSS
+        // ================================================================
+
         Task<MatchEntity?> GetMatchForTossAsync(int matchId);
-        Task<List<MatchEntity>> GetExpiredScheduledMatchesAsync();
 
         Task<MatchEntity?> GetMatchForInningsAsync(int matchId);
 
+        // ================================================================
+        // MATCH LIFECYCLE
+        // ================================================================
+
+        Task<List<MatchEntity>> GetExpiredScheduledMatchesAsync();
+
         Task<List<MatchEntity>> GetPendingCompletionMatchesAsync();
+
+        // ================================================================
+        // STATISTICS
+        // ================================================================
+
         Task<MatchEntity?> GetMatchForStatisticsAsync(int matchId);
+
+        // ================================================================
+        // LEGACY / COMPATIBILITY
+        // ================================================================
 
         Task DeleteCompletedMatchAsync(int matchId);
     }

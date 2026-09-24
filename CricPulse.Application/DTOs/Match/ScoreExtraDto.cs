@@ -6,11 +6,16 @@
 
         public string ExtraType { get; set; } = string.Empty;
 
-        // Total runs added to the team's score by this delivery.
         public int Runs { get; set; }
 
-        // Runs credited to the batter when the extra delivery also
-        // produces runs from the bat, such as a no-ball hit for 4.
         public int BatterRuns { get; set; }
+
+        public int RunsCompleted { get; set; }
+
+        public int? DismissedMatchPlayerId { get; set; }
+
+        public bool DidBattersCross { get; set; }
+
+        public int? NewBatterMatchPlayerId { get; set; }
     }
 }

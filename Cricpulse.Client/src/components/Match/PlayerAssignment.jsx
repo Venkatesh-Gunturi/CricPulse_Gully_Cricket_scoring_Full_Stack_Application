@@ -393,16 +393,29 @@ const MatchPlayerAssignment = ({
 
   // Purpose:
   // Mark a player as verified and reveal the next available player slot.
+  useEffect(() => {
+    setTeam1Players(
+      team1Slots
+        .filter((slot) => slot.verified)
+        .map(toPlayer)
+    );
+  }, [team1Slots, setTeam1Players]);
+
+  useEffect(() => {
+    setTeam2Players(
+      team2Slots
+        .filter((slot) => slot.verified)
+        .map(toPlayer)
+    );
+  }, [team2Slots, setTeam2Players]);
+
+  // Purpose:
+  // Mark a player as verified and reveal the next available player slot.
   const markPlayerVerified = (team, index, player) => {
     const setter =
       team === "team1"
         ? setTeam1Slots
         : setTeam2Slots;
-
-    const setPlayers =
-      team === "team1"
-        ? setTeam1Players
-        : setTeam2Players;
 
     setter((current) => {
       const updated = current.map(
@@ -421,13 +434,6 @@ const MatchPlayerAssignment = ({
               }
             : slot
       );
-
-      const verifiedPlayers =
-        updated
-          .filter((slot) => slot.verified)
-          .map(toPlayer);
-
-      setPlayers(verifiedPlayers);
 
       if (
         updated.length < playersPerTeam &&
@@ -448,11 +454,6 @@ const MatchPlayerAssignment = ({
         ? setTeam1Slots
         : setTeam2Slots;
 
-    const setPlayers =
-      team === "team1"
-        ? setTeam1Players
-        : setTeam2Players;
-
     setter((current) => {
       const updated = current.filter(
         (_, slotIndex) => slotIndex !== index
@@ -461,12 +462,6 @@ const MatchPlayerAssignment = ({
       if (updated.length === 0) {
         updated.push(createEmptySlot());
       }
-
-      setPlayers(
-        updated
-          .filter((slot) => slot.verified)
-          .map(toPlayer)
-      );
 
       return updated;
     });

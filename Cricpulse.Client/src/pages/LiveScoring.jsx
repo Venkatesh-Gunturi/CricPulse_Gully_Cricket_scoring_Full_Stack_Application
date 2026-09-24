@@ -1,42 +1,81 @@
-import {
-  useEffect,
-  useMemo,
-  useRef,
-  useState
-} from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import NoBallScoringModal from "../components/Match/NoBallScoringModal";
 import ExtraScoringModal from "../components/Match/ExtraScoringModal";
+import MatchInfo from "../components/Match/MatchDetails";
+import WicketScoringModal from "../components/Match/WicketScoringModal";
 
 import {
   getLiveMatch,
   scoreRuns,
   scoreExtra,
-  cancelMatch
+  scoreWicket,
+  cancelMatch,
+  completeMatch,
+  undoLastScore,
+  changeBowler,
+  scoreExtraRunOut
 } from "../services/matchService";
 
 const LiveScoring = ({
   match,
-  firstInningsTotalRuns,
   onBack,
-  onFirstInningsCompleted
+  onFirstInningsCompleted,
+  onMatchCompleted
 }) => {
   const [liveMatch, setLiveMatch] = useState(null);
   const [showMenu, setShowMenu] = useState(false);
+  const [showMatchInfo, setShowMatchInfo] = useState(false);
   const [loading, setLoading] = useState(true);
   const [scoring, setScoring] = useState(false);
   const [error, setError] = useState("");
   const [selectedExtra, setSelectedExtra] = useState(null);
-const [showNoBallModal, setShowNoBallModal] = useState(false);
-  // Reference for the three-dot menu.
-  // Used to detect clicks outside the menu.
+  const [showNoBallModal, setShowNoBallModal] = useState(false);
+  const [showWicketModal, setShowWicketModal] = useState(false);
+  const [selectedWicketType, setSelectedWicketType] = useState("BOWLED");
+  const [completionSeconds, setCompletionSeconds] = useState(0);
+  const [completionActionLoading, setCompletionActionLoading] = useState(false);
+
+  // Only one undo is allowed until a new ball is scored.
+  const [undoUsed, setUndoUsed] = useState(false);
+  const [undoMessage, setUndoMessage] = useState("");
+
+  const [showBowlerModal, setShowBowlerModal] = useState(false);
+  const [selectedBowlerId, setSelectedBowlerId] = useState("");
+
+  const completionStartedRef = useRef(false);
   const menuRef = useRef(null);
 
-  // Purpose:
-  // Close the three-dot menu when the user clicks anywhere
-  // outside the menu.
+  const refreshLiveMatch = async () => {
+    const result = await getLiveMatch(match.id);
+    setLiveMatch(result);
+    return result;
+  };
+
   useEffect(() => {
-    const handleOutsideClick = (event) => {
+    const load = async () => {
+      try {
+        setLoading(true);
+        setError("");
+        await refreshLiveMatch();
+      } catch (err) {
+        const data = err.response?.data;
+
+        setError(
+          typeof data === "string"
+            ? data
+            : data?.message || "Unable to load live match."
+        );
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    load();
+  }, [match.id]);
+
+  useEffect(() => {
+    const closeMenu = (event) => {
       if (
         menuRef.current &&
         !menuRef.current.contains(event.target)
@@ -45,120 +84,157 @@ const [showNoBallModal, setShowNoBallModal] = useState(false);
       }
     };
 
-    document.addEventListener(
-      "mousedown",
-      handleOutsideClick
-    );
+    document.addEventListener("mousedown", closeMenu);
 
-    return () => {
-      document.removeEventListener(
-        "mousedown",
-        handleOutsideClick
-      );
-    };
+    return () =>
+      document.removeEventListener("mousedown", closeMenu);
   }, []);
 
-  // Purpose:
-  // Load the latest live match state when the live scoring screen opens.
-  useEffect(() => {
-    const loadLiveMatch = async () => {
-      try {
-        setLoading(true);
-        setError("");
-
-        const result = await getLiveMatch(match.id);
-
-        setLiveMatch(result);
-      } catch (error) {
-        console.error(
-          "Failed to load live match:",
-          error
-        );
-
-        const responseData =
-          error.response?.data;
-
-        if (typeof responseData === "string") {
-          setError(responseData);
-        } else if (responseData?.message) {
-          setError(responseData.message);
-        } else {
-          setError("Unable to load live match.");
-        }
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    loadLiveMatch();
-  }, [match.id]);
-
-  // Purpose:
-  // Find a match player from the original match lineup using
-  // the MatchPlayer ID returned by the live scoring API.
   const getPlayer = (matchPlayerId) => {
-    if (!matchPlayerId) {
-      return null;
-    }
+    if (!matchPlayerId) return null;
 
     return (match.players || []).find(
       (player) =>
-        Number(player.matchPlayerId) ===
+        Number(player.matchPlayerId ?? player.id) ===
         Number(matchPlayerId)
     );
   };
 
-  // Purpose:
-  // Resolve the current striker from the live innings state.
-  const striker = useMemo(() => {
-    return getPlayer(
-      liveMatch?.strikerMatchPlayerId
-    );
-  }, [
-    liveMatch?.strikerMatchPlayerId,
-    match.players
-  ]);
+  const getPlayerName = (player) =>
+    player?.displayName ||
+    player?.playerName ||
+    player?.name ||
+    player?.mobileNumber ||
+    "Unknown Player";
 
-  // Purpose:
-  // Resolve the current non-striker from the live innings state.
-  const nonStriker = useMemo(() => {
-    return getPlayer(
-      liveMatch?.nonStrikerMatchPlayerId
-    );
-  }, [
-    liveMatch?.nonStrikerMatchPlayerId,
-    match.players
-  ]);
+  const striker = useMemo(
+    () => getPlayer(liveMatch?.strikerMatchPlayerId),
+    [liveMatch?.strikerMatchPlayerId, match.players]
+  );
 
-  // Purpose:
-  // Resolve the current bowler from the live innings state.
-  const bowler = useMemo(() => {
-    return getPlayer(
-      liveMatch?.currentBowlerMatchPlayerId
-    );
-  }, [
-    liveMatch?.currentBowlerMatchPlayerId,
-    match.players
-  ]);
+  const nonStriker = useMemo(
+    () => getPlayer(liveMatch?.nonStrikerMatchPlayerId),
+    [liveMatch?.nonStrikerMatchPlayerId, match.players]
+  );
 
-  // Purpose:
-  // Calculate the current striker's runs and legal balls faced.
+  const bowler = useMemo(
+    () => getPlayer(liveMatch?.currentBowlerMatchPlayerId),
+    [liveMatch?.currentBowlerMatchPlayerId, match.players]
+  );
+
+  const isSecondInnings =
+    Number(liveMatch?.inningsNumber) === 2;
+
+  const inningsCompleted =
+    liveMatch?.inningsStatus === "Completed";
+
+  const balls = liveMatch?.balls || [];
+
+  const isWaitingForBowler =
+    !inningsCompleted &&
+    liveMatch?.status === "Live" &&
+    Number(liveMatch?.currentBowlerMatchPlayerId ?? 0) === 0;
+
+ const bowlingTeamPlayers = useMemo(() => {
+  const players =
+    liveMatch?.players?.length > 0
+      ? liveMatch.players
+      : match?.players || [];
+
+  const bowlingTeam = String(
+    liveMatch?.bowlingTeam || ""
+  )
+    .trim()
+    .toLowerCase();
+
+  if (!bowlingTeam) {
+    return [];
+  }
+
+  const team1Name = String(
+    liveMatch?.team1Name ||
+      match?.team1Name ||
+      ""
+  )
+    .trim()
+    .toLowerCase();
+
+  const team2Name = String(
+    liveMatch?.team2Name ||
+      match?.team2Name ||
+      ""
+  )
+    .trim()
+    .toLowerCase();
+
+  return players.filter((player) => {
+    const playerTeam = String(
+      player?.team || ""
+    )
+      .trim()
+      .toLowerCase();
+
+    if (!playerTeam) {
+      return false;
+    }
+
+    // Backend stores MatchPlayer.Team as Team1 / Team2.
+    if (
+      playerTeam === "team1" &&
+      team1Name === bowlingTeam
+    ) {
+      return true;
+    }
+
+    if (
+      playerTeam === "team2" &&
+      team2Name === bowlingTeam
+    ) {
+      return true;
+    }
+
+    // Also support an API response that already
+    // contains the actual team name.
+    return playerTeam === bowlingTeam;
+  });
+}, [
+  liveMatch?.players,
+  liveMatch?.bowlingTeam,
+  liveMatch?.team1Name,
+  liveMatch?.team2Name,
+  match?.players,
+  match?.team1Name,
+  match?.team2Name
+]);
+
+  /*
+   * Current over is based on legal deliveries.
+   *
+   * Example:
+   * 0 legal balls  -> 0.0
+   * 1 legal ball   -> 0.1
+   * 5 legal balls  -> 0.5
+   * 6 legal balls  -> 1.0
+   * 7 legal balls  -> 1.1
+   */
+  const currentOver = useMemo(() => {
+    const legalBalls = liveMatch?.legalBalls ?? 0;
+
+    return `${Math.floor(legalBalls / 6)}.${legalBalls % 6}`;
+  }, [liveMatch?.legalBalls]);
+
   const strikerStats = useMemo(() => {
-    const balls = liveMatch?.balls || [];
-
-    const playerId =
-      liveMatch?.strikerMatchPlayerId;
+    const id = liveMatch?.strikerMatchPlayerId;
 
     const playerBalls = balls.filter(
       (ball) =>
-        Number(ball.strikerMatchPlayerId) ===
-        Number(playerId)
+        Number(ball.strikerMatchPlayerId) === Number(id)
     );
 
     return {
       runs: playerBalls.reduce(
-        (total, ball) =>
-          total +
+        (sum, ball) =>
+          sum +
           (ball.runs ?? 0) -
           (ball.extraRuns ?? 0),
         0
@@ -169,28 +245,22 @@ const [showNoBallModal, setShowNoBallModal] = useState(false);
       ).length
     };
   }, [
-    liveMatch?.balls,
+    balls,
     liveMatch?.strikerMatchPlayerId
   ]);
 
-  // Purpose:
-  // Calculate the non-striker's runs and legal balls faced.
   const nonStrikerStats = useMemo(() => {
-    const balls = liveMatch?.balls || [];
-
-    const playerId =
-      liveMatch?.nonStrikerMatchPlayerId;
+    const id = liveMatch?.nonStrikerMatchPlayerId;
 
     const playerBalls = balls.filter(
       (ball) =>
-        Number(ball.strikerMatchPlayerId) ===
-        Number(playerId)
+        Number(ball.strikerMatchPlayerId) === Number(id)
     );
 
     return {
       runs: playerBalls.reduce(
-        (total, ball) =>
-          total +
+        (sum, ball) =>
+          sum +
           (ball.runs ?? 0) -
           (ball.extraRuns ?? 0),
         0
@@ -201,165 +271,114 @@ const [showNoBallModal, setShowNoBallModal] = useState(false);
       ).length
     };
   }, [
-    liveMatch?.balls,
+    balls,
     liveMatch?.nonStrikerMatchPlayerId
   ]);
 
-  // Purpose:
-  // Calculate the current bowler's overs, runs conceded,
-  // and wickets from the recorded deliveries.
   const bowlerStats = useMemo(() => {
-    const balls = liveMatch?.balls || [];
+    const id = liveMatch?.currentBowlerMatchPlayerId;
 
-    const bowlerId =
-      liveMatch?.currentBowlerMatchPlayerId;
+    if (!id) {
+      return {
+        overs: "0.0",
+        runsConceded: 0,
+        wickets: 0
+      };
+    }
 
-    const bowlerBalls = balls.filter(
+    const playerBalls = balls.filter(
       (ball) =>
-        Number(ball.bowlerMatchPlayerId) ===
-        Number(bowlerId)
+        Number(ball.bowlerMatchPlayerId) === Number(id)
     );
 
-    const legalBalls = bowlerBalls.filter(
+    const legal = playerBalls.filter(
       (ball) => ball.isLegalDelivery
     ).length;
 
-    const runsConceded = bowlerBalls.reduce(
-      (total, ball) => {
-        // Byes and leg-byes are not charged to the bowler.
+    const conceded = playerBalls.reduce(
+      (sum, ball) => {
+        const type = (
+          ball.extraType || ""
+        ).toUpperCase();
+
         if (
-          ball.extraType === "BYE" ||
-          ball.extraType === "LEG BYE"
+          type === "BYE" ||
+          type === "LEG BYE"
         ) {
-          return total;
+          return sum;
         }
 
-        return total + (ball.runs ?? 0);
+        return sum + (ball.runs ?? 0);
       },
       0
     );
 
-    const wickets = bowlerBalls.filter(
+    const wickets = playerBalls.filter(
       (ball) =>
-        ball.wicketType &&
-        ball.wicketType !== "RUN OUT"
+        [
+          "BOWLED",
+          "CAUGHT",
+          "LBW",
+          "STUMPED",
+          "HIT WICKET"
+        ].includes(
+          (ball.wicketType || "").toUpperCase()
+        )
     ).length;
 
     return {
-      overs: `${Math.floor(
-        legalBalls / 6
-      )}.${legalBalls % 6}`,
-
-      runsConceded,
-
+      overs: `${Math.floor(legal / 6)}.${legal % 6}`,
+      runsConceded: conceded,
       wickets
     };
   }, [
-    liveMatch?.balls,
+    balls,
     liveMatch?.currentBowlerMatchPlayerId
   ]);
 
-  // Purpose:
-  // Calculate the current over notation from the number of legal
-  // deliveries recorded in the innings.
-  const currentOver = useMemo(() => {
-    const legalBalls =
-      liveMatch?.legalBalls ?? 0;
-
-    const completedOvers =
-      Math.floor(legalBalls / 6);
-
-    const ballsInCurrentOver =
-      legalBalls % 6;
-
-    return `${completedOvers}.${ballsInCurrentOver}`;
-  }, [
-    liveMatch?.legalBalls
-  ]);
-
-  // Purpose:
-  // Get the deliveries belonging to the latest over so the
-  // current-over display can show the actual ball sequence.
+  /*
+   * The current-over display must follow the current
+   * legal-ball position, not simply the latest recorded
+   * ball. This also works after an over has completed.
+   */
   const currentOverBalls = useMemo(() => {
-    const balls = liveMatch?.balls || [];
+    if (!balls.length) return [];
 
-    if (balls.length === 0) {
-      return [];
-    }
-
-    const latestBall =
-      balls[balls.length - 1];
+    const legalBalls = liveMatch?.legalBalls ?? 0;
+    const currentOverNumber = Math.floor(
+      legalBalls / 6
+    );
 
     return balls.filter(
       (ball) =>
-        ball.overNumber ===
-        latestBall.overNumber
+        Number(ball.overNumber) ===
+        currentOverNumber
     );
   }, [
-    liveMatch?.balls
-  ]);
-
-  // Purpose:
-  // Determine whether the current innings has finished using
-  // the authoritative innings status returned by the backend.
-  const inningsCompleted =
-    liveMatch?.inningsStatus === "Completed";
-
-  // Purpose:
-  // Determine whether the current innings is the second innings.
-  const isSecondInnings =
-    Number(liveMatch?.inningsNumber) === 2;
-
-  // Purpose:
-  // Calculate the current run rate from the actual legal balls
-  // and runs recorded by the backend.
-  const currentRunRate = useMemo(() => {
-    const runs =
-      liveMatch?.totalRuns ?? 0;
-
-    const legalBalls =
-      liveMatch?.legalBalls ?? 0;
-
-    if (legalBalls === 0) {
-      return 0;
-    }
-
-    return runs / (legalBalls / 6);
-  }, [
-    liveMatch?.totalRuns,
+    balls,
     liveMatch?.legalBalls
   ]);
 
-  // Purpose:
-  // Calculate the second-innings target directly from the persisted
-  // first-innings score returned by the live-match API.
-  const targetRuns = useMemo(() => {
-    if (!isSecondInnings) {
-      return null;
-    }
-
-    if (
-      liveMatch?.firstInningsTotalRuns === null ||
-      liveMatch?.firstInningsTotalRuns === undefined
-    ) {
-      return null;
-    }
-
-    return (
-      Number(
-        liveMatch.firstInningsTotalRuns
-      ) + 1
+  const firstInningsTotalRuns =
+    Number(
+      match.firstInningsTotalRuns ??
+        match.firstInningsScore ??
+        (isSecondInnings
+          ? undefined
+          : liveMatch?.firstInningsTotalRuns)
     );
-  }, [
-    isSecondInnings,
-    liveMatch?.firstInningsTotalRuns
-  ]);
 
-  // Purpose:
-  // Calculate required runs, remaining legal balls, and
-  // required run rate for the second innings chase.
+  const targetRuns =
+    isSecondInnings &&
+    Number.isFinite(firstInningsTotalRuns)
+      ? firstInningsTotalRuns + 1
+      : null;
+
   const chaseStats = useMemo(() => {
-    if (!isSecondInnings) {
+    if (
+      !isSecondInnings ||
+      targetRuns === null
+    ) {
       return null;
     }
 
@@ -377,18 +396,14 @@ const [showNoBallModal, setShowNoBallModal] = useState(false);
       0
     );
 
-    const requiredRuns =
-      targetRuns !== null
-        ? Math.max(
-            targetRuns - currentRuns,
-            0
-          )
-        : 0;
+    const requiredRuns = Math.max(
+      targetRuns - currentRuns,
+      0
+    );
 
     const requiredRunRate =
       remainingBalls > 0
-        ? requiredRuns /
-          (remainingBalls / 6)
+        ? requiredRuns / (remainingBalls / 6)
         : 0;
 
     return {
@@ -398,18 +413,31 @@ const [showNoBallModal, setShowNoBallModal] = useState(false);
     };
   }, [
     isSecondInnings,
+    targetRuns,
     liveMatch?.totalRuns,
     liveMatch?.legalBalls,
-    match.overs,
-    targetRuns
+    match.overs
   ]);
 
-  // Purpose:
-  // Notify the parent application when the first innings has completed
-  // so the application can display the next stage of the match flow.
+  const currentRunRate = useMemo(() => {
+    const ballsBowled =
+      liveMatch?.legalBalls ?? 0;
+
+    if (!ballsBowled) return 0;
+
+    return (
+      (liveMatch?.totalRuns ?? 0) /
+      (ballsBowled / 6)
+    );
+  }, [
+    liveMatch?.totalRuns,
+    liveMatch?.legalBalls
+  ]);
+
   useEffect(() => {
     if (
       !inningsCompleted ||
+      isSecondInnings ||
       !onFirstInningsCompleted ||
       !liveMatch
     ) {
@@ -417,20 +445,14 @@ const [showNoBallModal, setShowNoBallModal] = useState(false);
     }
 
     onFirstInningsCompleted({
-      battingTeam:
-        liveMatch.battingTeam,
-
-      totalRuns:
-        liveMatch.totalRuns ?? 0,
-
-      wickets:
-        liveMatch.wickets ?? 0,
-
-      overs:
-        match.overs
+      battingTeam: liveMatch.battingTeam,
+      totalRuns: liveMatch.totalRuns ?? 0,
+      wickets: liveMatch.wickets ?? 0,
+      overs: match.overs
     });
   }, [
     inningsCompleted,
+    isSecondInnings,
     liveMatch?.battingTeam,
     liveMatch?.totalRuns,
     liveMatch?.wickets,
@@ -438,14 +460,53 @@ const [showNoBallModal, setShowNoBallModal] = useState(false);
     onFirstInningsCompleted
   ]);
 
-  // Purpose:
-  // Record a normal bat run and reload the latest live state
-  // so all score information immediately reflects the delivery.
+  useEffect(() => {
+    if (
+      liveMatch?.status !==
+      "PendingCompletion"
+    ) {
+      completionStartedRef.current = false;
+      setCompletionSeconds(0);
+      return;
+    }
+
+    if (completionStartedRef.current) return;
+
+    completionStartedRef.current = true;
+
+    const deadline = liveMatch.completionDeadline
+      ? new Date(
+          liveMatch.completionDeadline
+        ).getTime()
+      : Date.now() + 10000;
+
+    const tick = () => {
+      const remaining = Math.max(
+        0,
+        Math.ceil(
+          (deadline - Date.now()) / 1000
+        )
+      );
+
+      setCompletionSeconds(remaining);
+    };
+
+    tick();
+
+    const timer = setInterval(tick, 250);
+
+    return () => clearInterval(timer);
+  }, [
+    liveMatch?.status,
+    liveMatch?.completionDeadline
+  ]);
+
   const handleScoreRuns = async (runs) => {
     if (
       !liveMatch?.inningsId ||
       scoring ||
-      inningsCompleted
+      inningsCompleted ||
+      isWaitingForBowler
     ) {
       return;
     }
@@ -459,33 +520,24 @@ const [showNoBallModal, setShowNoBallModal] = useState(false);
         runs
       );
 
-      const updatedMatch =
-        await getLiveMatch(match.id);
+      setUndoUsed(false);
+      setUndoMessage("");
 
-      setLiveMatch(updatedMatch);
-    } catch (error) {
-      console.error(
-        "Failed to score runs:",
-        error
+      await refreshLiveMatch();
+    } catch (err) {
+      const data = err.response?.data;
+
+      setError(
+        typeof data === "string"
+          ? data
+          : data?.message ||
+              "Unable to record runs."
       );
-
-      const responseData =
-        error.response?.data;
-
-      if (typeof responseData === "string") {
-        setError(responseData);
-      } else if (responseData?.message) {
-        setError(responseData.message);
-      } else {
-        setError("Unable to record runs.");
-      }
     } finally {
       setScoring(false);
     }
   };
 
-  // Purpose:
-  // Record an extra delivery and reload the latest live state.
   const handleScoreExtra = async (
     extraType,
     runs,
@@ -494,7 +546,8 @@ const [showNoBallModal, setShowNoBallModal] = useState(false);
     if (
       !liveMatch?.inningsId ||
       scoring ||
-      inningsCompleted
+      inningsCompleted ||
+      isWaitingForBowler
     ) {
       return;
     }
@@ -510,50 +563,268 @@ const [showNoBallModal, setShowNoBallModal] = useState(false);
         batterRuns
       );
 
-      const updatedMatch =
-        await getLiveMatch(match.id);
+      setUndoUsed(false);
+      setUndoMessage("");
 
-      setLiveMatch(updatedMatch);
+      await refreshLiveMatch();
 
       setSelectedExtra(null);
       setShowNoBallModal(false);
-    } catch (error) {
-      console.error(
-        "Failed to score extra:",
-        error
+    } catch (err) {
+      const data = err.response?.data;
+
+      setError(
+        typeof data === "string"
+          ? data
+          : data?.message ||
+              "Unable to record extra."
       );
-
-      const responseData =
-        error.response?.data;
-
-      if (typeof responseData === "string") {
-        setError(responseData);
-      } else if (responseData?.message) {
-        setError(responseData.message);
-      } else {
-        setError("Unable to record extra.");
-      }
     } finally {
       setScoring(false);
     }
   };
 
-  // Purpose:
-  // Cancel the current match after confirmation.
-  // After successful cancellation, return to the dashboard.
-  const handleCancelMatch = async () => {
+  const handleScoreExtraRunOut = async ({
+    extraType,
+    totalRuns,
+    batterRuns = 0,
+    runsCompleted = 0,
+    dismissedMatchPlayerId,
+    didBattersCross = false,
+    newBatterMatchPlayerId = null
+  }) => {
     if (
-      !match?.id ||
-      scoring
+      !liveMatch?.inningsId ||
+      scoring ||
+      inningsCompleted ||
+      isWaitingForBowler
     ) {
       return;
     }
 
-    const confirmed = window.confirm(
-      "Are you sure you want to cancel this match?"
-    );
+    if (!dismissedMatchPlayerId) {
+      setError("Select the dismissed batter.");
+      return;
+    }
 
-    if (!confirmed) {
+    try {
+      setScoring(true);
+      setError("");
+
+      await scoreExtraRunOut(
+        liveMatch.inningsId,
+        extraType,
+        totalRuns,
+        batterRuns,
+        dismissedMatchPlayerId,
+        runsCompleted,
+        didBattersCross,
+        newBatterMatchPlayerId
+      );
+
+      setUndoUsed(false);
+      setUndoMessage("");
+
+      await refreshLiveMatch();
+
+      setSelectedExtra(null);
+      setShowNoBallModal(false);
+    } catch (err) {
+      const data = err.response?.data;
+
+      setError(
+        typeof data === "string"
+          ? data
+          : data?.message ||
+              "Unable to record extra and run out."
+      );
+    } finally {
+      setScoring(false);
+    }
+  };
+
+  const handleScoreWicket = async (
+    wicketData
+  ) => {
+    if (
+      !liveMatch?.inningsId ||
+      scoring ||
+      inningsCompleted ||
+      isWaitingForBowler
+    ) {
+      return;
+    }
+
+    try {
+      setScoring(true);
+      setError("");
+
+    await scoreWicket({
+  inningsId: liveMatch.inningsId,
+  wicketType: wicketData.wicketType,
+  dismissedMatchPlayerId: wicketData.dismissedMatchPlayerId,
+  caughtByMatchPlayerId: wicketData.caughtByMatchPlayerId,
+  stumpedByMatchPlayerId: wicketData.stumpedByMatchPlayerId,
+  runsCompleted: Number(wicketData.runsCompleted || 0),
+  didBattersCross: Boolean(wicketData.didBattersCross),
+  newBatterMatchPlayerId: wicketData.newBatterMatchPlayerId
+});
+
+// A new ball was successfully scored,
+// so the next undo is allowed.
+setUndoUsed(false);
+setUndoMessage("");
+
+await refreshLiveMatch();
+
+      setShowWicketModal(false);
+    } catch (err) {
+      const data = err.response?.data;
+
+      setError(
+        typeof data === "string"
+          ? data
+          : data?.message ||
+              "Unable to record wicket."
+      );
+    } finally {
+      setScoring(false);
+    }
+  };
+
+  const handleChangeBowler = async () => {
+    if (
+      !liveMatch?.inningsId ||
+      !selectedBowlerId ||
+      scoring ||
+      inningsCompleted
+    ) {
+      return;
+    }
+
+    try {
+      setScoring(true);
+      setError("");
+
+      await changeBowler(
+        liveMatch.inningsId,
+        Number(selectedBowlerId)
+      );
+
+      setSelectedBowlerId("");
+      setShowBowlerModal(false);
+
+      await refreshLiveMatch();
+    } catch (err) {
+      const data = err.response?.data;
+
+      setError(
+        typeof data === "string"
+          ? data
+          : data?.message ||
+              "Unable to change bowler."
+      );
+    } finally {
+      setScoring(false);
+    }
+  };
+
+  const handleUndoLastBall = async () => {
+    if (
+      undoUsed ||
+      !liveMatch?.inningsId ||
+      !liveMatch?.balls?.length ||
+      scoring ||
+      completionActionLoading
+    ) {
+      return;
+    }
+
+    try {
+      setCompletionActionLoading(true);
+      setError("");
+      setUndoMessage("");
+
+      const lastBall = [...liveMatch.balls]
+        .sort((a, b) => a.id - b.id)
+        .at(-1);
+
+      if (!lastBall?.id) {
+        setError("No ball is available to undo.");
+        return;
+      }
+
+      await undoLastScore(
+        liveMatch.inningsId,
+        lastBall.id
+      );
+
+      // Only one undo is allowed until another ball is scored.
+      setUndoUsed(true);
+      setUndoMessage(
+        "Last ball undone successfully. You can only undo one ball at a time. To undo, you have to score a new ball."
+      );
+
+      completionStartedRef.current = false;
+
+      await refreshLiveMatch();
+
+      setCompletionSeconds(0);
+    } catch (err) {
+      const data = err.response?.data;
+
+      setError(
+        typeof data === "string"
+          ? data
+          : data?.message ||
+              "Unable to undo the last ball."
+      );
+    } finally {
+      setCompletionActionLoading(false);
+    }
+  };
+
+  const handleAcceptCompletion = async () => {
+    if (
+      !match?.id ||
+      completionActionLoading
+    ) {
+      return;
+    }
+
+    try {
+      setCompletionActionLoading(true);
+      setError("");
+
+      const snapshot = {
+        ...liveMatch
+      };
+
+      await completeMatch(match.id);
+
+      onMatchCompleted?.(snapshot);
+    } catch (err) {
+      const data = err.response?.data;
+
+      setError(
+        typeof data === "string"
+          ? data
+          : data?.message ||
+              "Unable to complete match."
+      );
+    } finally {
+      setCompletionActionLoading(false);
+    }
+  };
+
+  const handleCancelMatch = async () => {
+    if (!match?.id || scoring) return;
+
+    if (
+      !window.confirm(
+        "Are you sure you want to cancel this match?"
+      )
+    ) {
       return;
     }
 
@@ -564,105 +835,116 @@ const [showNoBallModal, setShowNoBallModal] = useState(false);
       await cancelMatch(match.id);
 
       setShowMenu(false);
-
       onBack();
-    } catch (error) {
-      console.error(
-        "Failed to cancel match:",
-        error
+    } catch (err) {
+      const data = err.response?.data;
+
+      setError(
+        typeof data === "string"
+          ? data
+          : data?.message ||
+              "Unable to cancel match."
       );
-
-      const responseData =
-        error.response?.data;
-
-      if (typeof responseData === "string") {
-        setError(responseData);
-      } else if (responseData?.message) {
-        setError(responseData.message);
-      } else {
-        setError("Unable to cancel match.");
-      }
     } finally {
       setScoring(false);
     }
   };
 
+  const formatBallNotation = (ball) => {
+    if (ball.notation) {
+      return ball.notation;
+    }
+
+    const wicket =
+      (ball.wicketType || "").toUpperCase();
+
+    if (wicket) {
+      return "W";
+    }
+
+    const extra =
+      (ball.extraType || "").toUpperCase();
+
+    const runs = ball.runs ?? 0;
+
+    if (extra === "WIDE") {
+      return `WD${runs}`;
+    }
+
+    if (extra === "NO BALL") {
+      return `NB${runs}`;
+    }
+
+    if (extra === "BYE") {
+      return `B${runs}`;
+    }
+
+    if (extra === "LEG BYE") {
+      return `LB${runs}`;
+    }
+
+    return String(runs);
+  };
+
   if (loading) {
     return (
       <div className="container py-5 text-center">
-        <h4>
-          Loading live match...
-        </h4>
-      </div>
-    );
-  }
-
-  if (error && !liveMatch) {
-    return (
-      <div className="container py-5 text-center">
-
-        <div className="alert alert-danger">
-          {error}
-        </div>
-
-        <button
-          type="button"
-          className="btn btn-secondary"
-          onClick={onBack}
-        >
-          ← Back to Dashboard
-        </button>
-
+        <h4>Loading live match...</h4>
       </div>
     );
   }
 
   if (!liveMatch) {
     return (
-      <div className="container py-5 text-center">
-
-        <div className="alert alert-warning">
-          Live match data is unavailable.
+      <div className="container py-5">
+        <div className="alert alert-danger">
+          {error ||
+            "Live match unavailable."}
         </div>
 
         <button
-          type="button"
           className="btn btn-secondary"
           onClick={onBack}
         >
           ← Back to Dashboard
         </button>
-
       </div>
+    );
+  }
+
+  if (showMatchInfo) {
+    return (
+      <MatchInfo
+        match={match}
+        liveMatch={liveMatch}
+        onClose={() =>
+          setShowMatchInfo(false)
+        }
+      />
     );
   }
 
   return (
     <div className="container-fluid p-0">
 
-      {/* Match Header */}
       <nav className="navbar navbar-dark bg-dark">
-
         <div className="container-fluid">
 
           <span className="navbar-brand mb-0 h1">
-            {liveMatch.team1Name}
-            &nbsp; VS &nbsp;
+            {liveMatch.team1Name} VS{" "}
             {liveMatch.team2Name}
           </span>
 
-          {/* Three-dot menu */}
           <div
             className="position-relative"
             ref={menuRef}
           >
-
             <button
               type="button"
               className="btn btn-outline-light"
               onClick={() =>
                 setShowMenu(
-                  (current) => !current
+                  (value) => !value
                 )
               }
               disabled={scoring}
@@ -674,10 +956,23 @@ const [showNoBallModal, setShowNoBallModal] = useState(false);
               <div
                 className="position-absolute end-0 mt-2 bg-white border rounded shadow"
                 style={{
-                  minWidth: "180px",
+                  minWidth: "220px",
                   zIndex: 1000
                 }}
               >
+
+                <button
+                  type="button"
+                  className="btn btn-link text-dark text-decoration-none w-100 text-start"
+                  onClick={() => {
+                    setShowMenu(false);
+                    setShowMatchInfo(true);
+                  }}
+                >
+                  ℹ️ Match Info
+                </button>
+
+                <hr className="my-1" />
 
                 <button
                   type="button"
@@ -685,12 +980,11 @@ const [showNoBallModal, setShowNoBallModal] = useState(false);
                   onClick={handleCancelMatch}
                   disabled={scoring}
                 >
-                  Cancel Match
+                  ✕ Cancel Match
                 </button>
 
               </div>
             )}
-
           </div>
 
         </div>
@@ -698,21 +992,23 @@ const [showNoBallModal, setShowNoBallModal] = useState(false);
 
       <div className="container py-4">
 
-        {/* Error */}
         {error && (
           <div className="alert alert-danger">
             {error}
           </div>
         )}
 
-        {/* Score Header */}
-        <div className="card mb-4">
+        {undoMessage && (
+          <div className="alert alert-info">
+            {undoMessage}
+          </div>
+        )}
 
+        <div className="card mb-4">
           <div className="card-body">
 
             <div className="row align-items-center">
 
-              {/* Score Box */}
               <div className="col-md-5 text-center">
 
                 <h2 className="mb-3">
@@ -720,8 +1016,7 @@ const [showNoBallModal, setShowNoBallModal] = useState(false);
                 </h2>
 
                 <h1 className="display-4 fw-bold mb-2">
-                  {liveMatch.totalRuns ?? 0}
-                  {" / "}
+                  {liveMatch.totalRuns ?? 0}/
                   {liveMatch.wickets ?? 0}
                 </h1>
 
@@ -731,156 +1026,123 @@ const [showNoBallModal, setShowNoBallModal] = useState(false);
 
               </div>
 
-              {/* First innings statistics */}
-              {!isSecondInnings && (
-                <div className="col-md-7 text-center">
+              <div className="col-md-7 text-center">
 
-                  <h4 className="mb-3">
-                    Current Run Rate
-                  </h4>
+                {!isSecondInnings ? (
+                  <>
+                    <h4>Current Run Rate</h4>
 
-                  <h2>
-                    CRR -{" "}
-                    {currentRunRate.toFixed(2)}
-                  </h2>
+                    <h2>
+                      CRR -{" "}
+                      {currentRunRate.toFixed(2)}
+                    </h2>
+                  </>
+                ) : (
+                  <>
+                    <h5 className="text-muted">
+                      {targetRuns !== null
+                        ? `Required ${chaseStats.requiredRuns} runs in ${chaseStats.remainingBalls} balls`
+                        : "Target unavailable"}
+                    </h5>
 
-                </div>
-              )}
+                    <div className="row">
 
-              {/* Second innings chase statistics */}
-              {isSecondInnings && (
-                <div className="col-md-7 text-center">
+                      <div className="col-6">
+                        <small className="text-muted">
+                          CRR
+                        </small>
 
-                  <h4 className="mb-3">
-                    {targetRuns !== null
-                      ? `Required ${chaseStats.requiredRuns} runs to win in ${chaseStats.remainingBalls} balls`
-                      : "Target unavailable"}
-                  </h4>
+                        <h3>
+                          {currentRunRate.toFixed(2)}
+                        </h3>
+                      </div>
 
-                  <div className="row">
+                      <div className="col-6">
+                        <small className="text-muted">
+                          RRR
+                        </small>
 
-                    <div className="col-6">
-
-                      <h5 className="text-muted">
-                        CRR
-                      </h5>
-
-                      <h3>
-                        {currentRunRate.toFixed(2)}
-                      </h3>
-
-                    </div>
-
-                    <div className="col-6">
-
-                      <h5 className="text-muted">
-                        RRR
-                      </h5>
-
-                      <h3>
-                        {chaseStats.requiredRunRate.toFixed(
-                          2
-                        )}
-                      </h3>
+                        <h3>
+                          {chaseStats?.requiredRunRate.toFixed(2)}
+                        </h3>
+                      </div>
 
                     </div>
-
-                  </div>
-
-                </div>
-              )}
-
-            </div>
-
-            {inningsCompleted && (
-              <div className="alert alert-success mt-4 mb-0 text-center">
-
-                <strong>
-                  INNINGS COMPLETED
-                </strong>
+                  </>
+                )}
 
               </div>
-            )}
+
+            </div>
 
           </div>
         </div>
 
-        {/* Active Players */}
         <div className="row g-3 mb-4">
 
-          {/* Striker */}
           <div className="col-md-4">
-
             <div className="card h-100">
-
               <div className="card-body">
 
-                <h5 className="card-title">
-                  Striker
-                </h5>
+                <h5>Striker</h5>
 
                 <h4>
-                  {striker?.displayName ||
-                    "Unknown Player"}
+                  {getPlayerName(striker)}
                 </h4>
 
                 <p className="mb-0">
-                  {strikerStats.runs}{" "}
-                  ({strikerStats.balls})
+                  {strikerStats.runs} (
+                  {strikerStats.balls})
                 </p>
 
               </div>
             </div>
           </div>
 
-          {/* Non-Striker */}
           <div className="col-md-4">
-
             <div className="card h-100">
-
               <div className="card-body">
 
-                <h5 className="card-title">
-                  Non-Striker
-                </h5>
+                <h5>Non-Striker</h5>
 
                 <h4>
-                  {nonStriker?.displayName ||
-                    "Unknown Player"}
+                  {getPlayerName(nonStriker)}
                 </h4>
 
                 <p className="mb-0">
-                  {nonStrikerStats.runs}{" "}
-                  ({nonStrikerStats.balls})
+                  {nonStrikerStats.runs} (
+                  {nonStrikerStats.balls})
                 </p>
 
               </div>
             </div>
           </div>
 
-          {/* Bowler */}
           <div className="col-md-4">
-
             <div className="card h-100">
-
               <div className="card-body">
 
-                <h5 className="card-title">
+                <h5>
                   {inningsCompleted
                     ? "Innings Completed"
+                    : isWaitingForBowler
+                    ? "New Bowler Required"
                     : "Bowler"}
                 </h5>
 
                 <h4>
                   {inningsCompleted
                     ? "Waiting for next innings"
-                    : bowler?.displayName ||
-                      "No Bowler Selected"}
+                    : isWaitingForBowler
+                    ? "Select a bowler"
+                    : getPlayerName(bowler)}
                 </h4>
 
                 <p className="mb-0">
                   {inningsCompleted
                     ? "First innings finished"
+                    : isWaitingForBowler
+                    ? "Over completed"
                     : `${bowlerStats.overs} - ${bowlerStats.runsConceded} - ${bowlerStats.wickets}`}
                 </p>
 
@@ -890,12 +1152,85 @@ const [showNoBallModal, setShowNoBallModal] = useState(false);
 
         </div>
 
-        {/* Current Over */}
+        {isWaitingForBowler && (
+          <div className="card border-warning mb-4">
+
+            <div className="card-body text-center">
+
+              <h4 className="mb-3">
+                Over Completed
+              </h4>
+
+              <p className="text-muted">
+                Select the bowler for the next over.
+              </p>
+
+              <div className="row justify-content-center">
+
+                <div className="col-md-6">
+
+                  <select
+                    className="form-select mb-3"
+                    value={selectedBowlerId}
+                    onChange={(event) =>
+                      setSelectedBowlerId(
+                        event.target.value
+                      )
+                    }
+                    disabled={scoring}
+                  >
+                    <option value="">
+                      Select Bowler
+                    </option>
+
+                    {bowlingTeamPlayers.map(
+                      (player) => {
+                        const playerId =
+                          player.matchPlayerId ??
+                          player.id;
+
+                        return (
+                          <option
+                            key={playerId}
+                            value={playerId}
+                          >
+                            {getPlayerName(player)}
+                          </option>
+                        );
+                      }
+                    )}
+                  </select>
+
+                  <button
+                    type="button"
+                    className="btn btn-primary"
+                    disabled={
+                      !selectedBowlerId ||
+                      scoring
+                    }
+                    onClick={
+                      handleChangeBowler
+                    }
+                  >
+                    {scoring
+                      ? "SELECTING..."
+                      : "START NEXT OVER"}
+                  </button>
+
+                </div>
+
+              </div>
+
+            </div>
+
+          </div>
+        )}
+
         <div className="card mb-4">
 
           <div className="card-body">
 
-            <h4 className="card-title">
+            <h4>
               CURRENT OVER ({currentOver})
             </h4>
 
@@ -912,9 +1247,7 @@ const [showNoBallModal, setShowNoBallModal] = useState(false);
                       key={ball.id}
                       className="badge bg-secondary fs-6 p-2"
                     >
-                      {ball.wicketType ||
-                        ball.extraType ||
-                        ball.runs}
+                      {formatBallNotation(ball)}
                     </span>
                   )
                 )
@@ -923,21 +1256,66 @@ const [showNoBallModal, setShowNoBallModal] = useState(false);
             </div>
 
           </div>
+
         </div>
 
-        {/* Scoring Controls */}
+        {liveMatch.status ===
+          "PendingCompletion" && (
+          <div className="alert alert-success text-center">
+
+            <h4 className="mb-2">
+              Match Complete
+            </h4>
+
+            <p className="mb-2">
+              Confirm completion in{" "}
+              <strong>
+                {completionSeconds}
+              </strong>{" "}
+              seconds.
+            </p>
+
+            <div className="d-flex justify-content-center gap-2">
+
+              <button
+                className="btn btn-warning"
+                disabled={
+                  undoUsed ||
+                  completionActionLoading
+                }
+                onClick={
+                  handleUndoLastBall
+                }
+              >
+                {undoUsed
+                  ? "UNDO USED"
+                  : "UNDO LAST BALL"}
+              </button>
+
+              <button
+                className="btn btn-success"
+                disabled={
+                  completionActionLoading
+                }
+                onClick={
+                  handleAcceptCompletion
+                }
+              >
+                ACCEPT & COMPLETE
+              </button>
+
+            </div>
+
+          </div>
+        )}
+
         <div className="row g-3">
 
-          {/* Runs */}
           <div className="col-md-4">
-
             <div className="card">
-
               <div className="card-body">
 
-                <h4>
-                  RUNS
-                </h4>
+                <h4>RUNS</h4>
 
                 <div className="d-grid gap-2">
 
@@ -949,7 +1327,10 @@ const [showNoBallModal, setShowNoBallModal] = useState(false);
                         className="btn btn-primary"
                         disabled={
                           scoring ||
-                          inningsCompleted
+                          inningsCompleted ||
+                          isWaitingForBowler ||
+                          liveMatch.status ===
+                            "PendingCompletion"
                         }
                         onClick={() =>
                           handleScoreRuns(runs)
@@ -966,70 +1347,62 @@ const [showNoBallModal, setShowNoBallModal] = useState(false);
             </div>
           </div>
 
-          {/* Extras */}
           <div className="col-md-4">
-
             <div className="card">
-
               <div className="card-body">
 
-                <h4>
-                  EXTRAS
-                </h4>
+                <h4>EXTRAS</h4>
 
-                {/* Same alignment as Runs and Wickets */}
                 <div className="d-grid gap-2">
 
-                  <button
-                    type="button"
-                    className="btn btn-warning"
-                    disabled={
-                      scoring ||
-                      inningsCompleted
-                    }
-                    onClick={() =>
-                      setSelectedExtra("WIDE")
-                    }
-                  >
-                    WIDE
-                  </button>
-
-                 <button
-                    type="button"
-                    className="btn btn-warning"
-                    disabled={scoring || inningsCompleted}
-                    onClick={() => setShowNoBallModal(true)}
-                  >
-                    NO BALL
-                  </button>
-
-                  <button
-                    type="button"
-                    className="btn btn-warning"
-                    disabled={
-                      scoring ||
-                      inningsCompleted
-                    }
-                    onClick={() =>
-                      setSelectedExtra("BYE")
-                    }
-                  >
-                    BYE
-                  </button>
-
-                  <button
-                    type="button"
-                    className="btn btn-warning"
-                    disabled={
-                      scoring ||
-                      inningsCompleted
-                    }
-                    onClick={() =>
-                      setSelectedExtra("LEG BYE")
-                    }
-                  >
-                    LEG BYE
-                  </button>
+                  {[
+                    [
+                      "WIDE",
+                      () =>
+                        setSelectedExtra(
+                          "WIDE"
+                        )
+                    ],
+                    [
+                      "NO BALL",
+                      () =>
+                        setShowNoBallModal(
+                          true
+                        )
+                    ],
+                    [
+                      "BYE",
+                      () =>
+                        setSelectedExtra(
+                          "BYE"
+                        )
+                    ],
+                    [
+                      "LEG BYE",
+                      () =>
+                        setSelectedExtra(
+                          "LEG BYE"
+                        )
+                    ]
+                  ].map(
+                    ([label, action]) => (
+                      <button
+                        key={label}
+                        type="button"
+                        className="btn btn-warning"
+                        disabled={
+                          scoring ||
+                          inningsCompleted ||
+                          isWaitingForBowler ||
+                          liveMatch.status ===
+                            "PendingCompletion"
+                        }
+                        onClick={action}
+                      >
+                        {label}
+                      </button>
+                    )
+                  )}
 
                 </div>
 
@@ -1037,16 +1410,11 @@ const [showNoBallModal, setShowNoBallModal] = useState(false);
             </div>
           </div>
 
-          {/* Wickets */}
           <div className="col-md-4">
-
             <div className="card">
-
               <div className="card-body">
 
-                <h4>
-                  WICKETS
-                </h4>
+                <h4>WICKETS</h4>
 
                 <div className="d-grid gap-2">
 
@@ -1063,7 +1431,17 @@ const [showNoBallModal, setShowNoBallModal] = useState(false);
                         key={wicket}
                         type="button"
                         className="btn btn-danger"
-                        disabled
+                        disabled={
+                          scoring ||
+                          inningsCompleted ||
+                          isWaitingForBowler ||
+                          liveMatch.status ===
+                            "PendingCompletion"
+                        }
+                        onClick={() => {
+                          setSelectedWicketType(wicket);
+                          setShowWicketModal(true);
+                        }}
                       >
                         {wicket}
                       </button>
@@ -1078,57 +1456,86 @@ const [showNoBallModal, setShowNoBallModal] = useState(false);
 
         </div>
 
-        {/* Undo */}
-        <div className="text-center mt-4">
+        {liveMatch.status !==
+          "PendingCompletion" &&
+          balls.length > 0 && (
+            <div className="text-center mt-4">
 
-          <button
-            type="button"
-            className="btn btn-secondary"
-            disabled
-          >
-            UNDO LAST BALL
-          </button>
+              <button
+                type="button"
+                className="btn btn-outline-secondary"
+                disabled={
+                  undoUsed ||
+                  scoring ||
+                  completionActionLoading
+                }
+                onClick={
+                  handleUndoLastBall
+                }
+              >
+                {completionActionLoading
+                  ? "PROCESSING..."
+                  : undoUsed
+                  ? "UNDO USED"
+                  : "UNDO LAST BALL"}
+              </button>
 
-        </div>
+            </div>
+          )}
 
-        {/* Back */}
-        <div className="text-center mt-3">
-
-          <button
-            type="button"
-            className="btn btn-link"
-            onClick={onBack}
-          >
-            ← Back to Dashboard
-          </button>
-
-        </div>
-
-        {/* Extra Scoring Modal */}
         {selectedExtra && (
           <ExtraScoringModal
+            match={match}
+            liveMatch={liveMatch}
             extraType={selectedExtra}
             loading={scoring}
-            onClose={() => {
-              if (!scoring) {
-                setSelectedExtra(null);
-              }
-            }}
-            onConfirm={handleScoreExtra}
+            onClose={() =>
+              !scoring &&
+              setSelectedExtra(null)
+            }
+            onConfirm={
+              handleScoreExtra
+            }
+            onRunOut={
+              handleScoreExtraRunOut
+            }
           />
         )}
 
         {showNoBallModal && (
           <NoBallScoringModal
+            match={match}
+            liveMatch={liveMatch}
             loading={scoring}
-            onClose={() => {
-              if (!scoring) {
-                setShowNoBallModal(false);
-              }
-            }}
-            onConfirm={handleScoreExtra}
+            onClose={() =>
+              !scoring &&
+              setShowNoBallModal(false)
+            }
+            onConfirm={
+              handleScoreExtra
+            }
+            onRunOut={
+              handleScoreExtraRunOut
+            }
           />
         )}
+
+        {showWicketModal && (
+          <WicketScoringModal
+            match={match}
+            liveMatch={liveMatch}
+            initialWicketType={selectedWicketType}
+            loading={scoring}
+            onClose={() =>
+              !scoring &&
+              setShowWicketModal(false)
+            }
+            onConfirm={
+              handleScoreWicket
+            }
+          />
+        )}
+
       </div>
     </div>
   );

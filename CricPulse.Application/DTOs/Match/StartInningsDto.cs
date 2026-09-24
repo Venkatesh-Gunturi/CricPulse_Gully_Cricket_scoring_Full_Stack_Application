@@ -6,5 +6,6 @@
         public int StrikerMatchPlayerId { get; set; }
         public int NonStrikerMatchPlayerId { get; set; }
         public int BowlerMatchPlayerId { get; set; }
+        public int InningsNumber { get; set; }
     }
 }

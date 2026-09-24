@@ -22,13 +22,26 @@
 
         public int Wickets { get; set; }
 
+        /// <summary>
+        /// Number of legal deliveries bowled in this innings.
+        /// Six legal deliveries = one completed over.
+        /// </summary>
         public int LegalBalls { get; set; }
 
         public string Status { get; set; } = "NotStarted";
 
+        /// <summary>
+        /// True when the next delivery is a free hit.
+        /// A free hit is awarded after a no-ball and remains active
+        /// until a legal delivery is completed or another no-ball occurs.
+        /// </summary>
+        public bool IsFreeHit { get; set; }
+
         public DateTime CreatedAt { get; set; }
 
         public DateTime? UpdatedAt { get; set; }
+
+        // Navigation properties
 
         public Match Match { get; set; } = null!;
 
@@ -38,9 +51,6 @@
 
         public MatchPlayer? CurrentBowlerMatchPlayer { get; set; }
 
-        public ICollection<Ball> Balls { get; set; }
-    = new List<Ball>();
-
-       
+        public ICollection<Ball> Balls { get; set; } = new List<Ball>();
     }
 }

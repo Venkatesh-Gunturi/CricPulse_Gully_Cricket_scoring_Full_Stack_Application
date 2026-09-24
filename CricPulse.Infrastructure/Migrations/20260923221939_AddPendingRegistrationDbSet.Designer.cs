@@ -4,6 +4,7 @@ using CricPulse.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace CricPulse.Infrastructure.Migrations
 {
     [DbContext(typeof(CricPulseDbContext))]
-    partial class CricPulseDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260923221939_AddPendingRegistrationDbSet")]
+    partial class AddPendingRegistrationDbSet
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -39,9 +42,6 @@ namespace CricPulse.Infrastructure.Migrations
                     b.Property<int>("BowlerMatchPlayerId")
                         .HasColumnType("int");
 
-                    b.Property<bool>("CanUndo")
-                        .HasColumnType("bit");
-
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
 
@@ -64,6 +64,7 @@ namespace CricPulse.Infrastructure.Migrations
                         .HasColumnType("int");
 
                     b.Property<string>("Notation")
+                        .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<int>("OverNumber")
@@ -86,11 +87,9 @@ namespace CricPulse.Infrastructure.Migrations
                         .HasColumnType("int");
 
                     b.Property<string>("PreviousMatchResult")
-                        .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("PreviousMatchStatus")
-                        .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<int>("PreviousNonStrikerMatchPlayerId")

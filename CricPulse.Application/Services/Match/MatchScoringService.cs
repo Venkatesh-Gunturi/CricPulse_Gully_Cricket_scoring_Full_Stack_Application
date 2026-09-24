@@ -1,1017 +1,682 @@
-﻿using CricPulse.Application.DTOs.Match;
-using CricPulse.Application.Interfaces;
+﻿using System.Diagnostics.CodeAnalysis;
+using CricPulse.Application.DTOs.Match;
 using CricPulse.Application.Interfaces.Match;
-using CricPulse.Application.Interfaces.Player;
 using CricPulse.Domain.Entities;
 using CricPulse.Domain.Enums;
 using MatchEntity = CricPulse.Domain.Entities.Match;
+
 namespace CricPulse.Application.Services
 {
     public class MatchScoringService : IMatchScoringService
     {
         private readonly IScoringRepository _scoringRepository;
-        private readonly IPlayerStatisticsRepository _playerStatisticsRepository;
 
-        // Purpose:
-        // Initialize the scoring service with the repositories required for
-        // match scoring and player statistics persistence.
-        public MatchScoringService(
-            IScoringRepository scoringRepository,
-            IPlayerStatisticsRepository playerStatisticsRepository)
+        private static readonly HashSet<int> ValidBatRuns =
+            new() { 0, 1, 2, 3, 4, 6 };
+
+        private static readonly HashSet<string> ValidWicketTypes =
+            new(StringComparer.OrdinalIgnoreCase)
+            {
+                "BOWLED",
+                "CAUGHT",
+                "RUN OUT",
+                "LBW",
+                "STUMPED",
+                "HIT WICKET"
+            };
+
+        private static readonly HashSet<string> ValidExtraTypes =
+            new(StringComparer.OrdinalIgnoreCase)
+            {
+                "WIDE",
+                "NO BALL",
+                "BYE",
+                "LEG BYE"
+            };
+
+        public MatchScoringService(IScoringRepository scoringRepository)
         {
             _scoringRepository = scoringRepository;
-            _playerStatisticsRepository = playerStatisticsRepository;
         }
 
+        // ====================================================================
+        // SCORE NORMAL BATTER RUNS
+        // ====================================================================
 
-        // Purpose:
-        // Determine the final match result from the two completed innings,
-        // regardless of which team batted first.
-        private MatchResult CalculateMatchResult(
-            MatchEntity match,
-            Innings secondInnings)
-        {
-            var firstInnings = match.Innings
-                .FirstOrDefault(i => i.InningsNumber == 1);
-
-            if (firstInnings == null)
-            {
-                return MatchResult.None;
-            }
-
-            if (secondInnings.TotalRuns > firstInnings.TotalRuns)
-            {
-                return secondInnings.BattingTeam == match.Team1Name
-                    ? MatchResult.Team1Won
-                    : MatchResult.Team2Won;
-            }
-
-            if (secondInnings.TotalRuns < firstInnings.TotalRuns)
-            {
-                return firstInnings.BattingTeam == match.Team1Name
-                    ? MatchResult.Team1Won
-                    : MatchResult.Team2Won;
-            }
-
-            return MatchResult.Tie;
-        }
-
-        // Purpose:
-        // Record runs from the bat while validating the current batter and bowler
-        // against the innings teams, then automatically complete the innings or match
-        // when the configured overs or second-innings target is reached.
         public async Task<bool> ScoreRunsAsync(
             int umpireId,
             int inningsId,
             int runs)
         {
-            if (runs != 0 && runs != 1 && runs != 2 &&
-                runs != 3 && runs != 4 && runs != 6)
-            {
+            if (!ValidBatRuns.Contains(runs))
                 return false;
-            }
 
-            var innings = await _scoringRepository
-                .GetInningsForScoringAsync(inningsId);
+            var innings =
+                await _scoringRepository.GetInningsForScoringAsync(inningsId);
 
-            if (innings == null)
-            {
+            if (!IsValidLiveInnings(innings))
                 return false;
-            }
 
-            if (innings.Match.UmpireId != umpireId)
-            {
+            if (!await IsAuthorizedUmpire(innings!, umpireId))
                 return false;
-            }
 
-            if (innings.Status != "Live")
-            {
+            if (!HasCurrentBowler(innings!))
                 return false;
-            }
 
-            if (innings.CurrentBowlerMatchPlayerId == null)
-            {
-                return false;
-            }
+            var striker = innings!.StrikerMatchPlayerId;
+            var nonStriker = innings.NonStrikerMatchPlayerId;
+            var bowler = innings.CurrentBowlerMatchPlayerId ?? 0;
 
-            var strikerId = innings.StrikerMatchPlayerId;
-            var nonStrikerId = innings.NonStrikerMatchPlayerId;
-            var bowlerId = innings.CurrentBowlerMatchPlayerId.Value;
+            var ball = CreateBallSnapshot(
+                innings,
+                striker,
+                nonStriker,
+                bowler);
 
-            var striker = innings.Match.MatchPlayers
-                .FirstOrDefault(mp => mp.Id == strikerId);
-
-            var nonStriker = innings.Match.MatchPlayers
-                .FirstOrDefault(mp => mp.Id == nonStrikerId);
-
-            var bowler = innings.Match.MatchPlayers
-                .FirstOrDefault(mp => mp.Id == bowlerId);
-
-            // All active players must still belong to the match.
-            if (striker == null ||
-                nonStriker == null ||
-                bowler == null)
-            {
-                return false;
-            }
-
-            // Both batters must belong to the current batting team.
-            var battingTeamCode =
-                innings.BattingTeam == innings.Match.Team1Name
-                    ? "Team1"
-                    : innings.BattingTeam == innings.Match.Team2Name
-                        ? "Team2"
-                        : string.Empty;
-
-            var bowlingTeamCode =
-                innings.BowlingTeam == innings.Match.Team1Name
-                    ? "Team1"
-                    : innings.BowlingTeam == innings.Match.Team2Name
-                        ? "Team2"
-                        : string.Empty;
-
-            if (string.IsNullOrEmpty(battingTeamCode) ||
-                string.IsNullOrEmpty(bowlingTeamCode))
-            {
-                return false;
-            }
-
-            if (striker.Team != battingTeamCode ||
-                nonStriker.Team != battingTeamCode)
-            {
-                return false;
-            }
-
-            // The bowler must belong to the opposing team.
-            if (bowler.Team != bowlingTeamCode)
-            {
-                return false;
-            }
-
-            // A player cannot occupy two active positions.
-            if (strikerId == nonStrikerId ||
-                strikerId == bowlerId ||
-                nonStrikerId == bowlerId)
-            {
-                return false;
-            }
-
-            var ball = new Ball
-            {
-                InningsId = innings.Id,
-                OverNumber = innings.LegalBalls / 6,
-                BallNumber = (innings.LegalBalls % 6) + 1,
-
-                StrikerMatchPlayerId = strikerId,
-                NonStrikerMatchPlayerId = nonStrikerId,
-                BowlerMatchPlayerId = bowlerId,
-
-                Runs = runs,
-
-                // ScoreRuns represents runs scored directly from the bat.
-                BatterRuns = runs,
-
-                IsLegalDelivery = true,
-                ExtraRuns = 0,
-                CreatedAt = DateTime.UtcNow
-            };
+            ball.Runs = runs;
+            ball.BatterRuns = runs;
+            ball.ExtraRuns = 0;
+            ball.ExtraType = null;
+            ball.IsLegalDelivery = true;
+            ball.Notation = runs.ToString();
 
             innings.TotalRuns += runs;
             innings.LegalBalls++;
 
-            // Odd runs rotate the strike.
-            if (runs == 1 || runs == 3)
-            {
-                innings.StrikerMatchPlayerId = nonStrikerId;
-                innings.NonStrikerMatchPlayerId = strikerId;
-            }
+            RotateStrikeForRuns(innings, runs);
 
-            var maximumLegalBalls =
-                innings.Match.Overs * 6;
+            innings.IsFreeHit = false;
 
-            // The chasing team wins immediately once it scores more
-            // than the first innings total.
-            var targetReached =
-                innings.InningsNumber == 2 &&
-                innings.Match.Innings
-                    .Any(i =>
-                        i.InningsNumber == 1 &&
-                        innings.TotalRuns > i.TotalRuns);
-
-            var inningsHasEnded =
-                innings.Wickets >=
-                    innings.Match.PlayersPerTeam - 1 ||
-                innings.LegalBalls >= maximumLegalBalls ||
-                targetReached;
-
-            if (inningsHasEnded)
-            {
-                innings.Status = "Completed";
-                innings.CurrentBowlerMatchPlayerId = null;
-
-                if (innings.InningsNumber == 2)
-                {
-                    var firstInnings = innings.Match.Innings
-                        .FirstOrDefault(i => i.InningsNumber == 1);
-
-                    if (firstInnings != null)
-                    {
-                        innings.Match.Result =
-                            CalculateMatchResult(
-                                innings.Match,
-                                innings);
-
-                        innings.Match.Status =
-                            MatchStatus.PendingCompletion;
-
-                        innings.Match.CompletionDeadline =
-                            DateTime.UtcNow.AddSeconds(10);
-
-                        innings.Match.UpdatedAt =
-                            DateTime.UtcNow;
-                    }
-                }
-            }
-            else if (innings.LegalBalls % 6 == 0)
-            {
-                // End of over: rotate strike and require a new bowler.
-                var currentStriker =
-                    innings.StrikerMatchPlayerId;
-
-                innings.StrikerMatchPlayerId =
-                    innings.NonStrikerMatchPlayerId;
-
-                innings.NonStrikerMatchPlayerId =
-                    currentStriker;
-
-                innings.CurrentBowlerMatchPlayerId = null;
-            }
-
-            await _scoringRepository.AddBallAsync(ball);
-            await _scoringRepository.SaveChangesAsync();
+            await FinalizeDeliveryAsync(innings, ball);
 
             return true;
         }
 
+        // ====================================================================
+        // SCORE WICKET
+        // ====================================================================
 
-        // Purpose:
-        // Record a wicket delivery while validating the dismissed player, replacement
-        // batter, catcher, and wicket type against the current innings and match lineup.
         public async Task<bool> ScoreWicketAsync(
             int umpireId,
             ScoreWicketDto dto)
         {
-            var innings = await _scoringRepository
-                .GetInningsForScoringAsync(dto.InningsId);
+            if (dto == null)
+                throw new InvalidOperationException("Wicket request is null.");
 
-            if (innings == null)
-            {
-                return false;
-            }
+            var innings =
+                await _scoringRepository.GetInningsForScoringAsync(dto.InningsId);
 
-            if (innings.Match.UmpireId != umpireId)
-            {
-                return false;
-            }
+            if (!IsValidLiveInnings(innings))
+                throw new InvalidOperationException("Innings is not live or the match is not live.");
 
-            if (innings.Status != "Live")
-            {
-                return false;
-            }
+            if (!await IsAuthorizedUmpire(innings!, umpireId))
+                throw new InvalidOperationException("Current user is not the match umpire.");
 
-            if (innings.CurrentBowlerMatchPlayerId == null)
-            {
-                return false;
-            }
+            if (!HasCurrentBowler(innings!))
+                throw new InvalidOperationException("Current bowler is missing.");
 
-            var wicketType = dto.WicketType.Trim().ToUpper();
+            var wicketType = NormalizeWicketType(dto.WicketType);
 
-            var validWicketTypes = new[]
-            {
-        "BOWLED",
-        "CAUGHT",
-        "RUN OUT",
-        "LBW",
-        "STUMPED",
-        "HIT WICKET"
-    };
+            if (!ValidWicketTypes.Contains(wicketType))
+                throw new InvalidOperationException($"Invalid wicket type: '{wicketType}'.");
 
-            if (!validWicketTypes.Contains(wicketType))
-            {
-                return false;
-            }
+            // Free-hit deliveries only allow the supported dismissal
+            // that remains legal here: run out.
+            if (innings!.IsFreeHit && wicketType != "RUN OUT")
+                throw new InvalidOperationException("Only Run Out is allowed on a free-hit delivery.");
 
-            if (dto.RunsCompleted < 0)
-            {
-                return false;
-            }
+            var strikerAtStart = innings.StrikerMatchPlayerId;
+            var nonStrikerAtStart = innings.NonStrikerMatchPlayerId;
+            var bowler = innings.CurrentBowlerMatchPlayerId ?? 0;
 
-            var strikerId = innings.StrikerMatchPlayerId;
-            var nonStrikerId = innings.NonStrikerMatchPlayerId;
-            var bowlerId = innings.CurrentBowlerMatchPlayerId.Value;
+            var dismissedId =
+                wicketType == "RUN OUT"
+                    ? dto.DismissedMatchPlayerId
+                    : strikerAtStart;
 
-            var striker = innings.Match.MatchPlayers
-                .FirstOrDefault(mp => mp.Id == strikerId);
+            if (!dismissedId.HasValue)
+                throw new InvalidOperationException("Dismissed batter is missing.");
 
-            var nonStriker = innings.Match.MatchPlayers
-                .FirstOrDefault(mp => mp.Id == nonStrikerId);
-
-            var bowler = innings.Match.MatchPlayers
-                .FirstOrDefault(mp => mp.Id == bowlerId);
-
-            if (striker == null ||
-                nonStriker == null ||
-                bowler == null)
-            {
-                return false;
-            }
-
-            var dismissedPlayerId =
-                dto.DismissedMatchPlayerId ?? strikerId;
-
-            // RUN OUT can dismiss either active batter.
-            // All other wicket types can only dismiss the striker.
-            if (wicketType == "RUN OUT")
-            {
-                if (dismissedPlayerId != strikerId &&
-                    dismissedPlayerId != nonStrikerId)
-                {
-                    return false;
-                }
-
-                if (dto.DismissedMatchPlayerId == null)
-                {
-                    return false;
-                }
-            }
-            else
-            {
-                if (dismissedPlayerId != strikerId)
-                {
-                    return false;
-                }
-            }
+            if (dismissedId.Value != strikerAtStart &&
+                dismissedId.Value != nonStrikerAtStart)
+                throw new InvalidOperationException("Dismissed batter is not one of the current batters.");
 
             if (wicketType == "CAUGHT")
             {
-                if (dto.CaughtByMatchPlayerId == null)
+                if (!dto.CaughtByMatchPlayerId.HasValue ||
+                    !IsFieldingTeamPlayer(
+                        innings,
+                        dto.CaughtByMatchPlayerId.Value))
                 {
-                    return false;
-                }
-
-                var catcher = innings.Match.MatchPlayers
-                    .FirstOrDefault(mp =>
-                        mp.Id == dto.CaughtByMatchPlayerId.Value);
-
-                if (catcher == null)
-                {
-                    return false;
-                }
-
-                if (catcher.Team != bowler.Team)
-                {
-                    return false;
-                }
-
-                if (catcher.Id == dismissedPlayerId)
-                {
-                    return false;
+                    throw new InvalidOperationException(
+                        "Caught by player is missing or is not a fielding-team player.");
                 }
             }
 
+            if (wicketType == "STUMPED")
+            {
+                if (!dto.StumpedByMatchPlayerId.HasValue ||
+                    !IsFieldingTeamPlayer(
+                        innings,
+                        dto.StumpedByMatchPlayerId.Value))
+                {
+                    throw new InvalidOperationException(
+                        "Stumped by player is missing or is not a fielding-team player.");
+                }
+            }
+
+            if (wicketType != "RUN OUT" && dto.RunsCompleted != 0)
+                throw new InvalidOperationException("Runs completed must be 0 for this wicket type.");
+
+            if (dto.RunsCompleted < 0)
+                throw new InvalidOperationException("Runs completed cannot be negative.");
+
+            var completedRuns =
+                wicketType == "RUN OUT"
+                    ? dto.RunsCompleted
+                    : 0;
+
+            var dismissedWasStriker =
+                dismissedId.Value == strikerAtStart;
+
+            // Validate the incoming batter BEFORE changing innings state.
             var maximumWickets =
-                innings.Match.PlayersPerTeam - 1;
+                Math.Max(1, innings.Match.PlayersPerTeam - 1);
 
-            var wicketWillEndInnings =
-                innings.Wickets + 1 >= maximumWickets;
+            var inningsWillEnd =
+                innings.Wickets + 1 >= maximumWickets ||
+                innings.LegalBalls + 1 >= innings.Match.Overs * 6;
 
-            if (!wicketWillEndInnings)
+            if (!inningsWillEnd && innings.InningsNumber == 2)
             {
-                if (dto.NewBatterMatchPlayerId <= 0)
-                {
-                    return false;
-                }
+                var firstInnings =
+                    innings.Match.Innings.FirstOrDefault(i => i.InningsNumber == 1);
 
-                var newBatter = innings.Match.MatchPlayers
-                    .FirstOrDefault(mp =>
-                        mp.Id == dto.NewBatterMatchPlayerId);
-
-                if (newBatter == null)
+                if (firstInnings != null &&
+                    innings.TotalRuns + completedRuns > firstInnings.TotalRuns)
                 {
-                    return false;
-                }
-
-                if (newBatter.Team != striker.Team)
-                {
-                    return false;
-                }
-
-                if (newBatter.Id == strikerId ||
-                    newBatter.Id == nonStrikerId)
-                {
-                    return false;
-                }
-
-                if (newBatter.Id == bowlerId)
-                {
-                    return false;
+                    inningsWillEnd = true;
                 }
             }
 
-            if (strikerId == bowlerId ||
-                nonStrikerId == bowlerId)
+            if (!inningsWillEnd)
             {
-                return false;
+                if (!dto.NewBatterMatchPlayerId.HasValue)
+                {
+                    throw new InvalidOperationException(
+                        "Incoming batter is required because the innings is not ending.");
+                }
+
+                if (!IsEligibleIncomingBatter(
+                        innings,
+                        dto.NewBatterMatchPlayerId.Value))
+                {
+                    throw new InvalidOperationException(
+                        $"Incoming batter MatchPlayerId {dto.NewBatterMatchPlayerId.Value} is not eligible.");
+                }
             }
 
-            var ball = new Ball
-            {
-                InningsId = innings.Id,
-                OverNumber = innings.LegalBalls / 6,
-                BallNumber = (innings.LegalBalls % 6) + 1,
+            var ball = CreateBallSnapshot(
+                innings,
+                strikerAtStart,
+                nonStrikerAtStart,
+                bowler);
 
-                StrikerMatchPlayerId = strikerId,
-                NonStrikerMatchPlayerId = nonStrikerId,
-                BowlerMatchPlayerId = bowlerId,
-
-                Runs = dto.RunsCompleted,
-                BatterRuns = dto.RunsCompleted,
-
-                IsLegalDelivery = true,
-                ExtraRuns = 0,
-                CreatedAt = DateTime.UtcNow
-            };
+            ball.Runs = completedRuns;
+            ball.BatterRuns = 0;
+            ball.ExtraRuns = 0;
+            ball.ExtraType = null;
+            ball.IsLegalDelivery = true;
+            ball.Notation =
+                wicketType == "RUN OUT" && completedRuns > 0
+                    ? $"{completedRuns}W"
+                    : "W";
 
             var wicket = new Wicket
             {
                 Ball = ball,
-                DismissedMatchPlayerId = dismissedPlayerId,
+                DismissedMatchPlayerId = dismissedId.Value,
                 WicketType = wicketType,
-                CaughtByMatchPlayerId = dto.CaughtByMatchPlayerId,
-                RunsCompleted = dto.RunsCompleted
+                CaughtByMatchPlayerId =
+                    wicketType == "CAUGHT"
+                        ? dto.CaughtByMatchPlayerId
+                        : null,
+                StumpedByMatchPlayerId =
+                    wicketType == "STUMPED"
+                        ? dto.StumpedByMatchPlayerId
+                        : null,
+                RunsCompleted = completedRuns,
+                DismissedPlayerWasStriker = dismissedWasStriker,
+                DidBattersCross =
+                    wicketType == "RUN OUT" && dto.DidBattersCross
             };
 
-            innings.TotalRuns += dto.RunsCompleted;
+            ball.Wicket = wicket;
+
+            innings.TotalRuns += completedRuns;
             innings.LegalBalls++;
             innings.Wickets++;
 
-            if (!wicketWillEndInnings)
+            if (wicketType == "RUN OUT")
             {
-                var newBatter =
-                    innings.Match.MatchPlayers
-                        .First(mp =>
-                            mp.Id == dto.NewBatterMatchPlayerId);
-
-                if (dto.NewBatterIsStriker)
-                {
-                    innings.StrikerMatchPlayerId =
-                        newBatter.Id;
-
-                    innings.NonStrikerMatchPlayerId =
-                        dismissedPlayerId == nonStrikerId
-                            ? strikerId
-                            : nonStrikerId;
-                }
-                else
-                {
-                    innings.StrikerMatchPlayerId =
-                        dismissedPlayerId == strikerId
-                            ? nonStrikerId
-                            : strikerId;
-
-                    innings.NonStrikerMatchPlayerId =
-                        newBatter.Id;
-                }
+                ApplyRunOutState(
+                    innings,
+                    strikerAtStart,
+                    nonStrikerAtStart,
+                    dismissedId.Value,
+                    dto.DidBattersCross,
+                    completedRuns);
+            }
+            else
+            {
+                // The dismissed batter's end is preserved until the
+                // incoming batter is inserted.
+                innings.StrikerMatchPlayerId = strikerAtStart;
+                innings.NonStrikerMatchPlayerId = nonStrikerAtStart;
             }
 
-            var maximumLegalBalls =
-                innings.Match.Overs * 6;
+            innings.IsFreeHit = false;
 
-            var targetReached =
-                innings.InningsNumber == 2 &&
-                innings.Match.Innings
-                    .Any(i =>
-                        i.InningsNumber == 1 &&
-                        innings.TotalRuns > i.TotalRuns);
-
-            var inningsHasEnded =
-                innings.Wickets >= maximumWickets ||
-                innings.LegalBalls >= maximumLegalBalls ||
-                targetReached;
-
-            if (inningsHasEnded)
+            if (inningsWillEnd)
             {
                 innings.Status = "Completed";
                 innings.CurrentBowlerMatchPlayerId = null;
-
-                if (innings.InningsNumber == 2)
-                {
-                    var firstInnings = innings.Match.Innings
-                        .FirstOrDefault(i => i.InningsNumber == 1);
-
-                    if (firstInnings != null)
-                    {
-                        innings.Match.Result =
-                            CalculateMatchResult(
-                                innings.Match,
-                                innings);
-
-                        innings.Match.Status =
-                            MatchStatus.PendingCompletion;
-
-                        innings.Match.CompletionDeadline =
-                            DateTime.UtcNow.AddSeconds(10);
-
-                        innings.Match.UpdatedAt =
-                            DateTime.UtcNow;
-                    }
-                }
             }
-            else if (innings.LegalBalls % 6 == 0)
+            else
             {
-                // End of over: rotate strike and require a new bowler.
-                var currentStriker =
-                    innings.StrikerMatchPlayerId;
-
-                innings.StrikerMatchPlayerId =
-                    innings.NonStrikerMatchPlayerId;
-
-                innings.NonStrikerMatchPlayerId =
-                    currentStriker;
-
-                innings.CurrentBowlerMatchPlayerId = null;
+                ApplyIncomingBatter(
+                    innings,
+                    dismissedId.Value,
+                    dto.NewBatterMatchPlayerId!.Value);
             }
 
-            await _scoringRepository.AddBallAsync(ball);
-            await _scoringRepository.AddWicketAsync(wicket);
-            await _scoringRepository.SaveChangesAsync();
+            await FinalizeDeliveryAsync(
+                innings,
+                ball,
+                wicket);
 
             return true;
         }
 
-        // Purpose:
-        // Record an extra delivery while validating the active players against the
-        // innings teams and automatically completing the innings or match when required.
-       
+        // ====================================================================
+        // SCORE EXTRAS
+        // ====================================================================
+
         public async Task<bool> ScoreExtraAsync(
-    int umpireId,
-    ScoreExtraDto dto)
+            int umpireId,
+            ScoreExtraDto dto)
         {
-            var innings = await _scoringRepository
-                .GetInningsForScoringAsync(dto.InningsId);
+            if (dto == null)
+                return false;
+
+            var innings =
+                await _scoringRepository.GetInningsForScoringAsync(dto.InningsId);
+
+            if (!IsValidLiveInnings(innings))
+                return false;
+
+            if (!await IsAuthorizedUmpire(innings!, umpireId))
+                return false;
+
+            if (!HasCurrentBowler(innings!))
+                return false;
+
+            var extraType = NormalizeExtraType(dto.ExtraType);
+
+            if (!ValidExtraTypes.Contains(extraType))
+                return false;
+
+            if (dto.Runs < 0 ||
+                dto.BatterRuns < 0 ||
+                dto.RunsCompleted < 0)
+            {
+                return false;
+            }
+
+            // WIDE
+            if (extraType == "WIDE")
+            {
+                if (dto.Runs < 1 ||
+                    dto.BatterRuns != 0 ||
+                    dto.Runs != dto.RunsCompleted + 1)
+                {
+                    return false;
+                }
+
+                if (dto.DismissedMatchPlayerId.HasValue)
+                {
+                    if (!IsCurrentBatter(
+                            innings!,
+                            dto.DismissedMatchPlayerId.Value))
+                    {
+                        return false;
+                    }
+
+                    return await ScoreExtraRunOutAsync(
+                        innings,
+                        dto,
+                        extraType,
+                        dto.Runs,
+                        dto.RunsCompleted,
+                        false);
+                }
+
+                return await ScoreExtraDeliveryAsync(
+                    innings!,
+                    extraType,
+                    dto.Runs,
+                    0,
+                    dto.RunsCompleted,
+                    false);
+            }
+
+            // NO BALL
+            if (extraType == "NO BALL")
+            {
+                if (dto.Runs < 1)
+                    return false;
+
+                // A no-ball contributes one automatic run.
+                // Any additional runs on the delivery are the completed runs.
+                if (dto.Runs != dto.RunsCompleted + 1)
+                    return false;
+
+                // Batter runs are part of the completed runs.
+                if (dto.BatterRuns > dto.RunsCompleted)
+                    return false;
+
+                if (dto.DismissedMatchPlayerId.HasValue)
+                {
+                    if (!IsCurrentBatter(
+                            innings!,
+                            dto.DismissedMatchPlayerId.Value))
+                    {
+                        return false;
+                    }
+
+                    return await ScoreNoBallRunOutAsync(
+                        innings,
+                        dto,
+                        dto.Runs,
+                        dto.BatterRuns,
+                        dto.RunsCompleted);
+                }
+
+                return await ScoreExtraDeliveryAsync(
+                    innings!,
+                    extraType,
+                    dto.Runs,
+                    dto.BatterRuns,
+                    dto.RunsCompleted,
+                    true);
+            }
+
+            // BYE / LEG BYE
+            if (extraType == "BYE" ||
+                extraType == "LEG BYE")
+            {
+                if (dto.BatterRuns != 0 ||
+                    dto.Runs != dto.RunsCompleted)
+                {
+                    return false;
+                }
+
+                if (dto.DismissedMatchPlayerId.HasValue)
+                {
+                    if (!IsCurrentBatter(
+                            innings!,
+                            dto.DismissedMatchPlayerId.Value))
+                    {
+                        return false;
+                    }
+
+                    return await ScoreExtraRunOutAsync(
+                        innings,
+                        dto,
+                        extraType,
+                        dto.Runs,
+                        dto.RunsCompleted,
+                        true);
+                }
+
+                if (dto.Runs == 0)
+                    return false;
+
+                return await ScoreExtraDeliveryAsync(
+                    innings!,
+                    extraType,
+                    dto.Runs,
+                    0,
+                    dto.RunsCompleted,
+                    false);
+            }
+
+            return false;
+        }
+
+
+
+        // ====================================================================
+        // CHANGE BOWLER
+        // ====================================================================
+
+        public async Task<bool> ChangeBowlerAsync(
+            int umpireId,
+            int inningsId,
+            int newBowlerMatchPlayerId)
+        {
+            var innings =
+                await _scoringRepository.GetInningsForScoringAsync(inningsId);
 
             if (innings == null)
+                return false;
+
+            if (!await IsAuthorizedUmpire(innings, umpireId))
+                return false;
+
+            if (!IsValidLiveInnings(innings))
+                return false;
+
+            // A new bowler can only be selected after the previous
+            // over has been completed.
+            if (innings.CurrentBowlerMatchPlayerId.HasValue)
+                return false;
+
+            // The selected player must belong to the bowling team.
+            if (!IsTeamPlayer(
+                    innings.Match,
+                    newBowlerMatchPlayerId,
+                    innings.BowlingTeam))
             {
                 return false;
             }
 
-            if (innings.Match.UmpireId != umpireId)
+            // A bowler cannot bowl consecutive overs.
+            var previousBall =
+                innings.Balls
+                    .OrderByDescending(b => b.Id)
+                    .FirstOrDefault();
+
+            if (previousBall != null &&
+                previousBall.BowlerMatchPlayerId == newBowlerMatchPlayerId)
             {
                 return false;
             }
 
-            if (innings.Status != "Live")
-            {
-                return false;
-            }
+            innings.CurrentBowlerMatchPlayerId =
+                newBowlerMatchPlayerId;
 
-            if (innings.CurrentBowlerMatchPlayerId == null)
-            {
-                return false;
-            }
+            innings.UpdatedAt = DateTime.UtcNow;
+            innings.Match.UpdatedAt = DateTime.UtcNow;
 
-            var extraType = dto.ExtraType.Trim().ToUpper();
-
-            var validExtraTypes = new[]
-            {
-        "WIDE",
-        "NO BALL",
-        "BYE",
-        "LEG BYE"
-    };
-
-            if (!validExtraTypes.Contains(extraType))
-            {
-                return false;
-            }
-
-            if (dto.Runs <= 0)
-            {
-                return false;
-            }
-
-            if (dto.BatterRuns < 0)
-            {
-                return false;
-            }
-
-            // Byes and leg-byes cannot contain batter runs.
-            if ((extraType == "BYE" || extraType == "LEG BYE") &&
-                dto.BatterRuns != 0)
-            {
-                return false;
-            }
-
-            int extraRuns;
-
-            if (extraType == "WIDE")
-            {
-                // All wide runs are extras.
-                if (dto.BatterRuns != 0)
-                {
-                    return false;
-                }
-
-                extraRuns = dto.Runs;
-            }
-            else if (extraType == "NO BALL")
-            {
-                // A no-ball must contain at least one extra run
-                // for the no-ball penalty.
-                if (dto.Runs < dto.BatterRuns + 1)
-                {
-                    return false;
-                }
-
-                extraRuns = dto.Runs - dto.BatterRuns;
-
-                if (extraRuns < 1)
-                {
-                    return false;
-                }
-            }
-            else if (extraType == "BYE" ||
-                     extraType == "LEG BYE")
-            {
-                // All bye / leg-bye runs are extras.
-                extraRuns = dto.Runs;
-            }
-            else
-            {
-                return false;
-            }
-
-            var strikerId = innings.StrikerMatchPlayerId;
-            var nonStrikerId = innings.NonStrikerMatchPlayerId;
-            var bowlerId = innings.CurrentBowlerMatchPlayerId.Value;
-
-            var striker = innings.Match.MatchPlayers
-                .FirstOrDefault(mp => mp.Id == strikerId);
-
-            var nonStriker = innings.Match.MatchPlayers
-                .FirstOrDefault(mp => mp.Id == nonStrikerId);
-
-            var bowler = innings.Match.MatchPlayers
-                .FirstOrDefault(mp => mp.Id == bowlerId);
-
-            // All active players must belong to the match.
-            if (striker == null ||
-                nonStriker == null ||
-                bowler == null)
-            {
-                return false;
-            }
-
-            // Convert the actual innings team names back to the
-            // logical MatchPlayer team values.
-            var battingTeamCode =
-                innings.BattingTeam == innings.Match.Team1Name
-                    ? "Team1"
-                    : innings.BattingTeam == innings.Match.Team2Name
-                        ? "Team2"
-                        : string.Empty;
-
-            var bowlingTeamCode =
-                innings.BowlingTeam == innings.Match.Team1Name
-                    ? "Team1"
-                    : innings.BowlingTeam == innings.Match.Team2Name
-                        ? "Team2"
-                        : string.Empty;
-
-            if (string.IsNullOrEmpty(battingTeamCode) ||
-                string.IsNullOrEmpty(bowlingTeamCode))
-            {
-                return false;
-            }
-
-            // Both active batters must belong to the batting team.
-            if (striker.Team != battingTeamCode ||
-                nonStriker.Team != battingTeamCode)
-            {
-                return false;
-            }
-
-            // The active bowler must belong to the bowling team.
-            if (bowler.Team != bowlingTeamCode)
-            {
-                return false;
-            }
-
-            // A player cannot occupy two active positions.
-            if (strikerId == nonStrikerId ||
-                strikerId == bowlerId ||
-                nonStrikerId == bowlerId)
-            {
-                return false;
-            }
-
-            var isLegalDelivery =
-                extraType == "BYE" ||
-                extraType == "LEG BYE";
-
-            var ball = new Ball
-            {
-                InningsId = innings.Id,
-
-                OverNumber = innings.LegalBalls / 6,
-
-                BallNumber = isLegalDelivery
-                    ? (innings.LegalBalls % 6) + 1
-                    : innings.LegalBalls + 1,
-
-                StrikerMatchPlayerId = strikerId,
-                NonStrikerMatchPlayerId = nonStrikerId,
-                BowlerMatchPlayerId = bowlerId,
-
-                Runs = dto.Runs,
-
-                // Only the portion scored from the bat belongs to the batter.
-                BatterRuns = dto.BatterRuns,
-
-                IsLegalDelivery = isLegalDelivery,
-                ExtraRuns = extraRuns,
-                ExtraType = extraType,
-
-                CreatedAt = DateTime.UtcNow
-            };
-
-            innings.TotalRuns += dto.Runs;
-
-            if (isLegalDelivery)
-            {
-                innings.LegalBalls++;
-            }
-
-            // Determine the number of completed runs that caused
-            // the batters to change ends.
-            int completedRuns;
-
-            if (extraType == "WIDE")
-            {
-                // The first run is the automatic wide penalty.
-                // Only additional runs represent completed runs.
-                completedRuns = dto.Runs - 1;
-            }
-            else if (extraType == "NO BALL")
-            {
-                // The first run is the mandatory no-ball extra.
-                // Any additional runs represent completed runs,
-                // whether they came from the bat or were taken as byes.
-                completedRuns = dto.Runs - 1;
-            }
-            else if (extraType == "BYE" ||
-                     extraType == "LEG BYE")
-            {
-                // Every bye / leg-bye run is a completed run.
-                completedRuns = dto.Runs;
-            }
-            else
-            {
-                completedRuns = 0;
-            }
-
-            // Odd completed runs rotate the strike.
-            if (completedRuns % 2 != 0)
-            {
-                innings.StrikerMatchPlayerId = nonStrikerId;
-                innings.NonStrikerMatchPlayerId = strikerId;
-            }
-
-            var maximumLegalBalls =
-                innings.Match.Overs * 6;
-
-            // The chasing team wins immediately once it exceeds
-            // the first innings score.
-            var targetReached =
-                innings.InningsNumber == 2 &&
-                innings.Match.Innings
-                    .Any(i =>
-                        i.InningsNumber == 1 &&
-                        innings.TotalRuns > i.TotalRuns);
-
-            var inningsHasEnded =
-                innings.LegalBalls >= maximumLegalBalls ||
-                targetReached;
-
-            if (inningsHasEnded)
-            {
-                innings.Status = "Completed";
-                innings.CurrentBowlerMatchPlayerId = null;
-
-                if (innings.InningsNumber == 2)
-                {
-                    var firstInnings = innings.Match.Innings
-                        .FirstOrDefault(i => i.InningsNumber == 1);
-
-                    if (firstInnings != null)
-                    {
-                        innings.Match.Result =
-                            CalculateMatchResult(
-                                innings.Match,
-                                innings);
-
-                        innings.Match.Status =
-                            MatchStatus.PendingCompletion;
-
-                        innings.Match.CompletionDeadline =
-                            DateTime.UtcNow.AddSeconds(10);
-
-                        innings.Match.UpdatedAt =
-                            DateTime.UtcNow;
-                    }
-                }
-            }
-            else if (isLegalDelivery &&
-                     innings.LegalBalls % 6 == 0)
-            {
-                // End of over: rotate strike and require a new bowler.
-                var currentStriker =
-                    innings.StrikerMatchPlayerId;
-
-                innings.StrikerMatchPlayerId =
-                    innings.NonStrikerMatchPlayerId;
-
-                innings.NonStrikerMatchPlayerId =
-                    currentStriker;
-
-                innings.CurrentBowlerMatchPlayerId = null;
-            }
-
-            await _scoringRepository.AddBallAsync(ball);
             await _scoringRepository.SaveChangesAsync();
 
             return true;
         }
 
 
+        // ====================================================================
+        // UNDO LAST DELIVERY
+        // ====================================================================
 
-        // Purpose:
-        // Undo the immediately previous scoring action and restore the innings and match
-        // to the exact state that existed before that delivery, including reopening a
-        // first innings that had just completed.
         public async Task<bool> UndoLastScoreAsync(
             int umpireId,
             UndoScoreDto dto)
         {
-            var innings = await _scoringRepository
-                .GetInningsForScoringAsync(dto.InningsId);
+            if (dto == null)
+                return false;
+
+            var innings =
+                await _scoringRepository.GetInningsForScoringAsync(
+                    dto.InningsId);
 
             if (innings == null)
                 return false;
 
             if (innings.Match.UmpireId != umpireId)
                 return false;
-
-            var isLiveInnings = innings.Status == "Live";
-
-            var isCompletedFirstInnings =
-                innings.Status == "Completed" &&
-                innings.InningsNumber == 1 &&
-                innings.Match.Status == MatchStatus.Live;
-
-            var isPendingCompletion =
-                innings.Status == "Completed" &&
-                innings.Match.Status == MatchStatus.PendingCompletion;
-
-            if (!isLiveInnings &&
-                !isCompletedFirstInnings &&
-                !isPendingCompletion)
-            {
-                return false;
-            }
 
             var lastBall = innings.Balls
                 .OrderByDescending(b => b.Id)
                 .FirstOrDefault();
 
-            if (lastBall == null ||
-                lastBall.Id != dto.BallId)
+            if (lastBall == null)
+                return false;
+
+            // Only the single most recent scoring action may be undone.
+            // Once a ball has been superseded by another scoring action,
+            // it is permanently locked and can never become undoable again.
+            if (dto.BallId <= 0 ||
+                lastBall.Id != dto.BallId ||
+                    !lastBall.CanUndo)
             {
                 return false;
             }
 
-            innings.TotalRuns -= lastBall.Runs;
-
-            if (lastBall.IsLegalDelivery)
-            {
-                innings.LegalBalls--;
-            }
-
+            // Restore the exact pre-delivery state.
             innings.StrikerMatchPlayerId =
-                lastBall.StrikerMatchPlayerId;
+                lastBall.PreviousStrikerMatchPlayerId;
 
             innings.NonStrikerMatchPlayerId =
-                lastBall.NonStrikerMatchPlayerId;
+                lastBall.PreviousNonStrikerMatchPlayerId;
 
             innings.CurrentBowlerMatchPlayerId =
-                lastBall.BowlerMatchPlayerId;
+                lastBall.PreviousBowlerMatchPlayerId;
 
+            innings.TotalRuns =
+                lastBall.PreviousTotalRuns;
+
+            innings.Wickets =
+                lastBall.PreviousWickets;
+
+            innings.LegalBalls =
+                lastBall.PreviousLegalBalls;
+
+            innings.Status =
+                lastBall.PreviousInningsStatus;
+
+            innings.IsFreeHit =
+                lastBall.PreviousFreeHit;
+
+            // Restore match-level state too.
+            if (Enum.TryParse<MatchStatus>(
+                    lastBall.PreviousMatchStatus,
+                    true,
+                    out var previousStatus))
+            {
+                innings.Match.Status = previousStatus;
+            }
+
+            if (Enum.TryParse<MatchResult>(
+                    lastBall.PreviousMatchResult,
+                    true,
+                    out var previousResult))
+            {
+                innings.Match.Result = previousResult;
+            }
+
+            innings.Match.CompletionDeadline =
+                lastBall.PreviousCompletionDeadline;
+
+            // Remove associated wicket first.
             if (lastBall.Wicket != null)
             {
-                innings.Wickets--;
-            }
+                innings.Match.Innings
+                    .SelectMany(i => i.Balls)
+                    .ToList();
 
-            if (isCompletedFirstInnings)
-            {
-                // The final first-innings ball was responsible for completing
-                // the innings, so reopening it allows the umpire to continue scoring.
-                innings.Status = "Live";
-                innings.Match.Status = MatchStatus.Live;
-                innings.Match.UpdatedAt = DateTime.UtcNow;
-            }
-
-            if (isPendingCompletion)
-            {
-                // The final second-innings ball created the pending result.
-                // Undoing it returns the entire match to normal live scoring.
-                innings.Status = "Live";
-                innings.Match.Status = MatchStatus.Live;
-                innings.Match.Result = MatchResult.None;
-                innings.Match.CompletionDeadline = null;
-                innings.Match.UpdatedAt = DateTime.UtcNow;
+                await _scoringRepository.RemoveBallAsync(lastBall);
             }
             else
             {
-                innings.UpdatedAt = DateTime.UtcNow;
+                await _scoringRepository.RemoveBallAsync(lastBall);
             }
-
-            await _scoringRepository.RemoveBallAsync(lastBall);
 
             await _scoringRepository.SaveChangesAsync();
 
             return true;
         }
 
-        // Purpose:
-        // Record the umpire's toss result and determine which team bats first.
+        // ====================================================================
+        // RECORD TOSS
+        // ====================================================================
+
         public async Task<bool> RecordTossAsync(
             int umpireId,
             RecordTossDto dto)
         {
-            var match = await _scoringRepository
-                .GetMatchForTossAsync(dto.MatchId);
+            if (dto == null)
+                return false;
+
+            var match =
+                await _scoringRepository.GetMatchForTossAsync(dto.MatchId);
 
             if (match == null)
-            {
                 return false;
-            }
 
             if (match.UmpireId != umpireId)
-            {
                 return false;
-            }
 
-            // Toss can only be recorded after the umpire starts the match.
-            if (match.Status != MatchStatus.Live)
-            {
-                return false;
-            }
-
-            // The toss can only be recorded once.
-            if (!string.IsNullOrWhiteSpace(match.TossWinnerTeam))
+            if (match.Status != MatchStatus.Scheduled &&
+      match.Status != MatchStatus.Live)
             {
                 return false;
             }
 
             if (match.Innings.Any())
+                return false;
+
+            if (string.IsNullOrWhiteSpace(dto.TossWinnerTeam))
+                return false;
+
+            if (string.IsNullOrWhiteSpace(dto.TossDecision))
+                return false;
+
+            if (!IsTeam(match, dto.TossWinnerTeam))
+                return false;
+
+            var decision =
+     dto.TossDecision.Trim().ToUpperInvariant();
+
+            if (decision != "BAT" &&
+                decision != "BOWL" &&
+                decision != "FIELD")
             {
                 return false;
             }
 
-            var tossWinner = dto.TossWinnerTeam.Trim();
-            var tossDecision = dto.TossDecision.Trim().ToUpper();
+            match.TossWinnerTeam =
+                dto.TossWinnerTeam.Trim();
 
-            if (tossWinner != match.Team1Name &&
-                tossWinner != match.Team2Name)
-            {
-                return false;
-            }
+            match.TossDecision =
+                decision == "FIELD"
+                    ? "BOWL"
+                    : decision;
 
-            if (tossDecision != "BAT" && tossDecision != "BOWL")
-            {
-                return false;
-            }
-
-            match.TossWinnerTeam = tossWinner;
-            match.TossDecision = tossDecision;
-
-            // If the toss winner chooses BAT, they bat first.
-            // If they choose BOWL, the opposing team bats first.
-            match.BattingFirstTeam = tossDecision == "BAT"
-                ? tossWinner
-                : tossWinner == match.Team1Name
-                    ? match.Team2Name
-                    : match.Team1Name;
+            match.BattingFirstTeam =
+                decision == "BAT"
+                    ? dto.TossWinnerTeam.Trim()
+                    : GetOtherTeam(match, dto.TossWinnerTeam);
 
             match.UpdatedAt = DateTime.UtcNow;
 
@@ -1020,196 +685,127 @@ namespace CricPulse.Application.Services
             return true;
         }
 
-        // Purpose:
-        // Start either innings of a live match after validating the match state,
-        // toss result, selected players, and the correct batting and bowling teams.
+        // ====================================================================
+        // START INNINGS
+        // ====================================================================
+
         public async Task<bool> StartInningsAsync(
-            int umpireId,
-            StartInningsDto dto)
+    int umpireId,
+    StartInningsDto dto)
         {
-            var match = await _scoringRepository
-                .GetMatchForInningsAsync(dto.MatchId);
+            if (dto == null)
+                throw new InvalidOperationException("DTO is null.");
+
+            var match =
+                await _scoringRepository.GetMatchForInningsAsync(
+                    dto.MatchId);
 
             if (match == null)
-            {
-                return false;
-            }
+                throw new InvalidOperationException("Match not found.");
 
             if (match.UmpireId != umpireId)
-            {
-                return false;
-            }
+                throw new UnauthorizedAccessException(
+                    "Current user is not the match umpire.");
 
-            // The match must already be live.
             if (match.Status != MatchStatus.Live)
+                throw new InvalidOperationException(
+                    $"Match status is '{match.Status}', expected 'Live'.");
+
+            if (dto.InningsNumber != 1 &&
+                dto.InningsNumber != 2)
             {
-                return false;
+                throw new InvalidOperationException(
+                    $"Invalid innings number: {dto.InningsNumber}.");
             }
 
-            // Toss must be completed before either innings can start.
-            if (string.IsNullOrWhiteSpace(match.BattingFirstTeam))
+            var existing =
+                match.Innings.FirstOrDefault(i =>
+                    i.InningsNumber == dto.InningsNumber);
+
+            if (existing != null)
+                throw new InvalidOperationException(
+                    $"Innings {dto.InningsNumber} already exists.");
+
+            var battingTeam =
+                dto.InningsNumber == 1
+                    ? match.BattingFirstTeam
+                    : GetOtherTeam(
+                        match,
+                        match.BattingFirstTeam!);
+
+            if (string.IsNullOrWhiteSpace(battingTeam))
+                throw new InvalidOperationException(
+                    "Batting first team has not been recorded.");
+
+            var bowlingTeam =
+                GetOtherTeam(match, battingTeam);
+
+            if (dto.StrikerMatchPlayerId ==
+                dto.NonStrikerMatchPlayerId)
             {
-                return false;
+                throw new InvalidOperationException(
+                    "Striker and non-striker cannot be the same player.");
             }
 
-            // MatchPlayer stores the logical values "Team1" and "Team2",
-            // while Match stores the actual team names entered by the umpire.
-            var team1PlayerCount = match.MatchPlayers
-                .Count(mp => mp.Team == "Team1");
-
-            var team2PlayerCount = match.MatchPlayers
-                .Count(mp => mp.Team == "Team2");
-
-            // Both teams must have exactly the configured number of players.
-            if (team1PlayerCount != match.PlayersPerTeam ||
-                team2PlayerCount != match.PlayersPerTeam)
+            if (!IsTeamPlayer(
+                    match,
+                    dto.StrikerMatchPlayerId,
+                    battingTeam))
             {
-                return false;
+                throw new InvalidOperationException(
+                    $"Striker MatchPlayerId {dto.StrikerMatchPlayerId} does not belong to batting team '{battingTeam}'.");
             }
 
-            // Striker and non-striker must be different players.
-            if (dto.StrikerMatchPlayerId == dto.NonStrikerMatchPlayerId)
+            if (!IsTeamPlayer(
+                    match,
+                    dto.NonStrikerMatchPlayerId,
+                    battingTeam))
             {
-                return false;
+                throw new InvalidOperationException(
+                    $"Non-striker MatchPlayerId {dto.NonStrikerMatchPlayerId} does not belong to batting team '{battingTeam}'.");
             }
 
-            if (dto.StrikerMatchPlayerId <= 0 ||
-                dto.NonStrikerMatchPlayerId <= 0 ||
-                dto.BowlerMatchPlayerId <= 0)
+            if (!IsTeamPlayer(
+                    match,
+                    dto.BowlerMatchPlayerId,
+                    bowlingTeam))
             {
-                return false;
+                throw new InvalidOperationException(
+                    $"Bowler MatchPlayerId {dto.BowlerMatchPlayerId} does not belong to bowling team '{bowlingTeam}'.");
             }
 
-            var striker = match.MatchPlayers
-                .FirstOrDefault(mp => mp.Id == dto.StrikerMatchPlayerId);
-
-            var nonStriker = match.MatchPlayers
-                .FirstOrDefault(mp => mp.Id == dto.NonStrikerMatchPlayerId);
-
-            var bowler = match.MatchPlayers
-                .FirstOrDefault(mp => mp.Id == dto.BowlerMatchPlayerId);
-
-            // All selected players must belong to this match.
-            if (striker == null ||
-                nonStriker == null ||
-                bowler == null)
+            if (dto.InningsNumber == 2)
             {
-                return false;
-            }
+                var firstInnings =
+                    match.Innings.FirstOrDefault(
+                        i => i.InningsNumber == 1);
 
-            var firstInnings = match.Innings
-                .FirstOrDefault(i => i.InningsNumber == 1);
+                if (firstInnings == null)
+                    throw new InvalidOperationException(
+                        "First innings does not exist.");
 
-            var secondInnings = match.Innings
-                .FirstOrDefault(i => i.InningsNumber == 2);
-
-            int inningsNumber;
-            string battingTeam;
-            string bowlingTeam;
-
-            if (firstInnings == null)
-            {
-                // -----------------------------
-                // FIRST INNINGS
-                // -----------------------------
-
-                inningsNumber = 1;
-
-                battingTeam = match.BattingFirstTeam;
-
-                bowlingTeam = battingTeam == match.Team1Name
-                    ? match.Team2Name
-                    : match.Team1Name;
-
-                var battingTeamCode = battingTeam == match.Team1Name
-                    ? "Team1"
-                    : "Team2";
-
-                var bowlingTeamCode = bowlingTeam == match.Team1Name
-                    ? "Team1"
-                    : "Team2";
-
-                // Both opening batters must belong to the batting-first team.
-                if (striker.Team != battingTeamCode ||
-                    nonStriker.Team != battingTeamCode)
-                {
-                    return false;
-                }
-
-                // Opening bowler must belong to the opposing team.
-                if (bowler.Team != bowlingTeamCode)
-                {
-                    return false;
-                }
-            }
-            else
-            {
-                // -----------------------------
-                // SECOND INNINGS
-                // -----------------------------
-
-                // Second innings can only begin after the first innings has ended.
                 if (firstInnings.Status != "Completed")
-                {
-                    return false;
-                }
-
-                // Only one second innings is allowed.
-                if (secondInnings != null)
-                {
-                    return false;
-                }
-
-                inningsNumber = 2;
-
-                // The team that batted first now bowls.
-                bowlingTeam = firstInnings.BattingTeam;
-
-                // The other team now bats.
-                battingTeam = firstInnings.BowlingTeam;
-
-                var battingTeamCode = battingTeam == match.Team1Name
-                    ? "Team1"
-                    : "Team2";
-
-                var bowlingTeamCode = bowlingTeam == match.Team1Name
-                    ? "Team1"
-                    : "Team2";
-
-                // Both opening batters must belong to the second innings batting team.
-                if (striker.Team != battingTeamCode ||
-                    nonStriker.Team != battingTeamCode)
-                {
-                    return false;
-                }
-
-                // Opening bowler must belong to the first innings batting team.
-                if (bowler.Team != bowlingTeamCode)
-                {
-                    return false;
-                }
-            }
-
-            // A player cannot be both a batter and the opening bowler.
-            if (striker.Id == bowler.Id ||
-                nonStriker.Id == bowler.Id)
-            {
-                return false;
+                    throw new InvalidOperationException(
+                        $"First innings status is '{firstInnings.Status}', expected 'Completed'.");
             }
 
             var innings = new Innings
             {
                 MatchId = match.Id,
-                InningsNumber = inningsNumber,
+                InningsNumber = dto.InningsNumber,
                 BattingTeam = battingTeam,
                 BowlingTeam = bowlingTeam,
-                StrikerMatchPlayerId = striker.Id,
-                NonStrikerMatchPlayerId = nonStriker.Id,
-                CurrentBowlerMatchPlayerId = bowler.Id,
+                StrikerMatchPlayerId =
+                    dto.StrikerMatchPlayerId,
+                NonStrikerMatchPlayerId =
+                    dto.NonStrikerMatchPlayerId,
+                CurrentBowlerMatchPlayerId =
+                    dto.BowlerMatchPlayerId,
                 TotalRuns = 0,
                 Wickets = 0,
                 LegalBalls = 0,
                 Status = "Live",
+                IsFreeHit = false,
                 CreatedAt = DateTime.UtcNow
             };
 
@@ -1221,208 +817,908 @@ namespace CricPulse.Application.Services
             return true;
         }
 
+        // ====================================================================
+        // COMPLETE MATCH
+        // ====================================================================
 
-        // Purpose:
-        // Aggregate batting and bowling statistics for every player who participated
-        // in the completed match before the match and its scoring records are removed.
-        private async Task AggregatePlayerStatisticsAsync(
-            MatchEntity match)
-        {
-            var completedInnings = match.Innings
-                .OrderBy(i => i.InningsNumber)
-                .ToList();
-
-            foreach (var matchPlayer in match.MatchPlayers)
-            {
-                var playerId = matchPlayer.PlayerId;
-
-                var statistics =
-                    await _playerStatisticsRepository
-                        .GetByPlayerIdAsync(playerId);
-
-                if (statistics == null)
-                {
-                    statistics = new PlayerStatistics
-                    {
-                        PlayerId = playerId
-                    };
-
-                    await _playerStatisticsRepository
-                        .CreateAsync(statistics);
-                }
-
-                // Every MatchPlayer represents participation in this match.
-                statistics.Matches++;
-
-                // ---------------------------------
-                // BATTING
-                // ---------------------------------
-
-                foreach (var innings in completedInnings)
-                {
-                    var playerBalls = innings.Balls
-                        .Where(b =>
-                            b.StrikerMatchPlayerId == matchPlayer.Id)
-                        .ToList();
-
-                    if (playerBalls.Count == 0)
-                    {
-                        continue;
-                    }
-
-                    statistics.BattingInnings++;
-
-                    var inningsRuns = playerBalls
-                        .Sum(b => b.BatterRuns);
-
-                    statistics.Runs += inningsRuns;
-
-                    statistics.BallsFaced += playerBalls
-                        .Count(b => b.IsLegalDelivery);
-
-                    statistics.Fours += playerBalls
-                        .Count(b => b.BatterRuns == 4);
-
-                    statistics.Sixes += playerBalls
-                        .Count(b => b.BatterRuns == 6);
-
-                    if (inningsRuns >= 100)
-                    {
-                        statistics.Hundreds++;
-                    }
-                    else if (inningsRuns >= 50)
-                    {
-                        statistics.Fifties++;
-                    }
-
-                    if (inningsRuns > statistics.HighestScore)
-                    {
-                        statistics.HighestScore = inningsRuns;
-                    }
-                }
-
-                // ---------------------------------
-                // BOWLING
-                // ---------------------------------
-
-                foreach (var innings in completedInnings)
-                {
-                    var playerBowledBalls = innings.Balls
-                        .Where(b =>
-                            b.BowlerMatchPlayerId == matchPlayer.Id)
-                        .ToList();
-
-                    if (playerBowledBalls.Count == 0)
-                    {
-                        continue;
-                    }
-
-                    statistics.BowlingInnings++;
-
-                    statistics.BallsBowled += playerBowledBalls
-                        .Count(b => b.IsLegalDelivery);
-
-                    foreach (var ball in playerBowledBalls)
-                    {
-                        // Byes and leg-byes are not charged to the bowler.
-                        if (ball.ExtraType != "BYE" &&
-                            ball.ExtraType != "LEG BYE")
-                        {
-                            statistics.RunsConceded += ball.Runs;
-                        }
-
-                        // Run outs are not credited as bowler wickets.
-                        if (ball.Wicket != null &&
-                            ball.Wicket.WicketType != "RUN OUT")
-                        {
-                            statistics.Wickets++;
-                        }
-                    }
-
-                    // A maiden requires a complete six-legal-ball over
-                    // with zero runs charged to the bowler.
-                    var completedOvers = playerBowledBalls
-                        .Where(b => b.IsLegalDelivery)
-                        .GroupBy(b => b.OverNumber);
-
-                    foreach (var over in completedOvers)
-                    {
-                        var legalBalls = over.Count();
-
-                        if (legalBalls != 6)
-                        {
-                            continue;
-                        }
-
-                        var runsConcededInOver = over
-                            .Where(b =>
-                                b.ExtraType != "BYE" &&
-                                b.ExtraType != "LEG BYE")
-                            .Sum(b => b.Runs);
-
-                        if (runsConcededInOver == 0)
-                        {
-                            statistics.MaidenOvers++;
-                        }
-                    }
-                }
-
-                if (statistics.Id > 0)
-                {
-                    await _playerStatisticsRepository
-                        .UpdateAsync(statistics);
-                }
-            }
-        }
-
-        // Purpose:
-        // Finalize a match by aggregating player statistics and permanently removing
-        // the completed match and its scoring records.
         public async Task<bool> CompleteMatchAsync(
             int umpireId,
             int matchId)
         {
-            var match = await _scoringRepository
-                .GetMatchForStatisticsAsync(matchId);
+            var match =
+                await _scoringRepository.GetMatchForStatisticsAsync(
+                    matchId);
 
             if (match == null)
-            {
                 return false;
-            }
 
             if (match.UmpireId != umpireId)
-            {
                 return false;
-            }
 
             if (match.Status != MatchStatus.PendingCompletion)
-            {
                 return false;
-            }
 
-            if (match.Result == MatchResult.None)
-            {
-                return false;
-            }
-
-            if (match.CompletionDeadline == null)
-            {
-                return false;
-            }
-
-            // Aggregate statistics while all match scoring data is still available.
-            await AggregatePlayerStatisticsAsync(match);
-
-            // The completed match is intentionally removed permanently after
-            // statistics have been accumulated.
-            await _scoringRepository.DeleteCompletedMatchAsync(matchId);
+            match.Status = MatchStatus.Completed;
+            match.CompletionDeadline = null;
+            match.UpdatedAt = DateTime.UtcNow;
 
             await _scoringRepository.SaveChangesAsync();
 
             return true;
         }
 
+        // ====================================================================
+        // EXTRA DELIVERY
+        // ====================================================================
 
+        private async Task<bool> ScoreExtraDeliveryAsync(
+            Innings innings,
+            string extraType,
+            int totalRuns,
+            int batterRuns,
+            int completedRuns,
+            bool isNoBall)
+        {
+            if (totalRuns <= 0)
+                return false;
 
+            var striker = innings.StrikerMatchPlayerId;
+            var nonStriker = innings.NonStrikerMatchPlayerId;
+            var bowler = innings.CurrentBowlerMatchPlayerId ?? 0;
+
+            var ball = CreateBallSnapshot(
+                innings,
+                striker,
+                nonStriker,
+                bowler);
+
+            ball.Runs = totalRuns;
+            ball.BatterRuns = batterRuns;
+            ball.ExtraType = extraType;
+            ball.ExtraRuns = totalRuns - batterRuns;
+            ball.IsLegalDelivery =
+                !isNoBall &&
+                extraType != "WIDE";
+
+            ball.Notation =
+                BuildExtraNotation(
+                    extraType,
+                    totalRuns);
+
+            innings.TotalRuns += totalRuns;
+
+            if (ball.IsLegalDelivery)
+                innings.LegalBalls++;
+
+            RotateStrikeForRuns(
+                innings,
+                completedRuns);
+
+            // A no-ball creates a free hit.
+            // A wide does NOT consume an existing free hit.
+            // Any legal delivery (bye/leg-bye) consumes it.
+            if (isNoBall)
+            {
+                innings.IsFreeHit = true;
+            }
+            else if (ball.IsLegalDelivery)
+            {
+                innings.IsFreeHit = false;
+            }
+
+            await FinalizeDeliveryAsync(
+                innings,
+                ball);
+
+            return true;
+        }
+
+        // ====================================================================
+        // NO-BALL + RUN OUT
+        // ====================================================================
+
+        private async Task<bool> ScoreNoBallRunOutAsync(
+            Innings innings,
+            ScoreExtraDto dto,
+            int totalRuns,
+            int batterRuns,
+            int completedRuns)
+        {
+            if (totalRuns < 1)
+                return false;
+
+            var dismissedId = dto.DismissedMatchPlayerId!.Value;
+            var strikerAtStart = innings.StrikerMatchPlayerId;
+            var nonStrikerAtStart = innings.NonStrikerMatchPlayerId;
+            var bowler = innings.CurrentBowlerMatchPlayerId ?? 0;
+
+            if (dismissedId != strikerAtStart &&
+                dismissedId != nonStrikerAtStart)
+            {
+                return false;
+            }
+
+            var maximumWickets =
+                Math.Max(1, innings.Match.PlayersPerTeam - 1);
+
+            var inningsWillEnd =
+                innings.Wickets + 1 >= maximumWickets;
+
+            if (!inningsWillEnd && innings.InningsNumber == 2)
+            {
+                var firstInnings =
+                    innings.Match.Innings.FirstOrDefault(
+                        i => i.InningsNumber == 1);
+
+                if (firstInnings != null &&
+                    innings.TotalRuns + totalRuns > firstInnings.TotalRuns)
+                {
+                    inningsWillEnd = true;
+                }
+            }
+
+            if (!inningsWillEnd)
+            {
+                if (!dto.NewBatterMatchPlayerId.HasValue ||
+                    !IsEligibleIncomingBatter(
+                        innings,
+                        dto.NewBatterMatchPlayerId.Value))
+                {
+                    return false;
+                }
+            }
+
+            var ball = CreateBallSnapshot(
+                innings,
+                strikerAtStart,
+                nonStrikerAtStart,
+                bowler);
+
+            ball.Runs = totalRuns;
+            ball.BatterRuns = batterRuns;
+            ball.ExtraType = "NO BALL";
+            ball.ExtraRuns = totalRuns - batterRuns;
+            ball.IsLegalDelivery = false;
+            ball.Notation =
+                completedRuns > 0
+                    ? $"NB{totalRuns}W"
+                    : "NBW";
+
+            var wicket = new Wicket
+            {
+                Ball = ball,
+                DismissedMatchPlayerId = dismissedId,
+                WicketType = "RUN OUT",
+                RunsCompleted = completedRuns,
+                DismissedPlayerWasStriker =
+                    dismissedId == strikerAtStart,
+                DidBattersCross = dto.DidBattersCross
+            };
+
+            ball.Wicket = wicket;
+
+            innings.TotalRuns += totalRuns;
+            innings.Wickets++;
+
+            ApplyRunOutState(
+                innings,
+                strikerAtStart,
+                nonStrikerAtStart,
+                dismissedId,
+                dto.DidBattersCross,
+                completedRuns);
+
+            // The no-ball itself creates a free hit for the next delivery.
+            innings.IsFreeHit = true;
+
+            if (inningsWillEnd)
+            {
+                innings.Status = "Completed";
+                innings.CurrentBowlerMatchPlayerId = null;
+            }
+            else
+            {
+                ApplyIncomingBatter(
+                    innings,
+                    dismissedId,
+                    dto.NewBatterMatchPlayerId!.Value);
+            }
+
+            await FinalizeDeliveryAsync(
+                innings,
+                ball,
+                wicket);
+
+            return true;
+        }
+
+        // ====================================================================
+        // EXTRA + RUN OUT
+        // ====================================================================
+
+        private async Task<bool> ScoreExtraRunOutAsync(
+            Innings innings,
+            ScoreExtraDto dto,
+            string extraType,
+            int totalRuns,
+            int completedRuns,
+            bool isLegalDelivery)
+        {
+            if (totalRuns < 0 ||
+                completedRuns < 0)
+            {
+                return false;
+            }
+
+            var dismissedId = dto.DismissedMatchPlayerId!.Value;
+            var strikerAtStart = innings.StrikerMatchPlayerId;
+            var nonStrikerAtStart = innings.NonStrikerMatchPlayerId;
+            var bowler = innings.CurrentBowlerMatchPlayerId ?? 0;
+
+            if (dismissedId != strikerAtStart &&
+                dismissedId != nonStrikerAtStart)
+            {
+                return false;
+            }
+
+            var maximumWickets =
+                Math.Max(1, innings.Match.PlayersPerTeam - 1);
+
+            var inningsWillEnd =
+                innings.Wickets + 1 >= maximumWickets;
+
+            if (!inningsWillEnd &&
+                isLegalDelivery &&
+                innings.LegalBalls + 1 >= innings.Match.Overs * 6)
+            {
+                inningsWillEnd = true;
+            }
+
+            if (!inningsWillEnd && innings.InningsNumber == 2)
+            {
+                var firstInnings =
+                    innings.Match.Innings.FirstOrDefault(
+                        i => i.InningsNumber == 1);
+
+                if (firstInnings != null &&
+                    innings.TotalRuns + totalRuns > firstInnings.TotalRuns)
+                {
+                    inningsWillEnd = true;
+                }
+            }
+
+            if (!inningsWillEnd)
+            {
+                if (!dto.NewBatterMatchPlayerId.HasValue ||
+                    !IsEligibleIncomingBatter(
+                        innings,
+                        dto.NewBatterMatchPlayerId.Value))
+                {
+                    return false;
+                }
+            }
+
+            var ball = CreateBallSnapshot(
+                innings,
+                strikerAtStart,
+                nonStrikerAtStart,
+                bowler);
+
+            ball.Runs = totalRuns;
+            ball.BatterRuns = 0;
+            ball.ExtraType = extraType;
+            ball.ExtraRuns = totalRuns;
+            ball.IsLegalDelivery = isLegalDelivery;
+            ball.Notation =
+                $"{GetExtraNotationPrefix(extraType)}{totalRuns}W";
+
+            var wicket = new Wicket
+            {
+                Ball = ball,
+                DismissedMatchPlayerId = dismissedId,
+                WicketType = "RUN OUT",
+                RunsCompleted = completedRuns,
+                DismissedPlayerWasStriker =
+                    dismissedId == strikerAtStart,
+                DidBattersCross = dto.DidBattersCross
+            };
+
+            ball.Wicket = wicket;
+
+            innings.TotalRuns += totalRuns;
+            innings.Wickets++;
+
+            if (isLegalDelivery)
+                innings.LegalBalls++;
+
+            ApplyRunOutState(
+                innings,
+                strikerAtStart,
+                nonStrikerAtStart,
+                dismissedId,
+                dto.DidBattersCross,
+                completedRuns);
+
+            if (isLegalDelivery)
+                innings.IsFreeHit = false;
+
+            if (inningsWillEnd)
+            {
+                innings.Status = "Completed";
+                innings.CurrentBowlerMatchPlayerId = null;
+            }
+            else
+            {
+                ApplyIncomingBatter(
+                    innings,
+                    dismissedId,
+                    dto.NewBatterMatchPlayerId!.Value);
+            }
+
+            await FinalizeDeliveryAsync(
+                innings,
+                ball,
+                wicket);
+
+            return true;
+        }
+
+        // ====================================================================
+        // CREATE BALL SNAPSHOT
+        // ====================================================================
+
+        private Ball CreateBallSnapshot(
+            Innings innings,
+            int striker,
+            int nonStriker,
+            int bowler)
+        {
+            var ballNumber =
+                innings.LegalBalls % 6 + 1;
+
+            var overNumber =
+                innings.LegalBalls / 6;
+
+            return new Ball
+            {
+                InningsId = innings.Id,
+                OverNumber = overNumber,
+                BallNumber = ballNumber,
+
+                StrikerMatchPlayerId = striker,
+                NonStrikerMatchPlayerId = nonStriker,
+                BowlerMatchPlayerId = bowler,
+
+                PreviousStrikerMatchPlayerId =
+                    innings.StrikerMatchPlayerId,
+
+                PreviousNonStrikerMatchPlayerId =
+                    innings.NonStrikerMatchPlayerId,
+
+                PreviousBowlerMatchPlayerId =
+                    innings.CurrentBowlerMatchPlayerId,
+
+                PreviousTotalRuns =
+                    innings.TotalRuns,
+
+                PreviousWickets =
+                    innings.Wickets,
+
+                PreviousLegalBalls =
+                    innings.LegalBalls,
+
+                PreviousInningsStatus =
+                    innings.Status,
+
+                PreviousFreeHit =
+                    innings.IsFreeHit,
+
+                PreviousMatchStatus =
+                    innings.Match.Status.ToString(),
+
+                PreviousMatchResult =
+                    innings.Match.Result.ToString(),
+
+                PreviousCompletionDeadline =
+                    innings.Match.CompletionDeadline,
+
+                CreatedAt = DateTime.UtcNow
+            };
+        }
+
+        // ====================================================================
+        // FINALIZE DELIVERY
+        // ====================================================================
+
+        private async Task FinalizeDeliveryAsync(
+            Innings innings,
+            Ball ball,
+            Wicket? wicket = null)
+        {
+            // ------------------------------------------------------------
+            // Over completed.
+            // ------------------------------------------------------------
+
+            if (ball.IsLegalDelivery &&
+                innings.LegalBalls > 0 &&
+                innings.LegalBalls % 6 == 0)
+            {
+                RotateStrike(innings);
+
+                innings.CurrentBowlerMatchPlayerId = null;
+            }
+
+            // ------------------------------------------------------------
+            // Innings completion.
+            // ------------------------------------------------------------
+
+            if (innings.Status != "Completed")
+            {
+                if (innings.LegalBalls >=
+                    innings.Match.Overs * 6)
+                {
+                    innings.Status = "Completed";
+                    innings.CurrentBowlerMatchPlayerId = null;
+                }
+
+                if (innings.Wickets >=
+                    Math.Max(
+                        1,
+                        innings.Match.PlayersPerTeam - 1))
+                {
+                    innings.Status = "Completed";
+                    innings.CurrentBowlerMatchPlayerId = null;
+                }
+
+                if (innings.InningsNumber == 2)
+                {
+                    var firstInnings =
+                        innings.Match.Innings
+                            .FirstOrDefault(
+                                i => i.InningsNumber == 1);
+
+                    if (firstInnings != null &&
+                        innings.TotalRuns > firstInnings.TotalRuns)
+                    {
+                        innings.Status = "Completed";
+                        innings.CurrentBowlerMatchPlayerId = null;
+                    }
+                }
+            }
+
+            // ------------------------------------------------------------
+            // First innings completion does not complete the match.
+            // ------------------------------------------------------------
+
+            if (innings.Status == "Completed" &&
+                innings.InningsNumber == 2)
+            {
+                innings.Match.Result =
+                    CalculateMatchResult(
+                        innings.Match,
+                        innings);
+
+                innings.Match.Status =
+                    MatchStatus.PendingCompletion;
+
+                innings.Match.CompletionDeadline =
+                    DateTime.UtcNow.AddSeconds(10);
+            }
+
+            // The new scoring action becomes the only undoable action.
+            // Every previous ball is permanently locked.
+            foreach (var previousBall in innings.Balls)
+            {
+                previousBall.CanUndo = false;
+            }
+
+            ball.CanUndo = true;
+
+            innings.UpdatedAt = DateTime.UtcNow;
+            innings.Match.UpdatedAt = DateTime.UtcNow;
+
+            await _scoringRepository.AddBallAsync(ball);
+
+            await _scoringRepository.SaveChangesAsync();
+        }
+
+        // ====================================================================
+        // RUN OUT STATE
+        // ====================================================================
+
+        private static void ApplyRunOutState(
+            Innings innings,
+            int strikerAtStart,
+            int nonStrikerAtStart,
+            int dismissedId,
+            bool didBattersCross,
+            int completedRuns)
+        {
+            var striker = strikerAtStart;
+            var nonStriker = nonStrikerAtStart;
+
+            // Every completed run swaps the ends.
+            if (completedRuns % 2 == 1)
+            {
+                (striker, nonStriker) =
+                    (nonStriker, striker);
+            }
+
+            // The run in progress is counted only if the batters crossed.
+            // Therefore crossing swaps the ends one additional time.
+            if (didBattersCross)
+            {
+                (striker, nonStriker) =
+                    (nonStriker, striker);
+            }
+
+            // Keep the dismissed batter at the end where the wicket occurred.
+            // The incoming batter will replace this exact position.
+            if (striker == dismissedId)
+            {
+                innings.StrikerMatchPlayerId = dismissedId;
+                innings.NonStrikerMatchPlayerId = nonStriker;
+            }
+            else if (nonStriker == dismissedId)
+            {
+                innings.StrikerMatchPlayerId = striker;
+                innings.NonStrikerMatchPlayerId = dismissedId;
+            }
+            else
+            {
+                // Defensive fallback; this should be unreachable because
+                // the caller validates the dismissed batter.
+                innings.StrikerMatchPlayerId = striker;
+                innings.NonStrikerMatchPlayerId = nonStriker;
+            }
+        }
+
+        // ====================================================================
+        // INCOMING BATTER
+        // ====================================================================
+
+        private static void ApplyIncomingBatter(
+            Innings innings,
+            int dismissedId,
+            int newBatterId)
+        {
+            if (innings.StrikerMatchPlayerId == dismissedId)
+            {
+                innings.StrikerMatchPlayerId = newBatterId;
+                return;
+            }
+
+            if (innings.NonStrikerMatchPlayerId == dismissedId)
+            {
+                innings.NonStrikerMatchPlayerId = newBatterId;
+            }
+        }
+
+        // ====================================================================
+        // ELIGIBILITY
+        // ====================================================================
+
+        private static bool IsEligibleIncomingBatter(
+            Innings innings,
+            int matchPlayerId)
+        {
+            var match =
+                innings.Match;
+
+            var player =
+                match.MatchPlayers
+                    .FirstOrDefault(mp =>
+                        mp.Id == matchPlayerId);
+
+            if (player == null)
+                return false;
+
+            // MatchPlayer.Team stores the logical team code
+            // ("Team1" / "Team2"), while Innings.BattingTeam
+            // stores the actual team name. Convert the innings
+            // team name to the same logical code before comparing.
+            var battingTeamCode =
+                innings.BattingTeam.Equals(
+                    innings.Match.Team1Name,
+                    StringComparison.OrdinalIgnoreCase)
+                    ? "Team1"
+                    : innings.BattingTeam.Equals(
+                        innings.Match.Team2Name,
+                        StringComparison.OrdinalIgnoreCase)
+                        ? "Team2"
+                        : string.Empty;
+
+            if (string.IsNullOrEmpty(battingTeamCode) ||
+                !player.Team.Equals(
+                    battingTeamCode,
+                    StringComparison.OrdinalIgnoreCase))
+            {
+                return false;
+            }
+
+            if (player.Id ==
+                innings.StrikerMatchPlayerId ||
+                player.Id ==
+                innings.NonStrikerMatchPlayerId)
+            {
+                return false;
+            }
+
+            var hasAlreadyBatted =
+                innings.Balls.Any(b =>
+                    b.StrikerMatchPlayerId == matchPlayerId ||
+                    b.NonStrikerMatchPlayerId == matchPlayerId);
+
+            return !hasAlreadyBatted;
+        }
+
+        private static bool IsFieldingTeamPlayer(
+            Innings innings,
+            int matchPlayerId)
+        {
+            var player =
+                innings.Match.MatchPlayers
+                    .FirstOrDefault(
+                        mp => mp.Id == matchPlayerId);
+
+            if (player == null)
+                return false;
+
+            // MatchPlayer.Team stores Team1 / Team2, while
+            // Innings.BowlingTeam stores the actual team name.
+            var bowlingTeamCode =
+                innings.BowlingTeam.Equals(
+                    innings.Match.Team1Name,
+                    StringComparison.OrdinalIgnoreCase)
+                    ? "Team1"
+                    : innings.BowlingTeam.Equals(
+                        innings.Match.Team2Name,
+                        StringComparison.OrdinalIgnoreCase)
+                        ? "Team2"
+                        : string.Empty;
+
+            return !string.IsNullOrEmpty(bowlingTeamCode) &&
+                   player.Team.Equals(
+                       bowlingTeamCode,
+                       StringComparison.OrdinalIgnoreCase);
+        }
+
+        private static bool IsCurrentBatter(
+            Innings innings,
+            int matchPlayerId)
+        {
+            return matchPlayerId == innings.StrikerMatchPlayerId ||
+                   matchPlayerId == innings.NonStrikerMatchPlayerId;
+        }
+
+        // ====================================================================
+        // VALIDATION
+        // ====================================================================
+
+        private static bool IsValidLiveInnings(
+            [NotNullWhen(true)] Innings? innings)
+        {
+            if (innings == null)
+                return false;
+
+            if (innings.Status != "Live")
+                return false;
+
+            if (innings.Match.Status != MatchStatus.Live)
+                return false;
+
+            return true;
+        }
+
+        private static bool HasCurrentBowler(
+            Innings innings)
+        {
+            return innings.CurrentBowlerMatchPlayerId.HasValue;
+        }
+
+        private static async Task<bool> IsAuthorizedUmpire(
+            Innings innings,
+            int umpireId)
+        {
+            await Task.CompletedTask;
+
+            return innings.Match.UmpireId == umpireId;
+        }
+
+        private static bool IsTeamPlayer(
+     MatchEntity match,
+     int matchPlayerId,
+     string team)
+        {
+            var matchPlayer =
+                match.MatchPlayers.FirstOrDefault(
+                    mp => mp.Id == matchPlayerId);
+
+            if (matchPlayer == null)
+                return false;
+
+            if (string.IsNullOrWhiteSpace(team))
+                return false;
+
+            var requestedTeam =
+                team.Trim();
+
+            var playerTeam =
+                matchPlayer.Team?.Trim();
+
+            if (string.IsNullOrWhiteSpace(playerTeam))
+                return false;
+
+            // Direct comparison.
+            if (playerTeam.Equals(
+                    requestedTeam,
+                    StringComparison.OrdinalIgnoreCase))
+            {
+                return true;
+            }
+
+            // MatchPlayer stores Team1 / Team2,
+            // while the scoring logic uses the actual team name.
+            if (playerTeam.Equals(
+                    "Team1",
+                    StringComparison.OrdinalIgnoreCase))
+            {
+                return match.Team1Name.Equals(
+                    requestedTeam,
+                    StringComparison.OrdinalIgnoreCase);
+            }
+
+            if (playerTeam.Equals(
+                    "Team2",
+                    StringComparison.OrdinalIgnoreCase))
+            {
+                return match.Team2Name.Equals(
+                    requestedTeam,
+                    StringComparison.OrdinalIgnoreCase);
+            }
+
+            return false;
+        }
+
+        private static bool IsTeam(
+            MatchEntity match,
+            string team)
+        {
+            return team.Equals(
+                       match.Team1Name,
+                       StringComparison.OrdinalIgnoreCase)
+                   ||
+                   team.Equals(
+                       match.Team2Name,
+                       StringComparison.OrdinalIgnoreCase);
+        }
+
+        private static string GetOtherTeam(
+            MatchEntity match,
+            string team)
+        {
+            return team.Equals(
+                       match.Team1Name,
+                       StringComparison.OrdinalIgnoreCase)
+                ? match.Team2Name
+                : match.Team1Name;
+        }
+
+        // ====================================================================
+        // STRIKE
+        // ====================================================================
+
+        private static void RotateStrikeForRuns(
+            Innings innings,
+            int runs)
+        {
+            if (runs % 2 == 1)
+            {
+                RotateStrike(innings);
+            }
+        }
+
+        private static void RotateStrike(
+            Innings innings)
+        {
+            (
+                innings.StrikerMatchPlayerId,
+                innings.NonStrikerMatchPlayerId
+            ) =
+            (
+                innings.NonStrikerMatchPlayerId,
+                innings.StrikerMatchPlayerId
+            );
+        }
+
+        // ====================================================================
+        // NOTATION
+        // ====================================================================
+
+        private static string BuildExtraNotation(
+            string extraType,
+            int totalRuns)
+        {
+            return $"{GetExtraNotationPrefix(extraType)}{totalRuns}";
+        }
+
+        private static string GetExtraNotationPrefix(
+            string extraType)
+        {
+            return extraType.ToUpperInvariant() switch
+            {
+                "WIDE" => "WD",
+                "NO BALL" => "NB",
+                "BYE" => "B",
+                "LEG BYE" => "LB",
+                _ => string.Empty
+            };
+        }
+
+        // ====================================================================
+        // NORMALIZATION
+        // ====================================================================
+
+        private static string NormalizeWicketType(
+            string value)
+        {
+            if (string.IsNullOrWhiteSpace(value))
+                return string.Empty;
+
+            return value
+                .Trim()
+                .Replace("_", " ")
+                .ToUpperInvariant();
+        }
+
+        private static string NormalizeExtraType(
+            string value)
+        {
+            if (string.IsNullOrWhiteSpace(value))
+                return string.Empty;
+
+            return value
+                .Trim()
+                .Replace("_", " ")
+                .ToUpperInvariant();
+        }
+
+        // ====================================================================
+        // RESULT
+        // ====================================================================
+
+        private static MatchResult CalculateMatchResult(
+            MatchEntity match,
+            Innings secondInnings)
+        {
+            var firstInnings =
+                match.Innings.FirstOrDefault(
+                    i => i.InningsNumber == 1);
+
+            if (firstInnings == null)
+                return MatchResult.None;
+
+            if (secondInnings.TotalRuns >
+                firstInnings.TotalRuns)
+            {
+                return secondInnings.BattingTeam.Equals(
+                           match.Team1Name,
+                           StringComparison.OrdinalIgnoreCase)
+                    ? MatchResult.Team1Won
+                    : MatchResult.Team2Won;
+            }
+
+            if (secondInnings.TotalRuns ==
+                firstInnings.TotalRuns)
+            {
+                return MatchResult.Tie;
+            }
+
+            return firstInnings.BattingTeam.Equals(
+                       match.Team1Name,
+                       StringComparison.OrdinalIgnoreCase)
+                ? MatchResult.Team1Won
+                : MatchResult.Team2Won;
+        }
     }
 }

@@ -6,8 +6,9 @@
         public string WicketType { get; set; } = string.Empty;
         public int? DismissedMatchPlayerId { get; set; }
         public int? CaughtByMatchPlayerId { get; set; }
+        public int? StumpedByMatchPlayerId { get; set; }
         public int RunsCompleted { get; set; }
-        public int NewBatterMatchPlayerId { get; set; }
-        public bool NewBatterIsStriker { get; set; }
+        public bool DidBattersCross { get; set; }
+        public int? NewBatterMatchPlayerId { get; set; }
     }
 }

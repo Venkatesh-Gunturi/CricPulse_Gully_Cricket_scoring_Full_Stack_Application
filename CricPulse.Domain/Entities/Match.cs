@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-
+using InningsEntity = CricPulse.Domain.Entities;
 using CricPulse.Domain.Enums;
 
 namespace CricPulse.Domain.Entities

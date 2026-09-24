@@ -16,7 +16,6 @@ using CricPulse.Application.Services.User;
 using CricPulse.Infrastructure.Authentication;
 using CricPulse.Infrastructure.Data;
 using CricPulse.Infrastructure.Repositories;
-using CricPulse.Infrastructure.Repositories.Match;
 using CricPulse.Infrastructure.Services.Location;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
