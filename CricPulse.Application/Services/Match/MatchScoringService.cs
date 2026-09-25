@@ -1,8 +1,9 @@
-﻿using System.Diagnostics.CodeAnalysis;
-using CricPulse.Application.DTOs.Match;
+﻿using CricPulse.Application.DTOs.Match;
 using CricPulse.Application.Interfaces.Match;
+using CricPulse.Application.Interfaces.Player;
 using CricPulse.Domain.Entities;
 using CricPulse.Domain.Enums;
+using System.Diagnostics.CodeAnalysis;
 using MatchEntity = CricPulse.Domain.Entities.Match;
 
 namespace CricPulse.Application.Services
@@ -10,6 +11,7 @@ namespace CricPulse.Application.Services
     public class MatchScoringService : IMatchScoringService
     {
         private readonly IScoringRepository _scoringRepository;
+        private readonly IPlayerStatisticsService _playerStatisticsService;
 
         private static readonly HashSet<int> ValidBatRuns =
             new() { 0, 1, 2, 3, 4, 6 };
@@ -34,9 +36,10 @@ namespace CricPulse.Application.Services
                 "LEG BYE"
             };
 
-        public MatchScoringService(IScoringRepository scoringRepository)
+        public MatchScoringService(IScoringRepository scoringRepository, IPlayerStatisticsService playerStatisticsService)
         {
             _scoringRepository = scoringRepository;
+            _playerStatisticsService = playerStatisticsService;
         }
 
         // ====================================================================
@@ -822,8 +825,8 @@ namespace CricPulse.Application.Services
         // ====================================================================
 
         public async Task<bool> CompleteMatchAsync(
-            int umpireId,
-            int matchId)
+     int umpireId,
+     int matchId)
         {
             var match =
                 await _scoringRepository.GetMatchForStatisticsAsync(
@@ -837,6 +840,11 @@ namespace CricPulse.Application.Services
 
             if (match.Status != MatchStatus.PendingCompletion)
                 return false;
+
+            // Calculate and permanently store player statistics
+            // before the detailed match data can be deleted.
+            await _playerStatisticsService
+                .CalculateAndSaveMatchStatisticsAsync(matchId);
 
             match.Status = MatchStatus.Completed;
             match.CompletionDeadline = null;

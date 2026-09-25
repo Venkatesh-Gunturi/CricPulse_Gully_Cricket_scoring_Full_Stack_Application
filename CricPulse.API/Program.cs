@@ -50,6 +50,8 @@ builder.Services.AddScoped<IPendingRegistrationRepository, PendingRegistrationRe
 builder.Services.AddHostedService<MatchCompletionBackgroundService>();
 builder.Services.AddScoped<IPlayerStatisticsRepository, PlayerStatisticsRepository>();
 builder.Services.AddHostedService<ScheduledMatchCancellationBackgroundService>();
+builder.Services.AddScoped<IPlayerStatisticsService, PlayerStatisticsService>();
+
 
 
 //External location service to get the match state

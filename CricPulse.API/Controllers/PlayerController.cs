@@ -1,5 +1,4 @@
-﻿using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
 using CricPulse.Application.DTOs.Player;
 using CricPulse.Application.Interfaces.Player;
@@ -9,7 +8,7 @@ namespace CricPulse.API.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    [Authorize]
+    [Authorize(Roles = "Player")]
     public class PlayerController : ControllerBase
     {
         private readonly IPlayerService _playerService;
@@ -20,9 +19,11 @@ namespace CricPulse.API.Controllers
         }
 
         [HttpPost("profile")]
-        public async Task<IActionResult> CreateProfile(CreatePlayerDto dto)
+        public async Task<IActionResult> CreateProfile(
+            CreatePlayerDto dto)
         {
-            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
+            var userIdClaim =
+                User.FindFirst(ClaimTypes.NameIdentifier);
 
             if (userIdClaim == null)
             {
@@ -33,9 +34,10 @@ namespace CricPulse.API.Controllers
 
             try
             {
-                var player = await _playerService.CreateProfileAsync(
-                    userId,
-                    dto);
+                var player =
+                    await _playerService.CreateProfileAsync(
+                        userId,
+                        dto);
 
                 return Ok(player);
             }
@@ -48,7 +50,8 @@ namespace CricPulse.API.Controllers
         [HttpGet("profile")]
         public async Task<IActionResult> GetProfile()
         {
-            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
+            var userIdClaim =
+                User.FindFirst(ClaimTypes.NameIdentifier);
 
             if (userIdClaim == null)
             {
@@ -57,21 +60,23 @@ namespace CricPulse.API.Controllers
 
             var userId = int.Parse(userIdClaim.Value);
 
-            var player = await _playerService.GetProfileAsync(userId);
+            var playerProfile =
+                await _playerService.GetPlayerProfileAsync(userId);
 
-            if (player == null)
+            if (playerProfile == null)
             {
                 return NotFound("Player profile not found.");
             }
 
-            return Ok(player);
+            return Ok(playerProfile);
         }
 
-
         [HttpPut("profile")]
-        public async Task<IActionResult> UpdateProfile(CreatePlayerDto dto)
+        public async Task<IActionResult> UpdateProfile(
+            CreatePlayerDto dto)
         {
-            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
+            var userIdClaim =
+                User.FindFirst(ClaimTypes.NameIdentifier);
 
             if (userIdClaim == null)
             {
@@ -82,9 +87,10 @@ namespace CricPulse.API.Controllers
 
             try
             {
-                var player = await _playerService.UpdateProfileAsync(
-                    userId,
-                    dto);
+                var player =
+                    await _playerService.UpdateProfileAsync(
+                        userId,
+                        dto);
 
                 return Ok(player);
             }

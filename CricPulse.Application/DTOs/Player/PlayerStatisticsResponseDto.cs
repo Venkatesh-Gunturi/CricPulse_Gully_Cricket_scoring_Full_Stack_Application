@@ -1,11 +1,7 @@
-﻿namespace CricPulse.Domain.Entities
+﻿namespace CricPulse.Application.DTOs.Player
 {
-    public class PlayerStatistics
+    public class PlayerStatisticsResponseDto
     {
-        public int Id { get; set; }
-
-        public int PlayerId { get; set; }
-
         // Batting
         public int Matches { get; set; }
         public int BattingInnings { get; set; }
@@ -17,6 +13,10 @@
         public int Hundreds { get; set; }
         public int HighestScore { get; set; }
 
+        // Derived batting statistics
+        public double BattingAverage { get; set; }
+        public double StrikeRate { get; set; }
+
         // Bowling
         public int BowlingInnings { get; set; }
         public int BallsBowled { get; set; }
@@ -24,8 +24,10 @@
         public int Wickets { get; set; }
         public int MaidenOvers { get; set; }
 
+        // Derived bowling statistic
+        public double Economy { get; set; }
+
         // MVP
         public int MVPCount { get; set; }
-        public Player Player { get; set; } = null!;
     }
 }

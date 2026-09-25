@@ -1,28 +1,29 @@
 ﻿using CricPulse.Application.DTOs.Player;
 using CricPulse.Application.Interfaces.player;
 using CricPulse.Application.Interfaces.Player;
-using PlayerEntity=CricPulse.Domain.Entities.Player;
-
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using PlayerEntity = CricPulse.Domain.Entities.Player;
 
 namespace CricPulse.Application.Services.Player
 {
     public class PlayerService : IPlayerService
     {
         private readonly IPlayerRepository _playerRepository;
+        private readonly IPlayerStatisticsRepository _playerStatisticsRepository;
 
-        public PlayerService(IPlayerRepository playerRepository)
+        public PlayerService(
+            IPlayerRepository playerRepository,
+            IPlayerStatisticsRepository playerStatisticsRepository)
         {
             _playerRepository = playerRepository;
+            _playerStatisticsRepository = playerStatisticsRepository;
         }
 
-        public async Task<PlayerResponseDto> CreateProfileAsync(int userId, CreatePlayerDto dto)
+        public async Task<PlayerResponseDto> CreateProfileAsync(
+            int userId,
+            CreatePlayerDto dto)
         {
-            var existingPlayer = await _playerRepository.GetByUserIdAsync(userId);
+            var existingPlayer =
+                await _playerRepository.GetByUserIdAsync(userId);
 
             if (existingPlayer != null)
             {
@@ -42,50 +43,43 @@ namespace CricPulse.Application.Services.Player
                 PinCode = dto.PinCode
             };
 
-            var createdPlayer = await _playerRepository.CreateAsync(player);
+            var createdPlayer =
+                await _playerRepository.CreateAsync(player);
 
-            return new PlayerResponseDto
-            {
-                Id = createdPlayer.Id,
-                UserId = createdPlayer.UserId,
-                DateOfBirth = createdPlayer.DateOfBirth,
-                Gender = createdPlayer.Gender,
-                BattingStyle = createdPlayer.BattingStyle,
-                BowlingStyle = createdPlayer.BowlingStyle,
-                PlayerRole = createdPlayer.PlayerRole,
-                State = createdPlayer.State,
-                PinCode = createdPlayer.PinCode
-            };
+            return MapPlayerResponse(createdPlayer);
         }
 
-        public async Task<PlayerResponseDto?> GetProfileAsync(int userId)
+        public async Task<PlayerProfileResponseDto?> GetPlayerProfileAsync(
+            int userId)
         {
-            var player = await _playerRepository.GetByUserIdAsync(userId);
+            var player =
+                await _playerRepository.GetByUserIdAsync(userId);
 
             if (player == null)
             {
                 return null;
             }
 
-            return new PlayerResponseDto
+            var statistics =
+                await _playerStatisticsRepository
+                    .GetByPlayerIdAsync(player.Id);
+
+            var statisticsResponse =
+                MapStatisticsResponse(statistics);
+
+            return new PlayerProfileResponseDto
             {
-                Id = player.Id,
-                UserId = player.UserId,
-                DateOfBirth = player.DateOfBirth,
-                Gender = player.Gender,
-                BattingStyle = player.BattingStyle,
-                BowlingStyle = player.BowlingStyle,
-                PlayerRole = player.PlayerRole,
-                State = player.State,
-                PinCode = player.PinCode
+                Profile = MapPlayerResponse(player),
+                Statistics = statisticsResponse
             };
         }
 
         public async Task<PlayerResponseDto> UpdateProfileAsync(
-    int userId,
-    CreatePlayerDto dto)
+            int userId,
+            CreatePlayerDto dto)
         {
-            var player = await _playerRepository.GetByUserIdAsync(userId);
+            var player =
+                await _playerRepository.GetByUserIdAsync(userId);
 
             if (player == null)
             {
@@ -101,19 +95,96 @@ namespace CricPulse.Application.Services.Player
             player.State = dto.State;
             player.PinCode = dto.PinCode;
 
-            var updatedPlayer = await _playerRepository.UpdateAsync(player);
+            var updatedPlayer =
+                await _playerRepository.UpdateAsync(player);
 
+            return MapPlayerResponse(updatedPlayer);
+        }
+
+        private static PlayerResponseDto MapPlayerResponse(
+            PlayerEntity player)
+        {
             return new PlayerResponseDto
             {
-                Id = updatedPlayer.Id,
-                UserId = updatedPlayer.UserId,
-                DateOfBirth = updatedPlayer.DateOfBirth,
-                Gender = updatedPlayer.Gender,
-                BattingStyle = updatedPlayer.BattingStyle,
-                BowlingStyle = updatedPlayer.BowlingStyle,
-                PlayerRole = updatedPlayer.PlayerRole,
-                State = updatedPlayer.State,
-                PinCode = updatedPlayer.PinCode
+                Id = player.Id,
+                UserId = player.UserId,
+
+                FirstName = player.User.FirstName,
+                LastName = player.User.LastName,
+                ProfileImageUrl = player.User.ProfileImageUrl,
+
+                DateOfBirth = player.DateOfBirth,
+                Gender = player.Gender,
+                BattingStyle = player.BattingStyle,
+                BowlingStyle = player.BowlingStyle,
+                PlayerRole = player.PlayerRole,
+                State = player.State,
+                PinCode = player.PinCode
+            };
+        }
+
+        private static PlayerStatisticsResponseDto MapStatisticsResponse(
+            CricPulse.Domain.Entities.PlayerStatistics? statistics)
+        {
+            if (statistics == null)
+            {
+                return new PlayerStatisticsResponseDto();
+            }
+
+            var battingAverage = 0.0;
+
+            /*
+             * We don't currently store dismissals in PlayerStatistics.
+             * Therefore batting average cannot be calculated accurately
+             * from the existing career data.
+             *
+             * We leave it as 0 until dismissal tracking is persisted.
+             */
+
+            var strikeRate = 0.0;
+
+            if (statistics.BallsFaced > 0)
+            {
+                strikeRate =
+                    (double)statistics.Runs /
+                    statistics.BallsFaced *
+                    100;
+            }
+
+            var economy = 0.0;
+
+            if (statistics.BallsBowled > 0)
+            {
+                economy =
+                    (double)statistics.RunsConceded /
+                    statistics.BallsBowled *
+                    6;
+            }
+
+            return new PlayerStatisticsResponseDto
+            {
+                Matches = statistics.Matches,
+                BattingInnings = statistics.BattingInnings,
+                Runs = statistics.Runs,
+                BallsFaced = statistics.BallsFaced,
+                Fours = statistics.Fours,
+                Sixes = statistics.Sixes,
+                Fifties = statistics.Fifties,
+                Hundreds = statistics.Hundreds,
+                HighestScore = statistics.HighestScore,
+
+                BattingAverage = battingAverage,
+                StrikeRate = strikeRate,
+
+                BowlingInnings = statistics.BowlingInnings,
+                BallsBowled = statistics.BallsBowled,
+                RunsConceded = statistics.RunsConceded,
+                Wickets = statistics.Wickets,
+                MaidenOvers = statistics.MaidenOvers,
+
+                Economy = economy,
+
+                MVPCount = statistics.MVPCount
             };
         }
     }
