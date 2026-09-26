@@ -12,8 +12,10 @@ import InningsSetup from "./pages/InningsSetup";
 import SecondInningsSetup from "./pages/SecondInningsSetup";
 import FirstInningsCompleted from "./pages/FirstInningsCompleted";
 import MatchCompleted from "./pages/MatchCompleted";
+import MatchesPage from "./pages/Matches/MatchesPage";
 
 function App() {
+  const [showMatches, setShowMatches] = useState(false);
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [showRegisterModal, setShowRegisterModal] = useState(false);
   const [showMatchCreation, setShowMatchCreation] = useState(false);
@@ -79,6 +81,7 @@ function App() {
 
     setMatchCompleted(false);
     setCompletedMatchData(null);
+    setShowMatches(false);
   };
 
   // Purpose:
@@ -139,101 +142,46 @@ function App() {
 
   return (
     <>
-      {loggedInUser?.isUmpire && (
-        <nav className="navbar navbar-dark bg-dark">
-          <div className="container">
-            <span className="navbar-brand">
-              CricPulse 🏏
-            </span>
-
-            <div className="d-flex gap-2">
-              <button
-                className={
-                  appMode === "normal"
-                    ? "btn btn-light"
-                    : "btn btn-outline-light"
-                }
-                onClick={() => {
-                  setShowMatchCreation(false);
-                  setAppMode("normal");
-                }}
-              >
-                Normal Mode
-              </button>
-
-              <button
-                className={
-                  appMode === "umpire"
-                    ? "btn btn-warning"
-                    : "btn btn-outline-warning"
-                }
-                onClick={() => {
-                  setShowMatchCreation(false);
-                  setAppMode("umpire");
-                }}
-              >
-                Umpire Mode
-              </button>
-
-              <button
-                className="btn btn-outline-danger"
-                onClick={handleLogout}
-              >
-                Logout
-              </button>
-            </div>
-          </div>
-        </nav>
-      )}
-
-      {!loggedInUser?.isUmpire && loggedInUser && (
-        <nav className="navbar navbar-dark bg-dark">
-          <div className="container">
-            <span className="navbar-brand">
-              CricPulse 🏏
-            </span>
-
-            <button
-              className="btn btn-outline-danger"
-              onClick={handleLogout}
-            >
-              Logout
-            </button>
-          </div>
-        </nav>
-      )}
+      
 
       {appMode === "normal" && (
-        <>
-          {!showMatchCreation ? (
-            <MainPage
-              onLogin={() =>
-                setShowLoginModal(true)
-              }
-              onRegister={() =>
-                setShowRegisterModal(true)
-              }
-              loggedInUser={loggedInUser}
-              onCreateMatch={() =>
-                setShowMatchCreation(true)
-              }
-            />
-          ) : (
-            <div className="container mt-4">
-              <button
-                className="btn btn-secondary mb-3"
-                onClick={() =>
-                  setShowMatchCreation(false)
-                }
-              >
-                ← Back
-              </button>
+  <>
+    {showMatches ? (
+      <MatchesPage
+        onBack={() => setShowMatches(false)}
+      />
+    ) : !showMatchCreation ? (
+      <MainPage
+        onLogin={() =>
+          setShowLoginModal(true)
+        }
+        onRegister={() =>
+          setShowRegisterModal(true)
+        }
+        loggedInUser={loggedInUser}
+        onCreateMatch={() =>
+          setShowMatchCreation(true)
+        }
+        onMatches={() =>
+          setShowMatches(true)
+        }
+      />
+    ) : (
+      <div className="container mt-4">
+        <button
+          className="btn btn-secondary mb-3"
+          onClick={() =>
+            setShowMatchCreation(false)
+          }
+        >
+          ← Back
+        </button>
 
-              <MatchCreation />
-            </div>
-          )}
-        </>
-      )}
+        <MatchCreation />
+      </div>
+    )}
+  </>
+)}
 
     {appMode === "umpire" &&
   loggedInUser?.isUmpire && (

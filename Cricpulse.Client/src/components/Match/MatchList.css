@@ -1,0 +1,462 @@
+.cp-match-list {
+  display: grid;
+  gap: 15px;
+}
+
+/* =========================================================
+   MATCH CARD
+========================================================= */
+
+.cp-match-card {
+  position: relative;
+  overflow: hidden;
+  padding: 24px;
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  border-radius: 18px;
+  background:
+    linear-gradient(
+      145deg,
+      rgba(255, 255, 255, 0.055),
+      rgba(255, 255, 255, 0.018)
+    );
+  box-shadow: 0 15px 40px rgba(0, 0, 0, 0.14);
+  transition:
+    transform 0.25s ease,
+    border-color 0.25s ease,
+    box-shadow 0.25s ease;
+}
+
+.cp-match-card::before {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 3px;
+  height: 100%;
+  background: rgba(255, 255, 255, 0.08);
+  content: "";
+}
+
+.cp-match-card:hover {
+  transform: translateY(-3px);
+  border-color: rgba(244, 123, 32, 0.24);
+  box-shadow: 0 22px 50px rgba(0, 0, 0, 0.22);
+}
+
+.cp-match-card.is-live {
+  border-color: rgba(239, 68, 68, 0.2);
+}
+
+.cp-match-card.is-live::before {
+  background: #ef4444;
+}
+
+/* =========================================================
+   TOP
+========================================================= */
+
+.cp-match-card-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 15px;
+  margin-bottom: 26px;
+}
+
+.cp-match-venue {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  gap: 8px;
+  color: rgba(255, 255, 255, 0.55);
+  font-size: 12px;
+}
+
+.cp-match-venue span:last-child {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cp-venue-icon {
+  color: #f47b20;
+  font-size: 17px;
+}
+
+/* =========================================================
+   STATUS
+========================================================= */
+
+.cp-match-status {
+  display: inline-flex;
+  align-items: center;
+  flex-shrink: 0;
+  gap: 6px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  font-size: 9px;
+  font-weight: 900;
+  letter-spacing: 0.1em;
+}
+
+.cp-match-status.scheduled {
+  border: 1px solid rgba(244, 123, 32, 0.18);
+  background: rgba(244, 123, 32, 0.08);
+  color: #f4a15d;
+}
+
+.cp-match-status.live {
+  border: 1px solid rgba(239, 68, 68, 0.22);
+  background: rgba(239, 68, 68, 0.1);
+  color: #ff7b7b;
+}
+
+.cp-match-status.completed {
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.05);
+  color: rgba(255, 255, 255, 0.58);
+}
+
+.cp-match-status.cancelled {
+  border: 1px solid rgba(239, 68, 68, 0.16);
+  background: rgba(239, 68, 68, 0.07);
+  color: #f08080;
+}
+
+.cp-status-live-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #ef4444;
+  animation: cpLivePulse 1.4s infinite;
+}
+
+/* =========================================================
+   TEAMS
+========================================================= */
+
+.cp-match-teams {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 60px minmax(0, 1fr);
+  align-items: center;
+  gap: 18px;
+}
+
+.cp-team {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  min-width: 0;
+}
+
+.cp-team-right {
+  align-items: flex-end;
+  text-align: right;
+}
+
+.cp-team-label {
+  margin-bottom: 7px;
+  color: rgba(255, 255, 255, 0.34);
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.13em;
+}
+
+.cp-team strong {
+  max-width: 100%;
+  overflow: hidden;
+  color: #ffffff;
+  font-size: clamp(18px, 2vw, 23px);
+  font-weight: 800;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cp-team-score {
+  margin-top: 5px;
+  color: #f47b20;
+  font-size: 14px;
+  font-weight: 800;
+}
+
+.cp-vs {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.cp-vs span {
+  display: grid;
+  width: 40px;
+  height: 40px;
+  place-items: center;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.035);
+  color: rgba(255, 255, 255, 0.45);
+  font-size: 10px;
+  font-weight: 900;
+}
+
+/* =========================================================
+   META
+========================================================= */
+
+.cp-match-meta {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+  margin-top: 26px;
+  padding: 17px 0;
+  border-top: 1px solid rgba(255, 255, 255, 0.07);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+}
+
+.cp-match-meta-item {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  min-width: 0;
+}
+
+.cp-match-meta-item > span:last-child {
+  overflow: hidden;
+  color: rgba(255, 255, 255, 0.74);
+  font-size: 12px;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cp-meta-label {
+  color: rgba(255, 255, 255, 0.31);
+  font-size: 8px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+}
+
+/* =========================================================
+   BOTTOM
+========================================================= */
+
+.cp-match-card-bottom {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 15px;
+  margin-top: 15px;
+}
+
+.cp-match-location {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  gap: 7px;
+  color: rgba(255, 255, 255, 0.42);
+  font-size: 11px;
+}
+
+.cp-match-location span:last-child {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cp-distance {
+  flex-shrink: 0;
+  color: #f4a15d;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+/* =========================================================
+   FOOTERS
+========================================================= */
+
+.cp-live-footer,
+.cp-scheduled-footer,
+.cp-completed-footer {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin-top: 15px;
+  padding-top: 13px;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  color: rgba(255, 255, 255, 0.4);
+  font-size: 10px;
+  font-weight: 600;
+}
+
+.cp-live-footer {
+  color: #ff7777;
+}
+
+.cp-scheduled-footer {
+  color: rgba(244, 161, 93, 0.72);
+}
+
+.cp-live-pulse {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #ef4444;
+  animation: cpLivePulse 1.4s infinite;
+}
+
+/* =========================================================
+   CANCELLED
+========================================================= */
+
+.cp-cancelled-reason {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 15px;
+  margin-top: 15px;
+  padding: 12px 14px;
+  border: 1px solid rgba(239, 68, 68, 0.1);
+  border-radius: 10px;
+  background: rgba(239, 68, 68, 0.045);
+}
+
+.cp-cancelled-reason span {
+  color: rgba(255, 255, 255, 0.4);
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.cp-cancelled-reason strong {
+  color: rgba(255, 255, 255, 0.68);
+  font-size: 11px;
+  text-align: right;
+}
+
+/* =========================================================
+   LOADING / ERROR / EMPTY
+========================================================= */
+
+.cp-match-list-state {
+  display: flex;
+  align-items: center;
+  flex-direction: column;
+  justify-content: center;
+  min-height: 210px;
+  padding: 30px;
+  border: 1px dashed rgba(255, 255, 255, 0.1);
+  border-radius: 17px;
+  background: rgba(255, 255, 255, 0.018);
+  text-align: center;
+}
+
+.cp-match-list-state p {
+  margin: 10px 0 0;
+  color: rgba(255, 255, 255, 0.42);
+  font-size: 12px;
+}
+
+.cp-match-list-state h3 {
+  margin: 12px 0 0;
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 17px;
+}
+
+.cp-match-state-icon {
+  display: grid;
+  width: 45px;
+  height: 45px;
+  place-items: center;
+  border-radius: 13px;
+  background: rgba(244, 123, 32, 0.07);
+  color: #f47b20;
+  font-size: 19px;
+  font-weight: 900;
+}
+
+.cp-match-list-error .cp-match-state-icon {
+  background: rgba(239, 68, 68, 0.08);
+  color: #ef7777;
+}
+
+.cp-match-spinner {
+  width: 25px;
+  height: 25px;
+  border: 2px solid rgba(255, 255, 255, 0.1);
+  border-top-color: #f47b20;
+  border-radius: 50%;
+  animation: cpMatchSpin 0.8s linear infinite;
+}
+
+/* =========================================================
+   ANIMATIONS
+========================================================= */
+
+@keyframes cpMatchSpin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes cpLivePulse {
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+
+  50% {
+    opacity: 0.35;
+    transform: scale(0.75);
+  }
+}
+
+/* =========================================================
+   RESPONSIVE
+========================================================= */
+
+@media (max-width: 700px) {
+  .cp-match-card {
+    padding: 19px;
+  }
+
+  .cp-match-teams {
+    grid-template-columns: minmax(0, 1fr) 45px minmax(0, 1fr);
+    gap: 8px;
+  }
+
+  .cp-team strong {
+    font-size: 17px;
+  }
+
+  .cp-match-meta {
+    grid-template-columns: repeat(2, 1fr);
+    row-gap: 16px;
+  }
+}
+
+@media (max-width: 500px) {
+  .cp-match-card-top {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .cp-match-status {
+    align-self: flex-start;
+  }
+
+  .cp-match-card-bottom {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .cp-distance {
+    align-self: flex-start;
+  }
+
+  .cp-cancelled-reason {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .cp-cancelled-reason strong {
+    text-align: left;
+  }
+}

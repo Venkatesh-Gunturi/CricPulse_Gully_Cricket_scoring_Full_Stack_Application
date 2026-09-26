@@ -6,7 +6,8 @@ function MainPage({
   onLogin,
   onRegister,
   loggedInUser,
-  onCreateMatch
+  onCreateMatch,
+  onMatches
 }) {
 
    const isLoggedIn = !!loggedInUser;
@@ -21,11 +22,12 @@ function MainPage({
   return (
     <div className="cricpulse-home">
       {/* ================= NAVBAR ================= */}
-      <Navbar
-        onLogin={onLogin}
-        onRegister={onRegister}
-        loggedInUser={loggedInUser}
-      />
+        <Navbar
+          onLogin={onLogin}
+          onRegister={onRegister}
+          loggedInUser={loggedInUser}
+          onMatches={onMatches}
+        />
 
       {/* ================= HERO ================= */}
       <main>
@@ -137,7 +139,7 @@ function MainPage({
               type="button"
               className="cp-action-card cp-action-live"
               onClick={() => {
-                window.location.hash = "matches";
+                onMatches();
               }}
             >
               <div className="cp-action-image" />
