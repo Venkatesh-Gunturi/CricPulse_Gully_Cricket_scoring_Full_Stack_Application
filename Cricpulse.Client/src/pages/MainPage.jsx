@@ -1,50 +1,6 @@
-import { useEffect, useState } from "react";
-
-import MatchList from "../components/Match/MatchList";
-
-import {
-  getCurrentLocation,
-  getStateByLocation
-} from "../services/LocationService";
-
-const indianStates = [
-  "Andaman and Nicobar Islands",
-  "Andhra Pradesh",
-  "Arunachal Pradesh",
-  "Assam",
-  "Bihar",
-  "Chandigarh",
-  "Chhattisgarh",
-  "Dadra and Nagar Haveli and Daman and Diu",
-  "Delhi",
-  "Goa",
-  "Gujarat",
-  "Haryana",
-  "Himachal Pradesh",
-  "Jammu and Kashmir",
-  "Jharkhand",
-  "Karnataka",
-  "Kerala",
-  "Ladakh",
-  "Lakshadweep",
-  "Madhya Pradesh",
-  "Maharashtra",
-  "Manipur",
-  "Meghalaya",
-  "Mizoram",
-  "Nagaland",
-  "Odisha",
-  "Puducherry",
-  "Punjab",
-  "Rajasthan",
-  "Sikkim",
-  "Tamil Nadu",
-  "Telangana",
-  "Tripura",
-  "Uttar Pradesh",
-  "Uttarakhand",
-  "West Bengal"
-];
+import "./MainPage.css";
+import Navbar from "../components/Layout/Navbar";
+import Footer from "../components/Layout/Footer";
 
 function MainPage({
   onLogin,
@@ -52,195 +8,321 @@ function MainPage({
   loggedInUser,
   onCreateMatch
 }) {
-  const [selectedStatus, setSelectedStatus] =
-    useState("Scheduled");
 
-  const [selectedState, setSelectedState] =
-    useState("Telangana");
+   const isLoggedIn = !!loggedInUser;
 
-  const [location, setLocation] =
-    useState(null);
+  const isUmpire =
+    loggedInUser?.isUmpire === true ||
+    loggedInUser?.role?.toLowerCase() === "umpire";
 
-  const [locationError, setLocationError] =
-    useState("");
-
-  useEffect(() => {
-    const loadLocation = async () => {
-      try {
-        const coordinates =
-          await getCurrentLocation();
-
-        setLocation(coordinates);
-
-        console.log(
-          "User location:",
-          coordinates
-        );
-
-        const detectedState =
-          await getStateByLocation(
-            coordinates.latitude,
-            coordinates.longitude
-          );
-
-        setSelectedState(detectedState);
-
-        console.log(
-          "Detected state:",
-          detectedState
-        );
-      } catch (error) {
-        console.log(
-          "Location permission denied or unavailable."
-        );
-
-        setLocationError(
-          "Location unavailable."
-        );
-      }
-    };
-
-    loadLocation();
-  }, []);
+  const isPlayer =
+    isLoggedIn && !isUmpire;
 
   return (
-    <>
-      <nav className="navbar navbar-dark bg-dark">
-        <div className="container">
-          <span className="navbar-brand mb-0 h1">
-            CricPulse 🏏
-          </span>
-
-          <div>
-            {loggedInUser ? (
-              <button
-                className="btn btn-warning"
-                onClick={onCreateMatch}
-              >
-                🏏 Create Match
-              </button>
-            ) : (
-              <>
-                <button
-                  className="btn btn-outline-light me-2"
-                  onClick={onLogin}
-                >
-                  Login
-                </button>
-
-                <button
-                  className="btn btn-primary"
-                  onClick={onRegister}
-                >
-                  Register
-                </button>
-              </>
-              )}
-            </div>
-        </div>
-      </nav>
-
-      <section className="container text-center mt-5">
-        <h1>
-          Your Local Cricket. One Pulse. 🏏
-        </h1>
-
-        <p className="text-muted">
-          Discover nearby matches, follow live
-          scores, and stay connected with cricket
-          around you.
-        </p>
-      </section>
-
-      <section className="container mt-4">
-        <div className="d-flex justify-content-center gap-2 flex-wrap">
-          <button
-            className={
-              selectedStatus === "Live"
-                ? "btn btn-danger"
-                : "btn btn-outline-danger"
-            }
-            onClick={() =>
-              setSelectedStatus("Live")
-            }
-          >
-            Live
-          </button>
-
-          <button
-            className={
-              selectedStatus === "Scheduled"
-                ? "btn btn-primary"
-                : "btn btn-outline-primary"
-            }
-            onClick={() =>
-              setSelectedStatus("Scheduled")
-            }
-          >
-            Upcoming
-          </button>
-
-          <button
-            className={
-              selectedStatus === "Completed"
-                ? "btn btn-secondary"
-                : "btn btn-outline-secondary"
-            }
-            onClick={() =>
-              setSelectedStatus("Completed")
-            }
-          >
-            Finished
-          </button>
-
-          <button
-            className={
-              selectedStatus === "Cancelled"
-                ? "btn btn-dark"
-                : "btn btn-outline-dark"
-            }
-            onClick={() =>
-              setSelectedStatus("Cancelled")
-            }
-          >
-            Cancelled
-          </button>
-        </div>
-      </section>
-
-      <section className="container mt-3 text-center">
-        <select
-          className="form-select d-inline-block"
-          style={{ width: "280px" }}
-          value={selectedState}
-          onChange={(event) =>
-            setSelectedState(event.target.value)
-          }
-        >
-          {indianStates.map((state) => (
-            <option
-              key={state}
-              value={state}
-            >
-              {state}
-            </option>
-          ))}
-        </select>
-
-        {locationError && (
-          <p className="text-muted mt-2">
-            {locationError}
-          </p>
-        )}
-      </section>
-
-      <MatchList
-        status={selectedStatus}
-        location={location}
-        state={selectedState}
+    <div className="cricpulse-home">
+      {/* ================= NAVBAR ================= */}
+      <Navbar
+        onLogin={onLogin}
+        onRegister={onRegister}
+        loggedInUser={loggedInUser}
       />
-    </>
+
+      {/* ================= HERO ================= */}
+      <main>
+
+        <section className="cp-hero">
+          <div className="cp-hero-overlay" />
+
+          <div className="cp-hero-content">
+
+            <div className="cp-hero-copy">
+
+              <div className="cp-eyebrow">
+                <span className="cp-live-dot" />
+                THE HOME OF GULLY CRICKET
+              </div>
+
+              <h1>
+                Local Cricket.
+                <br />
+                <span>Real People.</span>
+                <br />
+                Real Matches.
+              </h1>
+
+              <p>
+                Discover cricket happening around you.
+                Play with your people, organize matches,
+                follow live scores, and build your cricket
+                journey with CricPulse.
+              </p>
+
+              <div className="cp-hero-actions">
+                {!isLoggedIn ? (
+                  <>
+                    <button
+                      type="button"
+                      className="cp-primary-button"
+                      onClick={onRegister}
+                    >
+                      <span>🏏</span>
+                      Join CricPulse
+                    </button>
+
+                    <button
+                      type="button"
+                      className="cp-secondary-button"
+                      onClick={onLogin}
+                    >
+                      Login
+                      <span>→</span>
+                    </button>
+                  </>
+                ) : isUmpire ? (
+                  <button
+                    type="button"
+                    className="cp-primary-button"
+                    onClick={onCreateMatch}
+                  >
+                    <span>🏏</span>
+                    Create a Match
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    className="cp-primary-button"
+                    onClick={() => {
+                      window.location.hash = "player-profile";
+                    }}
+                  >
+                    <span>📊</span>
+                    View My Records
+                  </button>
+                )}
+              </div>
+            </div>
+
+          <div className="cp-hero-visual" aria-hidden="true" />
+          </div>
+
+          <div className="cp-hero-scroll">
+            <span>SCROLL TO EXPLORE</span>
+            <span className="cp-scroll-line" />
+          </div>
+        </section>
+
+        {/* ================= CTA SECTION ================= */}
+        <section className="cp-action-section">
+
+          <div className="cp-section-heading">
+            <span>YOUR GAME. YOUR COMMUNITY.</span>
+
+            <h2>
+              What brings you
+              <em> to the crease?</em>
+            </h2>
+
+            <p>
+              CricPulse connects players, umpires and local
+              cricket communities in one place.
+            </p>
+          </div>
+
+      
+    
+          <div className="cp-action-grid">
+
+            {/* ================= LIVE MATCHES ================= */}
+            <button
+              type="button"
+              className="cp-action-card cp-action-live"
+              onClick={() => {
+                window.location.hash = "matches";
+              }}
+            >
+              <div className="cp-action-image" />
+
+              <div className="cp-action-overlay" />
+
+              <div className="cp-card-number">
+                01
+              </div>
+
+              <div className="cp-action-content">
+                <span className="cp-action-label">
+                  FOLLOW THE GAME
+                </span>
+
+                <h3>
+                  View Live
+                  <br />
+                  Matches
+                </h3>
+
+                <p>
+                  See matches happening now and
+                  follow the action live.
+                </p>
+              </div>
+
+              <div className="cp-card-arrow">
+                ↗
+              </div>
+            </button>
+
+
+            {/* ================= CREATE MATCH ================= */}
+            <button
+              type="button"
+              className="cp-action-card cp-action-create"
+              onClick={() => {
+                if (isUmpire) {
+                  onCreateMatch();
+                } else {
+                  onRegister();
+                }
+              }}
+            >
+             <div className="cp-action-image" />
+
+              <div className="cp-action-overlay" />
+
+              <div className="cp-card-number">
+                02
+              </div>
+
+              <div className="cp-action-content">
+                <span className="cp-action-label">
+                  ORGANIZE THE GAME
+                </span>
+
+                <h3>
+                  Create
+                  <br />
+                  a Match
+                </h3>
+
+                <p>
+                  Bring your cricket crew together
+                  and start a new match.
+                </p>
+              </div>
+
+              <div className="cp-card-arrow">
+                ↗
+              </div>
+            </button>
+
+
+            {/* ================= PLAYER RECORDS ================= */}
+            <button
+              type="button"
+              className="cp-action-card cp-action-records"
+              onClick={() => {
+                if (isPlayer) {
+                  window.location.hash = "player-profile";
+                } else {
+                  onRegister();
+                }
+              }}
+            >
+              <div className="cp-action-image" />
+
+              <div className="cp-action-overlay" />
+
+              <div className="cp-card-number">
+                03
+              </div>
+
+              <div className="cp-action-content">
+                <span className="cp-action-label">
+                  BUILD YOUR LEGACY
+                </span>
+
+                <h3>
+                  See Your
+                  <br />
+                  Records
+                </h3>
+
+                <p>
+                  Track your matches, runs, wickets
+                  and cricket milestones.
+                </p>
+              </div>
+
+              <div className="cp-card-arrow">
+                ↗
+              </div>
+            </button>
+
+          </div>
+
+
+
+
+        </section>
+
+        {/* ================= ABOUT ================= */}
+        <section
+          id="about"
+          className="cp-about-section"
+        >
+          <div className="cp-about-inner">
+
+            <div className="cp-about-badge">
+              <span>CP</span>
+            </div>
+
+            <div className="cp-about-copy">
+              <span className="cp-section-label">
+                ABOUT CRICPULSE
+              </span>
+
+              <h2>
+                Cricket doesn't need
+                <br />
+                a stadium to matter.
+              </h2>
+
+              <p>
+                From streets and empty grounds to
+                neighborhood pitches, local cricket
+                has always been about people coming
+                together.
+              </p>
+
+              <p>
+                CricPulse gives that cricket a place
+                to live — with real matches, real
+                players, live scoring and records
+                that follow the journey.
+              </p>
+            </div>
+
+            <div className="cp-about-quote">
+              <span>“</span>
+              <p>
+                Local Cricket.
+                <br />
+                Real People.
+                <br />
+                Real Matches.
+              </p>
+            </div>
+
+          </div>
+        </section>
+
+      </main>
+        
+        {/* ================= FOOTER ================= */}
+        <Footer/>
+    
+
+    </div>
   );
 }
 
 export default MainPage;
+

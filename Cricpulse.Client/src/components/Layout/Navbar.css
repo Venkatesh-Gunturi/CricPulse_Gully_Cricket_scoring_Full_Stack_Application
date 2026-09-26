@@ -1,0 +1,705 @@
+/* =========================================================
+   CRICPULSE NAVBAR
+   ========================================================= */
+
+.cp-navbar {
+  position: relative;
+  z-index: 1000;
+  width: 100%;
+  background: rgba(5, 11, 9, 0.94);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+}
+
+.cp-navbar-inner {
+  width: min(1180px, calc(100% - 48px));
+  min-height: 76px;
+  margin: 0 auto;
+
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 28px;
+}
+
+/* =========================================================
+   BRAND
+   ========================================================= */
+
+.cp-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+
+  padding: 0;
+  border: 0;
+  background: transparent;
+
+  color: #fff;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.cp-brand-ball {
+  width: 34px;
+  height: 34px;
+
+  display: grid;
+  place-items: center;
+
+  border-radius: 10px;
+
+  background: rgba(244, 123, 32, 0.12);
+  border: 1px solid rgba(244, 123, 32, 0.22);
+
+  font-size: 18px;
+
+  transition:
+    transform 0.2s ease,
+    background 0.2s ease;
+}
+
+.cp-brand:hover .cp-brand-ball {
+  transform: rotate(-8deg) scale(1.05);
+  background: rgba(244, 123, 32, 0.2);
+}
+
+.cp-brand-text {
+  color: #fff;
+  font-size: 20px;
+  font-weight: 850;
+  letter-spacing: -0.7px;
+  line-height: 1;
+}
+
+.cp-brand-text span {
+  color: var(--cp-orange);
+}
+
+/* =========================================================
+   NAV LINKS
+   ========================================================= */
+
+.cp-nav-links {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+
+  flex: 1;
+}
+
+.cp-nav-link {
+  position: relative;
+
+  padding: 10px 13px;
+
+  border: 0;
+  background: transparent;
+
+  color: rgba(255, 255, 255, 0.64);
+
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.2px;
+
+  cursor: pointer;
+
+  transition:
+    color 0.2s ease,
+    transform 0.2s ease;
+}
+
+.cp-nav-link::after {
+  content: "";
+
+  position: absolute;
+  left: 50%;
+  bottom: 3px;
+
+  width: 0;
+  height: 2px;
+
+  border-radius: 999px;
+
+  background: var(--cp-orange);
+
+  transform: translateX(-50%);
+
+  transition: width 0.2s ease;
+}
+
+.cp-nav-link:hover {
+  color: #fff;
+  transform: translateY(-1px);
+}
+
+.cp-nav-link.active {
+  color: #fff;
+}
+
+.cp-nav-link:hover::after,
+.cp-nav-link.active::after {
+  width: 18px;
+}
+
+/* =========================================================
+   ROLE CAPSULE
+   ========================================================= */
+
+.cp-role-wrapper {
+  position: relative;
+  flex-shrink: 0;
+}
+
+.cp-role-capsule {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+
+  min-width: 118px;
+  padding: 7px 10px;
+
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 999px;
+
+  background: rgba(255, 255, 255, 0.045);
+
+  color: #fff;
+
+  cursor: pointer;
+
+  transition:
+    background 0.2s ease,
+    border-color 0.2s ease,
+    transform 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.cp-role-capsule:hover {
+  background: rgba(255, 255, 255, 0.075);
+  border-color: rgba(244, 123, 32, 0.35);
+  transform: translateY(-1px);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.2);
+}
+
+.cp-role-capsule.logged-in {
+  border-color: rgba(244, 123, 32, 0.2);
+}
+
+.cp-role-avatar {
+  width: 34px;
+  height: 34px;
+
+  flex-shrink: 0;
+
+  border-radius: 50%;
+
+  object-fit: cover;
+
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.cp-role-avatar-placeholder {
+  display: grid;
+  place-items: center;
+
+  font-size: 16px;
+
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.cp-role-info {
+  min-width: 0;
+
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+
+  line-height: 1.1;
+}
+
+.cp-role-info small {
+  margin-bottom: 3px;
+
+  color: rgba(255, 255, 255, 0.38);
+
+  font-size: 7px;
+  font-weight: 800;
+  letter-spacing: 1.3px;
+}
+
+.cp-role-info strong {
+  color: #fff;
+
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+}
+
+.cp-role-chevron {
+  margin-left: auto;
+
+  color: rgba(255, 255, 255, 0.55);
+
+  font-size: 15px;
+  line-height: 1;
+
+  transition: transform 0.2s ease;
+}
+
+.cp-role-chevron.open {
+  transform: rotate(180deg);
+}
+
+/* =========================================================
+   ROLE DROPDOWN
+   ========================================================= */
+
+.cp-role-dropdown {
+  position: absolute;
+  top: calc(100% + 12px);
+  right: 0;
+
+  width: 315px;
+
+  padding: 10px;
+
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 18px;
+
+  background: rgba(10, 17, 14, 0.98);
+
+  box-shadow:
+    0 24px 70px rgba(0, 0, 0, 0.45),
+    inset 0 1px 0 rgba(255, 255, 255, 0.04);
+
+  backdrop-filter: blur(22px);
+  -webkit-backdrop-filter: blur(22px);
+
+  animation: cpDropdownIn 0.18s ease-out;
+}
+
+@keyframes cpDropdownIn {
+  from {
+    opacity: 0;
+    transform: translateY(-7px) scale(0.98);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* =========================================================
+   DROPDOWN HEADING
+   ========================================================= */
+
+.cp-dropdown-heading {
+  padding: 11px 12px 13px;
+
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.cp-dropdown-heading span {
+  color: #fff;
+
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.cp-dropdown-heading small {
+  color: rgba(255, 255, 255, 0.42);
+
+  font-size: 10px;
+}
+
+/* =========================================================
+   DROPDOWN OPTIONS
+   ========================================================= */
+
+.cp-dropdown-option {
+  width: 100%;
+
+  display: grid;
+  grid-template-columns: 36px 1fr 20px;
+  align-items: center;
+  gap: 10px;
+
+  padding: 11px;
+
+  border: 1px solid transparent;
+  border-radius: 13px;
+
+  background: transparent;
+
+  color: #fff;
+
+  text-align: left;
+  cursor: pointer;
+
+  transition:
+    background 0.2s ease,
+    border-color 0.2s ease,
+    transform 0.2s ease;
+}
+
+.cp-dropdown-option:hover {
+  background: rgba(255, 255, 255, 0.055);
+  border-color: rgba(255, 255, 255, 0.07);
+  transform: translateX(2px);
+}
+
+.cp-option-icon {
+  width: 36px;
+  height: 36px;
+
+  display: grid;
+  place-items: center;
+
+  border-radius: 10px;
+
+  background: rgba(244, 123, 32, 0.1);
+
+  font-size: 16px;
+}
+
+.cp-dropdown-option > span:nth-child(2) {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+
+  min-width: 0;
+}
+
+.cp-dropdown-option strong {
+  color: #fff;
+
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.cp-dropdown-option small {
+  color: rgba(255, 255, 255, 0.4);
+
+  font-size: 9px;
+}
+
+.cp-option-arrow {
+  color: rgba(255, 255, 255, 0.45);
+
+  font-size: 17px;
+
+  transition:
+    color 0.2s ease,
+    transform 0.2s ease;
+}
+
+.cp-dropdown-option:hover .cp-option-arrow {
+  color: var(--cp-orange);
+  transform: translateX(2px);
+}
+
+/* =========================================================
+   DROPDOWN FOOTER
+   ========================================================= */
+
+.cp-dropdown-footer {
+  margin-top: 6px;
+  padding: 11px 12px 6px;
+
+  border-top: 1px solid rgba(255, 255, 255, 0.07);
+
+  color: rgba(255, 255, 255, 0.38);
+
+  font-size: 9px;
+}
+
+.cp-dropdown-footer button {
+  margin-left: 5px;
+
+  padding: 0;
+
+  border: 0;
+  background: transparent;
+
+  color: var(--cp-orange);
+
+  font-size: 9px;
+  font-weight: 800;
+
+  cursor: pointer;
+}
+
+.cp-dropdown-footer button:hover {
+  text-decoration: underline;
+}
+
+/* =========================================================
+   LOGGED-IN PROFILE HEADER
+   ========================================================= */
+
+.cp-profile-dropdown-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+
+  padding: 10px 10px 14px;
+
+  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+}
+
+.cp-large-avatar {
+  width: 46px;
+  height: 46px;
+
+  flex-shrink: 0;
+
+  border-radius: 50%;
+
+  object-fit: cover;
+
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.cp-large-avatar-placeholder {
+  display: grid;
+  place-items: center;
+
+  border: 1px solid rgba(244, 123, 32, 0.2);
+
+  font-size: 20px;
+}
+
+.cp-profile-dropdown-header > div:last-child {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.cp-profile-dropdown-header strong {
+  color: #fff;
+
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.cp-profile-dropdown-header span {
+  color: var(--cp-orange);
+
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+
+/* =========================================================
+   PROFILE DETAILS
+   ========================================================= */
+
+.cp-profile-detail {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+
+  padding: 9px 10px 0;
+
+  color: rgba(255, 255, 255, 0.55);
+
+  font-size: 10px;
+}
+
+.cp-profile-detail span {
+  width: 20px;
+
+  display: inline-flex;
+  justify-content: center;
+}
+
+/* =========================================================
+   ROLE STATS
+   ========================================================= */
+
+.cp-role-stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+
+  margin-top: 12px;
+
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 12px;
+
+  overflow: hidden;
+
+  background: rgba(255, 255, 255, 0.025);
+}
+
+.cp-role-stats > div {
+  min-width: 0;
+
+  padding: 10px 5px;
+
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+
+  border-right: 1px solid rgba(255, 255, 255, 0.07);
+}
+
+.cp-role-stats > div:last-child {
+  border-right: 0;
+}
+
+.cp-role-stats strong {
+  color: #fff;
+
+  font-size: 13px;
+  font-weight: 850;
+}
+
+.cp-role-stats span {
+  color: rgba(255, 255, 255, 0.38);
+
+  font-size: 7px;
+  font-weight: 700;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+}
+
+/* =========================================================
+   PROFILE ACTION
+   ========================================================= */
+
+.cp-profile-action {
+  width: 100%;
+
+  margin-top: 10px;
+  padding: 11px 12px;
+
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  border: 1px solid rgba(244, 123, 32, 0.18);
+  border-radius: 11px;
+
+  background: rgba(244, 123, 32, 0.07);
+
+  color: #fff;
+
+  font-size: 10px;
+  font-weight: 800;
+
+  cursor: pointer;
+
+  transition:
+    background 0.2s ease,
+    border-color 0.2s ease,
+    transform 0.2s ease;
+}
+
+.cp-profile-action:hover {
+  background: rgba(244, 123, 32, 0.13);
+  border-color: rgba(244, 123, 32, 0.35);
+  transform: translateY(-1px);
+}
+
+.cp-profile-action span {
+  color: var(--cp-orange);
+  font-size: 15px;
+}
+
+/* =========================================================
+   RESPONSIVE — 1100px
+   ========================================================= */
+
+@media (max-width: 1100px) {
+  .cp-navbar-inner {
+    width: min(100% - 36px, 980px);
+  }
+}
+
+/* =========================================================
+   RESPONSIVE — 850px
+   ========================================================= */
+
+@media (max-width: 850px) {
+  .cp-navbar-inner {
+    min-height: 70px;
+    gap: 15px;
+  }
+
+  .cp-nav-links {
+    gap: 2px;
+  }
+
+  .cp-nav-link {
+    padding: 9px 8px;
+    font-size: 11px;
+  }
+
+  .cp-role-capsule {
+    min-width: 105px;
+  }
+}
+
+/* =========================================================
+   RESPONSIVE — 600px
+   ========================================================= */
+
+@media (max-width: 600px) {
+  .cp-navbar-inner {
+    width: calc(100% - 24px);
+    min-height: 66px;
+    gap: 8px;
+  }
+
+  .cp-brand-text {
+    font-size: 17px;
+  }
+
+  .cp-brand-ball {
+    width: 30px;
+    height: 30px;
+    font-size: 15px;
+  }
+
+  .cp-nav-links {
+    gap: 0;
+  }
+
+  .cp-nav-link {
+    padding: 8px 5px;
+    font-size: 9px;
+  }
+
+  .cp-nav-link:nth-child(3) {
+    display: none;
+  }
+
+  .cp-role-capsule {
+    min-width: auto;
+    padding: 6px;
+  }
+
+  .cp-role-info {
+    display: none;
+  }
+
+  .cp-role-chevron {
+    display: none;
+  }
+
+  .cp-role-dropdown {
+    position: fixed;
+    top: 72px;
+    right: 12px;
+
+    width: min(315px, calc(100vw - 24px));
+  }
+}
