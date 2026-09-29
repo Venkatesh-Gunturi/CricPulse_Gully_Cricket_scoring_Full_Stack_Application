@@ -4,24 +4,45 @@ import "./Navbar.css";
 function Navbar({
   onLogin,
   onRegister,
-  loggedInUser
+  loggedInUser,
+  appMode = "normal",
+  onMatches,
+  onPlayerProfile,
+  onUmpireDashboard,
+  onBackToPlayerMode,
+  onAbout,
+  onLogout,
 }) {
   const [showRoleMenu, setShowRoleMenu] = useState(false);
 
+  // ============================================================
+  // AUTH / ROLE
+  // ============================================================
+
   const isLoggedIn = !!loggedInUser;
 
-  const isUmpire =
+  const accountIsUmpire =
     loggedInUser?.isUmpire === true ||
     loggedInUser?.role?.toLowerCase() === "umpire";
 
-  const isPlayer =
-    isLoggedIn && !isUmpire;
+  const isUmpireMode =
+    isLoggedIn &&
+    accountIsUmpire &&
+    appMode === "umpire";
+
+  const isPlayerMode =
+    isLoggedIn &&
+    !isUmpireMode;
 
   const activeRole = !isLoggedIn
     ? "User"
-    : isUmpire
+    : isUmpireMode
       ? "Umpire"
       : "Player";
+
+  // ============================================================
+  // USER DETAILS
+  // ============================================================
 
   const firstName =
     loggedInUser?.firstName ||
@@ -54,58 +75,97 @@ function Navbar({
     loggedInUser?.Email ||
     "";
 
-  const handleRoleAction = () => {
-    setShowRoleMenu((current) => !current);
+  // ============================================================
+  // NAVIGATION
+  // ============================================================
+
+  const closeRoleMenu = () => {
+    setShowRoleMenu(false);
   };
 
   const goHome = () => {
-    setShowRoleMenu(false);
+    closeRoleMenu();
+
+    if (isUmpireMode) {
+      onBackToPlayerMode?.();
+      return;
+    }
+
+    window.location.hash = "";
 
     window.scrollTo({
       top: 0,
-      behavior: "smooth"
+      behavior: "smooth",
     });
   };
 
   const goToMatches = () => {
-    setShowRoleMenu(false);
-    window.location.hash = "matches";
+    closeRoleMenu();
+    onMatches?.();
   };
 
   const goToAbout = () => {
-    setShowRoleMenu(false);
-    window.location.hash = "about";
+    closeRoleMenu();
+    onAbout?.();
   };
 
   const goToProfile = () => {
-    setShowRoleMenu(false);
-
-    if (isUmpire) {
-      window.location.hash = "umpire-profile";
-    } else {
-      window.location.hash = "player-profile";
-    }
+    closeRoleMenu();
+    onPlayerProfile?.();
   };
+
+  const goToUmpireDashboard = () => {
+    closeRoleMenu();
+    onUmpireDashboard?.();
+  };
+
+  const goBackToPlayerMode = () => {
+    closeRoleMenu();
+    onBackToPlayerMode?.();
+  };
+
+  // ============================================================
+  // LOGOUT
+  // ============================================================
+
+  const handleLogout = () => {
+    closeRoleMenu();
+    onLogout?.();
+  };
+
+  // ============================================================
+  // RENDER
+  // ============================================================
 
   return (
     <header className="cp-navbar">
       <div className="cp-navbar-inner">
 
-        {/* ================= BRAND ================= */}
+        {/* ======================================================
+            BRAND
+            ====================================================== */}
+
         <button
           type="button"
           className="cp-brand"
           onClick={goHome}
         >
-          <span className="cp-brand-ball">🏏</span>
+          <span className="cp-brand-ball">
+            🏏
+          </span>
 
           <span className="cp-brand-text">
             Cric<span>Pulse</span>
           </span>
         </button>
 
-        {/* ================= NAV LINKS ================= */}
+        {/* ======================================================
+            NAV LINKS
+            ====================================================== */}
+
         <nav className="cp-nav-links">
+
+          {/* HOME */}
 
           <button
             type="button"
@@ -115,6 +175,8 @@ function Navbar({
             Home
           </button>
 
+          {/* MATCHES */}
+
           <button
             type="button"
             className="cp-nav-link"
@@ -123,6 +185,8 @@ function Navbar({
             Matches
           </button>
 
+          {/* ABOUT */}
+
           <button
             type="button"
             className="cp-nav-link"
@@ -130,6 +194,8 @@ function Navbar({
           >
             About
           </button>
+
+          {/* REGISTER / LOGIN */}
 
           {!isLoggedIn && (
             <>
@@ -150,10 +216,12 @@ function Navbar({
               </button>
             </>
           )}
-
         </nav>
 
-        {/* ================= ROLE CAPSULE ================= */}
+        {/* ======================================================
+            ROLE CAPSULE
+            ====================================================== */}
+
         <div className="cp-role-wrapper">
 
           <button
@@ -161,8 +229,11 @@ function Navbar({
             className={`cp-role-capsule ${
               isLoggedIn ? "logged-in" : ""
             }`}
-            onClick={handleRoleAction}
+            onClick={() =>
+              setShowRoleMenu((current) => !current)
+            }
           >
+
             {profileImage ? (
               <img
                 src={profileImage}
@@ -171,9 +242,9 @@ function Navbar({
               />
             ) : (
               <span className="cp-role-avatar cp-role-avatar-placeholder">
-                {isUmpire
+                {isUmpireMode
                   ? "🧑‍⚖️"
-                  : isPlayer
+                  : isPlayerMode
                     ? "🏏"
                     : "👤"}
               </span>
@@ -191,17 +262,27 @@ function Navbar({
             >
               ⌄
             </span>
+
           </button>
 
-          {/* ================= ROLE DROPDOWN ================= */}
+          {/* ====================================================
+              ROLE DROPDOWN
+              ==================================================== */}
+
           {showRoleMenu && (
             <div className="cp-role-dropdown">
 
-              {/* ================= LOGGED OUT ================= */}
+              {/* ==================================================
+                  LOGGED OUT
+                  ================================================== */}
+
               {!isLoggedIn ? (
                 <>
                   <div className="cp-dropdown-heading">
-                    <span>Welcome to CricPulse</span>
+                    <span>
+                      Welcome to CricPulse
+                    </span>
+
                     <small>
                       Choose how you want to enter
                     </small>
@@ -211,8 +292,8 @@ function Navbar({
                     type="button"
                     className="cp-dropdown-option"
                     onClick={() => {
-                      setShowRoleMenu(false);
-                      onLogin();
+                      closeRoleMenu();
+                      onLogin?.();
                     }}
                   >
                     <span className="cp-option-icon">
@@ -220,7 +301,10 @@ function Navbar({
                     </span>
 
                     <span>
-                      <strong>Login as Player</strong>
+                      <strong>
+                        Login as Player
+                      </strong>
+
                       <small>
                         View your cricket profile
                       </small>
@@ -235,8 +319,8 @@ function Navbar({
                     type="button"
                     className="cp-dropdown-option"
                     onClick={() => {
-                      setShowRoleMenu(false);
-                      onLogin();
+                      closeRoleMenu();
+                      onLogin?.();
                     }}
                   >
                     <span className="cp-option-icon">
@@ -244,7 +328,10 @@ function Navbar({
                     </span>
 
                     <span>
-                      <strong>Login as Umpire</strong>
+                      <strong>
+                        Login as Umpire
+                      </strong>
+
                       <small>
                         Manage your matches
                       </small>
@@ -261,17 +348,20 @@ function Navbar({
                     <button
                       type="button"
                       onClick={() => {
-                        setShowRoleMenu(false);
-                        onRegister();
+                        closeRoleMenu();
+                        onRegister?.();
                       }}
                     >
                       Create an account
                     </button>
                   </div>
                 </>
-              ) : (
+              ) : isUmpireMode ? (
 
-                /* ================= LOGGED IN ================= */
+                /* ==================================================
+                   UMPIRE MODE
+                   ================================================== */
+
                 <>
                   <div className="cp-profile-dropdown-header">
 
@@ -283,15 +373,18 @@ function Navbar({
                       />
                     ) : (
                       <div className="cp-large-avatar cp-large-avatar-placeholder">
-                        {isUmpire
-                          ? "🧑‍⚖️"
-                          : "🏏"}
+                        🧑‍⚖️
                       </div>
                     )}
 
                     <div>
-                      <strong>{displayName}</strong>
-                      <span>{activeRole}</span>
+                      <strong>
+                        {displayName}
+                      </strong>
+
+                      <span>
+                        Umpire
+                      </span>
                     </div>
 
                   </div>
@@ -310,78 +403,203 @@ function Navbar({
                     </div>
                   )}
 
-                  {/* ================= PLAYER STATS ================= */}
-                  {isPlayer && (
-                    <div className="cp-role-stats">
+                  {/* UMPIRE DASHBOARD */}
 
-                      <div>
-                        <strong>
-                          {loggedInUser?.matchesPlayed ?? 0}
-                        </strong>
+                  <button
+                    type="button"
+                    className="cp-profile-action"
+                    onClick={goToUmpireDashboard}
+                  >
+                    <span>
+                      Umpire Dashboard
+                    </span>
 
-                        <span>Matches</span>
+                    <span>
+                      →
+                    </span>
+                  </button>
+
+                  {/* CREATE MATCH
+                      Intentionally goes to dashboard */}
+
+                  <button
+                    type="button"
+                    className="cp-profile-action"
+                    onClick={goToUmpireDashboard}
+                  >
+                    <span>
+                      Create a Match
+                    </span>
+
+                    <span>
+                      →
+                    </span>
+                  </button>
+
+                  {/* BACK TO PLAYER MODE */}
+
+                  <button
+                    type="button"
+                    className="cp-profile-action"
+                    onClick={goBackToPlayerMode}
+                  >
+                    <span>
+                      Back to Player Mode
+                    </span>
+
+                    <span>
+                      ←
+                    </span>
+                  </button>
+
+                  {/* LOGOUT */}
+
+                  <button
+                    type="button"
+                    className="cp-profile-action cp-logout-action"
+                    onClick={handleLogout}
+                  >
+                    <span>
+                      Logout
+                    </span>
+
+                    <span>
+                      ↪
+                    </span>
+                  </button>
+                </>
+
+              ) : (
+
+                /* ==================================================
+                   PLAYER MODE
+                   ================================================== */
+
+                <>
+                  <div className="cp-profile-dropdown-header">
+
+                    {profileImage ? (
+                      <img
+                        src={profileImage}
+                        alt={displayName}
+                        className="cp-large-avatar"
+                      />
+                    ) : (
+                      <div className="cp-large-avatar cp-large-avatar-placeholder">
+                        🏏
                       </div>
+                    )}
 
-                      <div>
-                        <strong>
-                          {loggedInUser?.runs ?? 0}
-                        </strong>
+                    <div>
+                      <strong>
+                        {displayName}
+                      </strong>
 
-                        <span>Runs</span>
-                      </div>
+                      <span>
+                        Player
+                      </span>
+                    </div>
 
-                      <div>
-                        <strong>
-                          {loggedInUser?.wickets ?? 0}
-                        </strong>
+                  </div>
 
-                        <span>Wickets</span>
-                      </div>
-
+                  {mobileNumber && (
+                    <div className="cp-profile-detail">
+                      <span>📱</span>
+                      {mobileNumber}
                     </div>
                   )}
 
-                  {/* ================= UMPIRE STATS ================= */}
-                  {isUmpire && (
-                    <div className="cp-role-stats">
-
-                      <div>
-                        <strong>
-                          {loggedInUser?.matchesCreated ?? 0}
-                        </strong>
-
-                        <span>Created</span>
-                      </div>
-
-                      <div>
-                        <strong>
-                          {loggedInUser?.organizedSuccessfully ?? 0}
-                        </strong>
-
-                        <span>Successful</span>
-                      </div>
-
-                      <div>
-                        <strong>
-                          {loggedInUser?.cancelledMatches ?? 0}
-                        </strong>
-
-                        <span>Cancelled</span>
-                      </div>
-
+                  {email && (
+                    <div className="cp-profile-detail">
+                      <span>✉️</span>
+                      {email}
                     </div>
                   )}
 
-                  {/* ================= PROFILE BUTTON ================= */}
+                  <div className="cp-role-stats">
+
+                    <div>
+                      <strong>
+                        {loggedInUser?.matchesPlayed ?? 0}
+                      </strong>
+
+                      <span>
+                        Matches
+                      </span>
+                    </div>
+
+                    <div>
+                      <strong>
+                        {loggedInUser?.runs ?? 0}
+                      </strong>
+
+                      <span>
+                        Runs
+                      </span>
+                    </div>
+
+                    <div>
+                      <strong>
+                        {loggedInUser?.wickets ?? 0}
+                      </strong>
+
+                      <span>
+                        Wickets
+                      </span>
+                    </div>
+
+                  </div>
+
+                  {/* PLAYER PROFILE */}
+
                   <button
                     type="button"
                     className="cp-profile-action"
                     onClick={goToProfile}
                   >
-                    View {activeRole} Profile
+                    <span>
+                      Player Records & Info
+                    </span>
 
-                    <span>→</span>
+                    <span>
+                      →
+                    </span>
                   </button>
+
+                  {/* UMPIRE ACCESS */}
+
+                  {accountIsUmpire && (
+                    <button
+                      type="button"
+                      className="cp-profile-action"
+                      onClick={goToUmpireDashboard}
+                    >
+                      <span>
+                        Umpire Dashboard
+                      </span>
+
+                      <span>
+                        →
+                      </span>
+                    </button>
+                  )}
+
+                  {/* LOGOUT */}
+
+                  <button
+                    type="button"
+                    className="cp-profile-action cp-logout-action"
+                    onClick={handleLogout}
+                  >
+                    <span>
+                      Logout
+                    </span>
+
+                    <span>
+                      ↪
+                    </span>
+                  </button>
+
                 </>
               )}
 

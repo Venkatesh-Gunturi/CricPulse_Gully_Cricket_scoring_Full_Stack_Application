@@ -1,331 +1,926 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+
 import { getMyMatches } from "../services/matchService";
 import MatchManagement from "../components/Match/MatchManagement";
+import Navbar from "../components/Layout/Navbar";
+
+import "./UmpireDashboard.css";
+
+const INITIAL_VISIBLE_MATCHES = 3;
 
 const UmpireDashboard = ({
+  loggedInUser,
   onCreateMatch,
-  onContinueScoring
+  onContinueScoring,
+  onMatches,
+  onPlayerProfile,
+  onUmpireDashboard,
+  onBackToPlayerMode,
+  onLogout,
 }) => {
   const [matches, setMatches] = useState([]);
-  const [selectedStatus, setSelectedStatus] =
-    useState("Scheduled");
-  const [selectedMatch, setSelectedMatch] =
-    useState(null);
+  const [activeTab, setActiveTab] =
+    useState("Upcoming");
 
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
+  const [showAllMatches, setShowAllMatches] =
+    useState(false);
 
-  // Purpose:
-  // Load all matches belonging to the currently logged-in umpire.
+  const [loading, setLoading] =
+    useState(true);
+
+  const [error, setError] =
+    useState("");
+
+  useEffect(() => {
+    loadMatches();
+  }, []);
+
   const loadMatches = async () => {
     try {
       setLoading(true);
       setError("");
 
-      const data = await getMyMatches();
+      const response =
+        await getMyMatches();
 
-      setMatches(data ?? []);
-    } catch (error) {
+      setMatches(
+        Array.isArray(response)
+          ? response
+          : []
+      );
+    } catch (err) {
       console.error(
-        "Failed to load umpire matches:",
-        error
+        "Unable to load umpire matches:",
+        err
       );
 
       setError(
-        "Failed to load your matches."
+        err?.response?.data?.message ||
+          "Unable to load your matches."
       );
     } finally {
       setLoading(false);
     }
   };
 
-  useEffect(() => {
-    loadMatches();
-  }, []);
+  const getStatus = (match) =>
+    String(
+      match?.status || ""
+    ).toLowerCase();
 
-  const filteredMatches = matches.filter(
-    (match) =>
-      match.status === selectedStatus
+  const upcomingMatches = useMemo(
+    () =>
+      matches.filter(
+        (match) =>
+          getStatus(match) ===
+          "scheduled"
+      ),
+    [matches]
   );
 
-  // Purpose:
-  // Update the dashboard immediately after a match
-  // is edited, started, or cancelled.
-  const handleMatchUpdated = (
-    updatedMatch
-  ) => {
-    setMatches((previousMatches) =>
-      previousMatches.map((match) =>
-        match.id === updatedMatch.id
-          ? updatedMatch
-          : match
-      )
-    );
+  const liveMatches = useMemo(
+    () =>
+      matches.filter(
+        (match) =>
+          getStatus(match) ===
+          "live"
+      ),
+    [matches]
+  );
 
-    setSelectedMatch(updatedMatch);
-  };
+  const finishedMatches = useMemo(
+    () =>
+      matches.filter(
+        (match) =>
+          getStatus(match) ===
+          "completed"
+      ),
+    [matches]
+  );
 
-  // Purpose:
-  // Return the appropriate heading for the
-  // selected match category.
-  const getStatusTitle = () => {
-    switch (selectedStatus) {
-      case "Scheduled":
-        return "My Upcoming Matches";
+  const cancelledMatches = useMemo(
+    () =>
+      matches.filter(
+        (match) =>
+          getStatus(match) ===
+          "cancelled"
+      ),
+    [matches]
+  );
 
+  const tabMatches = useMemo(() => {
+    switch (activeTab) {
       case "Live":
-        return "My Live Matches";
+        return liveMatches;
 
-      case "Completed":
-        return "My Finished Matches";
+      case "Finished":
+        return finishedMatches;
 
       case "Cancelled":
-        return "My Cancelled Matches";
+        return cancelledMatches;
 
+      case "Upcoming":
       default:
-        return "My Matches";
+        return upcomingMatches;
     }
+  }, [
+    activeTab,
+    upcomingMatches,
+    liveMatches,
+    finishedMatches,
+    cancelledMatches,
+  ]);
+
+  const visibleMatches =
+    showAllMatches
+      ? tabMatches
+      : tabMatches.slice(
+          0,
+          INITIAL_VISIBLE_MATCHES
+        );
+
+  const hasMoreMatches =
+    tabMatches.length >
+    INITIAL_VISIBLE_MATCHES;
+
+  const formatDate = (value) => {
+    if (!value) {
+      return "Date unavailable";
+    }
+
+    const date =
+      new Date(value);
+
+    if (
+      Number.isNaN(
+        date.getTime()
+      )
+    ) {
+      return value;
+    }
+
+    return date.toLocaleDateString(
+      "en-IN",
+      {
+        day: "2-digit",
+        month: "short",
+        year: "numeric",
+      }
+    );
+  };
+
+  const formatTime = (value) => {
+    if (!value) {
+      return "Time unavailable";
+    }
+
+    if (
+      typeof value === "string" &&
+      /^\d{2}:\d{2}/.test(value)
+    ) {
+      const parts =
+        value.split(":");
+
+      const hours =
+        Number(parts[0]);
+
+      const minutes =
+        Number(parts[1]);
+
+      const date =
+        new Date();
+
+      date.setHours(
+        hours,
+        minutes,
+        0,
+        0
+      );
+
+      return date.toLocaleTimeString(
+        "en-IN",
+        {
+          hour: "numeric",
+          minute: "2-digit",
+        }
+      );
+    }
+
+    const date =
+      new Date(value);
+
+    if (
+      Number.isNaN(
+        date.getTime()
+      )
+    ) {
+      return value;
+    }
+
+    return date.toLocaleTimeString(
+      "en-IN",
+      {
+        hour: "numeric",
+        minute: "2-digit",
+      }
+    );
+  };
+
+  const getVenue = (match) =>
+    match?.venueName ||
+    match?.venue ||
+    "Venue not available";
+
+  const getPlayersCount = (match) => {
+    if (
+      Array.isArray(
+        match?.players
+      )
+    ) {
+      return match.players.length;
+    }
+
+    if (
+      match?.playersPerTeam
+    ) {
+      return (
+        Number(
+          match.playersPerTeam
+        ) * 2
+      );
+    }
+
+    return null;
+  };
+
+  const getScore = (
+    match,
+    team
+  ) => {
+    if (
+      team === 1
+    ) {
+      return (
+        match?.team1Score ??
+        match?.team1Runs ??
+        null
+      );
+    }
+
+    return (
+      match?.team2Score ??
+      match?.team2Runs ??
+      null
+    );
+  };
+
+  const renderStatus = (
+    match
+  ) => {
+    const status =
+      getStatus(match);
+
+    if (
+      status === "live"
+    ) {
+      return (
+        <span className="cp-umpire-match-status live">
+          <span className="cp-umpire-live-dot" />
+          LIVE
+        </span>
+      );
+    }
+
+    if (
+      status === "scheduled"
+    ) {
+      return (
+        <span className="cp-umpire-match-status upcoming">
+          UPCOMING
+        </span>
+      );
+    }
+
+    if (
+      status === "completed"
+    ) {
+      return (
+        <span className="cp-umpire-match-status finished">
+          FINISHED
+        </span>
+      );
+    }
+
+    if (
+      status === "cancelled"
+    ) {
+      return (
+        <span className="cp-umpire-match-status cancelled">
+          CANCELLED
+        </span>
+      );
+    }
+
+    return (
+      <span className="cp-umpire-match-status">
+        {String(
+          match?.status ||
+            "UNKNOWN"
+        ).toUpperCase()}
+      </span>
+    );
+  };
+
+  const renderMatchCard = (
+    match
+  ) => {
+    const status =
+      getStatus(match);
+
+    const team1Score =
+      getScore(match, 1);
+
+    const team2Score =
+      getScore(match, 2);
+
+    const playersCount =
+      getPlayersCount(match);
+
+    return (
+      <article
+        key={
+          match.id ??
+          `${match.team1Name}-${match.team2Name}-${match.matchDate}`
+        }
+        className={`cp-umpire-match-card ${status}`}
+      >
+
+        <div className="cp-umpire-match-card-top">
+          {renderStatus(match)}
+
+          {match?.overs && (
+            <span className="cp-umpire-match-overs">
+              {match.overs} overs
+            </span>
+          )}
+        </div>
+
+        {/* TEAMS */}
+
+        <div className="cp-umpire-teams">
+
+          <div className="cp-umpire-team">
+
+            <span className="cp-umpire-team-name">
+              {match?.team1Name ||
+                "Team 1"}
+            </span>
+
+            {team1Score !== null &&
+              status !==
+                "scheduled" &&
+              status !==
+                "cancelled" && (
+                <span className="cp-umpire-team-score">
+                  {team1Score}
+                </span>
+              )}
+
+          </div>
+
+          <div className="cp-umpire-vs">
+            VS
+          </div>
+
+          <div className="cp-umpire-team">
+
+            <span className="cp-umpire-team-name">
+              {match?.team2Name ||
+                "Team 2"}
+            </span>
+
+            {team2Score !== null &&
+              status !==
+                "scheduled" &&
+              status !==
+                "cancelled" && (
+                <span className="cp-umpire-team-score">
+                  {team2Score}
+                </span>
+              )}
+
+          </div>
+
+        </div>
+
+        {/* DETAILS */}
+
+        <div className="cp-umpire-match-details">
+
+          <div className="cp-umpire-match-detail">
+            <span className="cp-umpire-match-detail-label">
+              DATE
+            </span>
+
+            <span className="cp-umpire-match-detail-value">
+              {formatDate(
+                match?.matchDate
+              )}
+            </span>
+          </div>
+
+          <div className="cp-umpire-match-detail">
+            <span className="cp-umpire-match-detail-label">
+              TIME
+            </span>
+
+            <span className="cp-umpire-match-detail-value">
+              {formatTime(
+                match?.matchTime
+              )}
+            </span>
+          </div>
+
+          <div className="cp-umpire-match-detail">
+            <span className="cp-umpire-match-detail-label">
+              PLAYERS
+            </span>
+
+            <span className="cp-umpire-match-detail-value">
+              {playersCount
+                ? `${playersCount} players`
+                : "Not available"}
+            </span>
+          </div>
+
+          <div className="cp-umpire-match-detail">
+            <span className="cp-umpire-match-detail-label">
+              STATE
+            </span>
+
+            <span className="cp-umpire-match-detail-value">
+              {match?.state ||
+                "Not available"}
+            </span>
+          </div>
+
+        </div>
+
+        {/* FOOTER */}
+
+        <div className="cp-umpire-match-footer">
+
+          <span className="cp-umpire-match-location">
+            📍 {getVenue(match)}
+          </span>
+
+          {status === "live" && (
+            <button
+              type="button"
+              className="cp-umpire-match-action live-action"
+              onClick={() =>
+                onContinueScoring?.(
+                  match
+                )
+              }
+            >
+              Continue Scoring
+            </button>
+          )}
+
+          {status === "scheduled" && (
+            <span className="cp-umpire-match-action manage">
+              Manage Match
+            </span>
+          )}
+
+          {status === "completed" && (
+            <span className="cp-umpire-match-action manage">
+              Match Finished
+            </span>
+          )}
+
+          {status === "cancelled" && (
+            <span className="cp-umpire-match-action manage cancelled-action">
+              Cancelled
+            </span>
+          )}
+
+        </div>
+
+        {/* EXISTING MATCH MANAGEMENT */}
+
+        {status === "scheduled" && (
+          <div className="cp-umpire-management">
+            <MatchManagement
+              match={match}
+              onMatchUpdated={
+                loadMatches
+              }
+            />
+          </div>
+        )}
+
+      </article>
+    );
   };
 
   if (loading) {
     return (
-      <div className="container mt-5">
-        <p>
-          Loading your matches...
-        </p>
-      </div>
+      <>
+        <Navbar
+          loggedInUser={
+            loggedInUser
+          }
+          onMatches={
+            onMatches
+          }
+          onPlayerProfile={
+            onPlayerProfile
+          }
+          onUmpireDashboard={
+            onUmpireDashboard
+          }
+          onCreateMatch={
+            onCreateMatch
+          }
+          onBackToPlayerMode={
+            onBackToPlayerMode
+          }
+          onLogout={
+            onLogout
+          }
+        />
+
+        <main className="cp-umpire-dashboard">
+          <div className="cp-umpire-dashboard-container">
+            <div className="cp-umpire-loading">
+              <div className="cp-umpire-loader">
+                <span />
+                <span />
+                <span />
+              </div>
+
+              <span>
+                Loading your matches...
+              </span>
+            </div>
+          </div>
+        </main>
+      </>
     );
   }
 
   return (
-    <div className="container mt-4">
+    <>
+      {/* ================= NAVBAR ================= */}
 
-      {/* Dashboard Header */}
-      <div className="d-flex justify-content-between align-items-center mb-4">
+      <Navbar
+        loggedInUser={
+          loggedInUser
+        }
 
-        <div>
-          <h2>
-            Umpire Dashboard
-          </h2>
+        onMatches={
+          onMatches
+        }
 
-          <p className="text-muted mb-0">
-            Manage your matches and scoring.
-          </p>
-        </div>
+        onPlayerProfile={
+          onPlayerProfile
+        }
 
-        <button
-          className="btn btn-primary"
-          onClick={onCreateMatch}
-        >
-          + Create Match
-        </button>
+        onUmpireDashboard={
+          onUmpireDashboard
+        }
 
-      </div>
+        onCreateMatch={
+          onCreateMatch
+        }
 
-      {/* Error */}
-      {error && (
-        <div className="alert alert-danger">
-          {error}
-        </div>
-      )}
+        onBackToPlayerMode={
+          onBackToPlayerMode
+        }
 
-      {/* Status Filters */}
-      <div className="d-flex gap-2 flex-wrap mb-4">
+        onLogout={
+          onLogout
+        }
+      />
 
-        <button
-          className={
-            selectedStatus === "Scheduled"
-              ? "btn btn-primary"
-              : "btn btn-outline-primary"
-          }
-          onClick={() => {
-            setSelectedStatus("Scheduled");
-            setSelectedMatch(null);
-          }}
-        >
-          Upcoming
-        </button>
+      <main className="cp-umpire-dashboard">
 
-        <button
-          className={
-            selectedStatus === "Live"
-              ? "btn btn-danger"
-              : "btn btn-outline-danger"
-          }
-          onClick={() => {
-            setSelectedStatus("Live");
-            setSelectedMatch(null);
-          }}
-        >
-          Live
-        </button>
+        <div className="cp-umpire-dashboard-container">
 
-        <button
-          className={
-            selectedStatus === "Completed"
-              ? "btn btn-secondary"
-              : "btn btn-outline-secondary"
-          }
-          onClick={() => {
-            setSelectedStatus("Completed");
-            setSelectedMatch(null);
-          }}
-        >
-          Finished
-        </button>
+          {/* ================= HEADER ================= */}
 
-        <button
-          className={
-            selectedStatus === "Cancelled"
-              ? "btn btn-dark"
-              : "btn btn-outline-dark"
-          }
-          onClick={() => {
-            setSelectedStatus("Cancelled");
-            setSelectedMatch(null);
-          }}
-        >
-          Cancelled
-        </button>
+          <header className="cp-umpire-header">
 
-      </div>
+            <div className="cp-umpire-header-copy">
 
-      {/* Current Category */}
-      <h4 className="mb-3">
-        {getStatusTitle()}
-      </h4>
+              <span className="cp-umpire-eyebrow">
+                UMPIRE WORKSPACE
+              </span>
 
-      {/* Empty State */}
-      {filteredMatches.length === 0 && (
-        <div className="alert alert-light border">
-          No{" "}
-          {selectedStatus.toLowerCase()}{" "}
-          matches.
-        </div>
-      )}
+              <h1>
+                Manage your matches.
+              </h1>
 
-      {/* Match List */}
-      {filteredMatches.map((match) => (
-        <div
-          key={match.id}
-          className="card mb-3"
-        >
-          <div className="card-body">
-
-            <div className="d-flex justify-content-between align-items-start">
-
-              {/* Match Information */}
-              <div>
-
-                <h5 className="card-title">
-                  {match.team1Name} vs{" "}
-                  {match.team2Name}
-                </h5>
-
-                <p className="text-muted mb-1">
-                  {new Date(
-                    match.matchDate
-                  ).toLocaleDateString()}{" "}
-                  • {match.matchTime}
-                </p>
-
-                <p className="mb-1">
-                  <strong>
-                    Venue:
-                  </strong>{" "}
-                  {match.venueName}
-                </p>
-
-                <p className="mb-1">
-                  <strong>
-                    State:
-                  </strong>{" "}
-                  {match.state}
-                </p>
-
-                <p className="mb-0">
-                  <strong>
-                    Status:
-                  </strong>{" "}
-                  {match.status}
-                </p>
-
-              </div>
-
-              {/* Scheduled Match */}
-              {match.status ===
-                "Scheduled" && (
-                <button
-                  className="btn btn-outline-primary"
-                  onClick={() => {
-                    setSelectedMatch(
-                      selectedMatch?.id ===
-                        match.id
-                        ? null
-                        : match
-                    );
-                  }}
-                >
-                  {selectedMatch?.id ===
-                  match.id
-                    ? "Close"
-                    : "Manage"}
-                </button>
-              )}
-
-              {/* Live Match */}
-              {match.status ===
-                "Live" && (
-                <button
-                  className="btn btn-danger"
-                  onClick={() =>
-                    onContinueScoring(
-                      match
-                    )
-                  }
-                >
-                  ▶️ Continue Scoring
-                </button>
-              )}
-
-              {/* Completed Match */}
-              {match.status ===
-                "Completed" && (
-                <span className="badge bg-secondary fs-6">
-                  Completed
-                </span>
-              )}
-
-              {/* Cancelled Match */}
-              {match.status ===
-                "Cancelled" && (
-                <span className="badge bg-dark fs-6">
-                  Cancelled
-                </span>
-              )}
+              <p>
+                Create, organize and score your
+                local cricket matches from one place.
+              </p>
 
             </div>
 
-            {/* Scheduled Match Management */}
-            {selectedMatch?.id ===
-              match.id &&
-              match.status ===
-                "Scheduled" && (
-                <MatchManagement
-                  match={selectedMatch}
-                  onMatchUpdated={
-                    handleMatchUpdated
-                  }
-                />
-              )}
+            <button
+              type="button"
+              className="cp-umpire-create-button"
+              onClick={onCreateMatch}
+            >
+              <span>＋</span>
+              Create Match
+            </button>
 
-          </div>
+          </header>
+
+          {error && (
+            <div className="cp-umpire-error">
+              {error}
+            </div>
+          )}
+
+          {/* ================= CREATE CARD ================= */}
+
+          <section className="cp-umpire-create-card">
+
+            <div className="cp-umpire-create-card-icon">
+              🏏
+            </div>
+
+            <div className="cp-umpire-create-card-content">
+
+              <span className="cp-umpire-create-card-label">
+                ORGANIZE THE GAME
+              </span>
+
+              <h2>
+                Ready to set up your next match?
+              </h2>
+
+              <p>
+                Set up a local cricket match, add
+                the participating players, and get
+                ready to score the game live.
+              </p>
+
+            </div>
+
+            <button
+              type="button"
+              className="cp-umpire-create-card-action"
+              onClick={onCreateMatch}
+            >
+              Create Match
+              <span>→</span>
+            </button>
+
+          </section>
+
+          {/* ================= STATS ================= */}
+
+          <section className="cp-umpire-stats">
+
+            <div className="cp-umpire-stat-card created">
+
+              <div className="cp-umpire-stat-icon">
+                🏏
+              </div>
+
+              <div className="cp-umpire-stat-content">
+
+                <span className="cp-umpire-stat-label">
+                  Matches Created
+                </span>
+
+                <strong className="cp-umpire-stat-value">
+                  {matches.length}
+                </strong>
+
+              </div>
+
+            </div>
+
+            <div className="cp-umpire-stat-card organized">
+
+              <div className="cp-umpire-stat-icon">
+                ✓
+              </div>
+
+              <div className="cp-umpire-stat-content">
+
+                <span className="cp-umpire-stat-label">
+                  Organized Successfully
+                </span>
+
+                <strong className="cp-umpire-stat-value">
+                  {finishedMatches.length}
+                </strong>
+
+              </div>
+
+            </div>
+
+            <div className="cp-umpire-stat-card cancelled">
+
+              <div className="cp-umpire-stat-icon">
+                ×
+              </div>
+
+              <div className="cp-umpire-stat-content">
+
+                <span className="cp-umpire-stat-label">
+                  Cancelled Matches
+                </span>
+
+                <strong className="cp-umpire-stat-value">
+                  {cancelledMatches.length}
+                </strong>
+
+              </div>
+
+            </div>
+
+          </section>
+
+          {/* ================= MY MATCHES ================= */}
+
+          <section className="cp-my-matches-section">
+
+            <div className="cp-my-matches-heading">
+
+              <div>
+                <span className="cp-my-matches-eyebrow">
+                  MATCH MANAGEMENT
+                </span>
+
+                <h2>
+                  My Matches
+                </h2>
+
+                <p>
+                  Manage and follow the matches
+                  you organize.
+                </p>
+              </div>
+
+            </div>
+
+            {/* ================= TABS ================= */}
+
+            <div className="cp-umpire-status-tabs">
+
+              <button
+                type="button"
+                className={`cp-umpire-status-tab ${
+                  activeTab === "Upcoming"
+                    ? "active"
+                    : ""
+                }`}
+                onClick={() => {
+                  setActiveTab("Upcoming");
+                  setShowAllMatches(false);
+                }}
+              >
+                <span>
+                  Upcoming
+                </span>
+
+                <span className="cp-umpire-status-count">
+                  {upcomingMatches.length}
+                </span>
+              </button>
+
+              <button
+                type="button"
+                className={`cp-umpire-status-tab ${
+                  activeTab === "Live"
+                    ? "active"
+                    : ""
+                }`}
+                onClick={() => {
+                  setActiveTab("Live");
+                  setShowAllMatches(false);
+                }}
+              >
+                <span>
+                  Live
+                </span>
+
+                <span className="cp-umpire-status-count">
+                  {liveMatches.length}
+                </span>
+              </button>
+
+              <button
+                type="button"
+                className={`cp-umpire-status-tab ${
+                  activeTab === "Finished"
+                    ? "active"
+                    : ""
+                }`}
+                onClick={() => {
+                  setActiveTab("Finished");
+                  setShowAllMatches(false);
+                }}
+              >
+                <span>
+                  Finished
+                </span>
+
+                <span className="cp-umpire-status-count">
+                  {finishedMatches.length}
+                </span>
+              </button>
+
+              <button
+                type="button"
+                className={`cp-umpire-status-tab ${
+                  activeTab === "Cancelled"
+                    ? "active"
+                    : ""
+                }`}
+                onClick={() => {
+                  setActiveTab("Cancelled");
+                  setShowAllMatches(false);
+                }}
+              >
+                <span>
+                  Cancelled
+                </span>
+
+                <span className="cp-umpire-status-count">
+                  {cancelledMatches.length}
+                </span>
+              </button>
+
+            </div>
+
+            {/* ================= MATCH GRID ================= */}
+
+            {visibleMatches.length > 0 ? (
+              <>
+                <div className="cp-umpire-match-grid">
+                  {visibleMatches.map(
+                    renderMatchCard
+                  )}
+                </div>
+
+                {hasMoreMatches && (
+                  <div className="cp-umpire-view-more">
+
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setShowAllMatches(
+                          (current) =>
+                            !current
+                        )
+                      }
+                    >
+                      {showAllMatches
+                        ? "Show Less ↑"
+                        : `View More (${tabMatches.length - INITIAL_VISIBLE_MATCHES}) ↓`}
+                    </button>
+
+                  </div>
+                )}
+              </>
+            ) : (
+              <div className="cp-umpire-empty">
+
+                <div className="cp-umpire-empty-icon">
+                  🏏
+                </div>
+
+                <h3>
+                  No{" "}
+                  {activeTab.toLowerCase()}{" "}
+                  matches
+                </h3>
+
+                <p>
+                  Matches in this category will
+                  appear here when they are available.
+                </p>
+
+              </div>
+            )}
+
+          </section>
+
         </div>
-      ))}
 
-    </div>
+      </main>
+    </>
   );
 };
 
 export default UmpireDashboard;
-

@@ -1,0 +1,1206 @@
+/* ============================================================
+   CRICPULSE UMPIRE DASHBOARD
+   ============================================================ */
+
+.cp-umpire-dashboard {
+  min-height: calc(100vh - 80px);
+  background:
+    radial-gradient(
+      circle at 10% 0%,
+      rgba(30, 126, 76, 0.08),
+      transparent 32%
+    ),
+    linear-gradient(
+      180deg,
+      #f4f8f5 0%,
+      #f8faf9 48%,
+      #eef4f0 100%
+    );
+
+  padding: 42px 20px 80px;
+}
+
+.cp-umpire-dashboard-container {
+  width: min(1320px, 100%);
+  margin: 0 auto;
+}
+
+/* ============================================================
+   HEADER
+   ============================================================ */
+
+.cp-umpire-header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 30px;
+
+  margin-bottom: 30px;
+}
+
+.cp-umpire-header-copy {
+  max-width: 720px;
+}
+
+.cp-umpire-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+  color: #16804b;
+
+  margin-bottom: 10px;
+}
+
+.cp-umpire-header h1 {
+  margin: 0;
+
+  color: #17251d;
+
+  font-size: clamp(
+    32px,
+    4vw,
+    52px
+  );
+
+  line-height: 1.05;
+  font-weight: 850;
+  letter-spacing: -0.04em;
+}
+
+.cp-umpire-header p {
+  margin: 14px 0 0;
+
+  max-width: 620px;
+
+  color: #66756d;
+
+  font-size: 16px;
+  line-height: 1.7;
+}
+
+/* ============================================================
+   CREATE BUTTON
+   ============================================================ */
+
+.cp-umpire-create-button {
+  border: 0;
+  border-radius: 14px;
+
+  padding: 14px 21px;
+
+  background: linear-gradient(
+    135deg,
+    #157347,
+    #1d9a5a
+  );
+
+  color: white;
+
+  font-size: 14px;
+  font-weight: 800;
+
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+
+  cursor: pointer;
+
+  box-shadow:
+    0 10px 25px rgba(
+      21,
+      115,
+      71,
+      0.2
+    );
+
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.cp-umpire-create-button span {
+  font-size: 20px;
+}
+
+.cp-umpire-create-button:hover {
+  transform: translateY(-2px);
+
+  box-shadow:
+    0 14px 30px rgba(
+      21,
+      115,
+      71,
+      0.28
+    );
+}
+
+/* ============================================================
+   CREATE MATCH HERO CARD
+   ============================================================ */
+
+.cp-umpire-create-card {
+  position: relative;
+
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+
+  align-items: center;
+  gap: 22px;
+
+  padding: 26px 30px;
+
+  margin-bottom: 28px;
+
+  border: 1px solid rgba(
+    25,
+    111,
+    69,
+    0.14
+  );
+
+  border-radius: 22px;
+
+  background:
+    linear-gradient(
+      135deg,
+      #123f2a 0%,
+      #176a43 55%,
+      #198451 100%
+    );
+
+  color: white;
+
+  overflow: hidden;
+
+  box-shadow:
+    0 18px 45px rgba(
+      17,
+      70,
+      45,
+      0.18
+    );
+}
+
+.cp-umpire-create-card::after {
+  content: "";
+
+  position: absolute;
+
+  width: 220px;
+  height: 220px;
+
+  right: -60px;
+  top: -80px;
+
+  border-radius: 50%;
+
+  background: rgba(
+    255,
+    255,
+    255,
+    0.06
+  );
+}
+
+.cp-umpire-create-card-icon {
+  position: relative;
+  z-index: 1;
+
+  width: 64px;
+  height: 64px;
+
+  display: grid;
+  place-items: center;
+
+  border-radius: 18px;
+
+  background: rgba(
+    255,
+    255,
+    255,
+    0.13
+  );
+
+  font-size: 30px;
+}
+
+.cp-umpire-create-card-content {
+  position: relative;
+  z-index: 1;
+}
+
+.cp-umpire-create-card-label {
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.15em;
+
+  color: rgba(
+    255,
+    255,
+    255,
+    0.7
+  );
+}
+
+.cp-umpire-create-card h2 {
+  margin: 5px 0 5px;
+
+  font-size: 24px;
+  font-weight: 800;
+}
+
+.cp-umpire-create-card p {
+  margin: 0;
+
+  color: rgba(
+    255,
+    255,
+    255,
+    0.76
+  );
+
+  line-height: 1.55;
+}
+
+.cp-umpire-create-card-action {
+  position: relative;
+  z-index: 1;
+
+  border: 1px solid rgba(
+    255,
+    255,
+    255,
+    0.25
+  );
+
+  border-radius: 12px;
+
+  padding: 12px 17px;
+
+  background: rgba(
+    255,
+    255,
+    255,
+    0.1
+  );
+
+  color: white;
+
+  font-weight: 800;
+
+  cursor: pointer;
+
+  transition:
+    background 0.2s ease,
+    transform 0.2s ease;
+}
+
+.cp-umpire-create-card-action span {
+  margin-left: 7px;
+}
+
+.cp-umpire-create-card-action:hover {
+  background: rgba(
+    255,
+    255,
+    255,
+    0.18
+  );
+
+  transform: translateY(-1px);
+}
+
+/* ============================================================
+   STAT CARDS
+   ============================================================ */
+
+.cp-umpire-stats {
+  display: grid;
+  grid-template-columns: repeat(
+    3,
+    minmax(0, 1fr)
+  );
+
+  gap: 18px;
+
+  margin-bottom: 42px;
+}
+
+.cp-umpire-stat-card {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+
+  padding: 22px;
+
+  border-radius: 18px;
+
+  background: white;
+
+  border: 1px solid #e2e9e4;
+
+  box-shadow:
+    0 8px 25px rgba(
+      27,
+      52,
+      38,
+      0.06
+    );
+}
+
+.cp-umpire-stat-icon {
+  width: 50px;
+  height: 50px;
+
+  flex: 0 0 50px;
+
+  display: grid;
+  place-items: center;
+
+  border-radius: 15px;
+
+  font-size: 21px;
+}
+
+.cp-umpire-stat-card.created
+  .cp-umpire-stat-icon {
+  background: #e8f6ed;
+  color: #16804b;
+}
+
+.cp-umpire-stat-card.organized
+  .cp-umpire-stat-icon {
+  background: #e9f7ef;
+  color: #16804b;
+}
+
+.cp-umpire-stat-card.cancelled
+  .cp-umpire-stat-icon {
+  background: #fff0ee;
+  color: #d94a3d;
+}
+
+.cp-umpire-stat-content {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.cp-umpire-stat-label {
+  color: #748179;
+
+  font-size: 12px;
+  font-weight: 700;
+
+  letter-spacing: 0.03em;
+}
+
+.cp-umpire-stat-value {
+  color: #17251d;
+
+  font-size: 30px;
+  line-height: 1;
+
+  font-weight: 850;
+}
+
+/* ============================================================
+   MY MATCHES
+   ============================================================ */
+
+.cp-my-matches-section {
+  width: 100%;
+}
+
+.cp-my-matches-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+
+  margin-bottom: 20px;
+}
+
+.cp-my-matches-eyebrow {
+  color: #16804b;
+
+  font-size: 11px;
+  font-weight: 850;
+
+  letter-spacing: 0.14em;
+}
+
+.cp-my-matches-heading h2 {
+  margin: 5px 0 4px;
+
+  color: #17251d;
+
+  font-size: 30px;
+  font-weight: 850;
+}
+
+.cp-my-matches-heading p {
+  margin: 0;
+
+  color: #748179;
+
+  font-size: 14px;
+}
+
+/* ============================================================
+   TABS
+   ============================================================ */
+
+.cp-umpire-status-tabs {
+  display: flex;
+  gap: 8px;
+
+  padding: 6px;
+
+  margin-bottom: 22px;
+
+  width: fit-content;
+
+  border-radius: 14px;
+
+  background: #e8eeea;
+}
+
+.cp-umpire-status-tab {
+  border: 0;
+
+  border-radius: 10px;
+
+  padding: 10px 15px;
+
+  background: transparent;
+
+  color: #617067;
+
+  display: flex;
+  align-items: center;
+  gap: 8px;
+
+  font-size: 13px;
+  font-weight: 750;
+
+  cursor: pointer;
+
+  transition:
+    background 0.2s ease,
+    color 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.cp-umpire-status-tab:hover {
+  color: #17251d;
+}
+
+.cp-umpire-status-tab.active {
+  background: white;
+
+  color: #157347;
+
+  box-shadow:
+    0 4px 12px rgba(
+      27,
+      52,
+      38,
+      0.08
+    );
+}
+
+.cp-umpire-status-count {
+  min-width: 22px;
+  height: 22px;
+
+  display: inline-grid;
+  place-items: center;
+
+  border-radius: 999px;
+
+  background: #dce7df;
+
+  font-size: 11px;
+}
+
+.cp-umpire-status-tab.active
+  .cp-umpire-status-count {
+  background: #dff3e7;
+  color: #157347;
+}
+
+/* ============================================================
+   MATCH GRID
+   ============================================================ */
+
+.cp-umpire-match-grid {
+  display: grid;
+
+  grid-template-columns: repeat(
+    3,
+    minmax(0, 1fr)
+  );
+
+  gap: 20px;
+
+  align-items: start;
+}
+
+/* ============================================================
+   MATCH CARD
+   ============================================================ */
+
+.cp-umpire-match-card {
+  min-width: 0;
+
+  background: white;
+
+  border: 1px solid #e2e9e4;
+
+  border-radius: 20px;
+
+  overflow: hidden;
+
+  box-shadow:
+    0 10px 30px rgba(
+      27,
+      52,
+      38,
+      0.06
+    );
+
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease,
+    border-color 0.2s ease;
+}
+
+.cp-umpire-match-card:hover {
+  transform: translateY(-3px);
+
+  border-color: #cbdacf;
+
+  box-shadow:
+    0 16px 35px rgba(
+      27,
+      52,
+      38,
+      0.1
+    );
+}
+
+.cp-umpire-match-card.live {
+  border-color: #b9dfc9;
+
+  box-shadow:
+    0 12px 32px rgba(
+      23,
+      128,
+      75,
+      0.11
+    );
+}
+
+/* ============================================================
+   CARD TOP
+   ============================================================ */
+
+.cp-umpire-match-card-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+
+  padding: 16px 18px 10px;
+}
+
+.cp-umpire-match-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+
+  padding: 6px 9px;
+
+  border-radius: 999px;
+
+  background: #edf1ee;
+
+  color: #5d6c63;
+
+  font-size: 10px;
+  font-weight: 850;
+
+  letter-spacing: 0.08em;
+}
+
+.cp-umpire-match-status.upcoming {
+  background: #fff5df;
+  color: #a86a00;
+}
+
+.cp-umpire-match-status.live {
+  background: #e3f7eb;
+  color: #147544;
+}
+
+.cp-umpire-match-status.finished {
+  background: #edf0f2;
+  color: #59656d;
+}
+
+.cp-umpire-match-status.cancelled {
+  background: #ffeded;
+  color: #c8463b;
+}
+
+.cp-umpire-live-dot {
+  width: 7px;
+  height: 7px;
+
+  border-radius: 50%;
+
+  background: #18a957;
+
+  animation:
+    cp-umpire-live-pulse
+    1.4s infinite;
+}
+
+@keyframes cp-umpire-live-pulse {
+  0%,
+  100% {
+    box-shadow:
+      0 0 0 0 rgba(
+        24,
+        169,
+        87,
+        0.45
+      );
+  }
+
+  50% {
+    box-shadow:
+      0 0 0 6px rgba(
+        24,
+        169,
+        87,
+        0
+      );
+  }
+}
+
+.cp-umpire-match-overs {
+  color: #7b8880;
+
+  font-size: 11px;
+  font-weight: 750;
+}
+
+/* ============================================================
+   TEAMS
+   ============================================================ */
+
+.cp-umpire-teams {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+
+  align-items: center;
+
+  gap: 12px;
+
+  padding: 14px 18px 18px;
+
+  border-bottom: 1px solid #edf1ee;
+}
+
+.cp-umpire-team {
+  min-width: 0;
+
+  display: flex;
+  flex-direction: column;
+
+  gap: 5px;
+}
+
+.cp-umpire-team:last-child {
+  text-align: right;
+  align-items: flex-end;
+}
+
+.cp-umpire-team-name {
+  color: #17251d;
+
+  font-size: 16px;
+  font-weight: 850;
+
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cp-umpire-team-score {
+  color: #157347;
+
+  font-size: 21px;
+  font-weight: 900;
+}
+
+.cp-umpire-vs {
+  color: #9aa59e;
+
+  font-size: 10px;
+  font-weight: 850;
+
+  letter-spacing: 0.1em;
+}
+
+/* ============================================================
+   DETAILS
+   ============================================================ */
+
+.cp-umpire-match-details {
+  display: grid;
+
+  grid-template-columns: repeat(
+    2,
+    minmax(0, 1fr)
+  );
+
+  gap: 13px 18px;
+
+  padding: 17px 18px;
+}
+
+.cp-umpire-match-detail {
+  min-width: 0;
+
+  display: flex;
+  flex-direction: column;
+
+  gap: 4px;
+}
+
+.cp-umpire-match-detail-label {
+  color: #99a39d;
+
+  font-size: 9px;
+  font-weight: 850;
+
+  letter-spacing: 0.12em;
+}
+
+.cp-umpire-match-detail-value {
+  color: #3f4e45;
+
+  font-size: 12px;
+  font-weight: 700;
+
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ============================================================
+   FOOTER
+   ============================================================ */
+
+.cp-umpire-match-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  gap: 12px;
+
+  padding: 14px 18px;
+
+  background: #f8faf9;
+
+  border-top: 1px solid #edf1ee;
+}
+
+.cp-umpire-match-location {
+  min-width: 0;
+
+  color: #6e7b73;
+
+  font-size: 11px;
+  font-weight: 650;
+
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cp-umpire-match-action {
+  flex-shrink: 0;
+
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.cp-umpire-match-action.manage {
+  color: #65736b;
+}
+
+.cp-umpire-match-action.live-action {
+  border: 0;
+
+  border-radius: 9px;
+
+  padding: 8px 11px;
+
+  background: #157347;
+
+  color: white;
+
+  cursor: pointer;
+
+  transition:
+    background 0.2s ease,
+    transform 0.2s ease;
+}
+
+.cp-umpire-match-action.live-action:hover {
+  background: #0f613b;
+  transform: translateY(-1px);
+}
+
+.cp-umpire-match-action.cancelled-action {
+  color: #c8463b;
+}
+
+/* ============================================================
+   MATCH MANAGEMENT
+   ============================================================ */
+
+.cp-umpire-management {
+  border-top: 1px solid #edf1ee;
+
+  padding: 14px 18px;
+
+  background: #fbfcfb;
+}
+
+/* ============================================================
+   VIEW MORE
+   ============================================================ */
+
+.cp-umpire-view-more {
+  display: flex;
+  justify-content: center;
+
+  margin-top: 28px;
+}
+
+.cp-umpire-view-more button {
+  border: 1px solid #cbdacf;
+
+  border-radius: 999px;
+
+  padding: 11px 20px;
+
+  background: white;
+
+  color: #157347;
+
+  font-size: 13px;
+  font-weight: 800;
+
+  cursor: pointer;
+
+  transition:
+    background 0.2s ease,
+    transform 0.2s ease,
+    border-color 0.2s ease;
+}
+
+.cp-umpire-view-more button:hover {
+  background: #edf8f1;
+
+  border-color: #a9cfb8;
+
+  transform: translateY(-1px);
+}
+
+/* ============================================================
+   EMPTY
+   ============================================================ */
+
+.cp-umpire-empty {
+  padding: 70px 20px;
+
+  border: 1px dashed #cbd8cf;
+
+  border-radius: 20px;
+
+  background: rgba(
+    255,
+    255,
+    255,
+    0.7
+  );
+
+  text-align: center;
+}
+
+.cp-umpire-empty-icon {
+  width: 64px;
+  height: 64px;
+
+  display: grid;
+  place-items: center;
+
+  margin: 0 auto 15px;
+
+  border-radius: 18px;
+
+  background: #e8f4ec;
+
+  font-size: 28px;
+}
+
+.cp-umpire-empty h3 {
+  margin: 0 0 7px;
+
+  color: #27372e;
+
+  font-size: 20px;
+}
+
+.cp-umpire-empty p {
+  margin: 0;
+
+  color: #77837c;
+
+  font-size: 13px;
+}
+
+/* ============================================================
+   LOADING
+   ============================================================ */
+
+.cp-umpire-loading {
+  min-height: 55vh;
+
+  display: flex;
+  flex-direction: column;
+
+  align-items: center;
+  justify-content: center;
+
+  gap: 15px;
+
+  color: #647269;
+
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.cp-umpire-loader {
+  display: flex;
+  gap: 6px;
+}
+
+.cp-umpire-loader span {
+  width: 9px;
+  height: 9px;
+
+  border-radius: 50%;
+
+  background: #16804b;
+
+  animation:
+    cp-umpire-loading
+    1.1s infinite ease-in-out;
+}
+
+.cp-umpire-loader span:nth-child(2) {
+  animation-delay: 0.15s;
+}
+
+.cp-umpire-loader span:nth-child(3) {
+  animation-delay: 0.3s;
+}
+
+@keyframes cp-umpire-loading {
+  0%,
+  80%,
+  100% {
+    transform: scale(0.6);
+    opacity: 0.45;
+  }
+
+  40% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+/* ============================================================
+   ERROR
+   ============================================================ */
+
+.cp-umpire-error {
+  margin-bottom: 20px;
+
+  padding: 13px 16px;
+
+  border: 1px solid #f0c8c4;
+
+  border-radius: 12px;
+
+  background: #fff2f0;
+
+  color: #a83d34;
+
+  font-size: 13px;
+  font-weight: 700;
+}
+
+/* ============================================================
+   MATCH CREATION PAGE
+   ============================================================ */
+
+.cp-umpire-create-page {
+  min-height: 100vh;
+
+  padding: 30px 20px 70px;
+
+  background: #f4f8f5;
+}
+
+.cp-umpire-back-button {
+  border: 0;
+
+  border-radius: 10px;
+
+  padding: 10px 15px;
+
+  margin-bottom: 18px;
+
+  background: #27372e;
+
+  color: white;
+
+  font-size: 13px;
+  font-weight: 750;
+
+  cursor: pointer;
+}
+
+.cp-umpire-back-button:hover {
+  background: #18251e;
+}
+
+/* ============================================================
+   TABLET
+   ============================================================ */
+
+@media (max-width: 1050px) {
+  .cp-umpire-match-grid {
+    grid-template-columns: repeat(
+      2,
+      minmax(0, 1fr)
+    );
+  }
+}
+
+/* ============================================================
+   MOBILE
+   ============================================================ */
+
+@media (max-width: 720px) {
+  .cp-umpire-dashboard {
+    padding: 28px 14px 60px;
+  }
+
+  .cp-umpire-header {
+    flex-direction: column;
+    align-items: stretch;
+
+    gap: 20px;
+  }
+
+  .cp-umpire-create-button {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .cp-umpire-create-card {
+    grid-template-columns: 1fr;
+
+    padding: 22px;
+  }
+
+  .cp-umpire-create-card-icon {
+    width: 54px;
+    height: 54px;
+  }
+
+  .cp-umpire-create-card-action {
+    width: 100%;
+  }
+
+  .cp-umpire-stats {
+    grid-template-columns: 1fr;
+
+    gap: 12px;
+
+    margin-bottom: 32px;
+  }
+
+  .cp-umpire-status-tabs {
+    width: 100%;
+
+    overflow-x: auto;
+
+    scrollbar-width: none;
+  }
+
+  .cp-umpire-status-tabs::-webkit-scrollbar {
+    display: none;
+  }
+
+  .cp-umpire-status-tab {
+    flex: 0 0 auto;
+  }
+
+  .cp-umpire-match-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .cp-umpire-match-footer {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .cp-umpire-match-action.live-action {
+    width: 100%;
+    text-align: center;
+  }
+}
+
+/* ============================================================
+   SMALL MOBILE
+   ============================================================ */
+
+@media (max-width: 430px) {
+  .cp-umpire-header h1 {
+    font-size: 34px;
+  }
+
+  .cp-umpire-create-card h2 {
+    font-size: 20px;
+  }
+
+  .cp-umpire-match-details {
+    gap: 11px;
+  }
+
+  .cp-umpire-team-name {
+    font-size: 14px;
+  }
+}

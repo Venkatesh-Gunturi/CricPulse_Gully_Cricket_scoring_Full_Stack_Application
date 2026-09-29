@@ -1,14 +1,36 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
-import api from "../api";
 
-const PlayerProfile = () => {
-  const navigate = useNavigate();
+import { getPlayerProfile } from "../services/playerService";
 
-  const [profile, setProfile] = useState(null);
-  const [activeSection, setActiveSection] = useState("batting");
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
+import Navbar from "../components/Layout/Navbar";
+
+import "./PlayerProfile.css";
+
+const PlayerProfile = ({
+  loggedInUser,
+  onLogin,
+  onRegister,
+  onMatches,
+  onPlayerProfile,
+  onUmpireDashboard,
+  onCreateMatch,
+  onLogout
+}) => {
+  const [profile, setProfile] =
+    useState(null);
+
+  const [activeSection, setActiveSection] =
+    useState("batting");
+
+  const [loading, setLoading] =
+    useState(true);
+
+  const [error, setError] =
+    useState("");
+
+  // ============================================================
+  // LOAD PROFILE
+  // ============================================================
 
   useEffect(() => {
     loadProfile();
@@ -19,453 +41,1273 @@ const PlayerProfile = () => {
       setLoading(true);
       setError("");
 
-      const response = await api.get("/Player/profile");
+      const data =
+        await getPlayerProfile();
 
-      setProfile(response.data);
+      setProfile(data);
     } catch (err) {
-      console.error("Failed to load player profile:", err);
+      console.error(
+        "Failed to load player profile:",
+        err
+      );
 
-      if (err.response?.status === 401) {
-        setError("Please login to view your profile.");
-      } else if (err.response?.status === 403) {
-        setError("Only players can access this profile.");
-      } else if (err.response?.status === 404) {
-        setError("Player profile not found.");
+      if (
+        err.response?.status === 401
+      ) {
+        setError(
+          "Please login to view your profile."
+        );
+      } else if (
+        err.response?.status === 403
+      ) {
+        setError(
+          "Only players can access this profile."
+        );
+      } else if (
+        err.response?.status === 404
+      ) {
+        setError(
+          "Player profile not found."
+        );
       } else {
-        setError("Unable to load player profile.");
+        setError(
+          "Unable to load player profile."
+        );
       }
     } finally {
       setLoading(false);
     }
   };
 
+  // ============================================================
+  // DATA
+  // ============================================================
+
+  const player =
+    profile?.profile;
+
+  const statistics =
+    profile?.statistics || {};
+
+  // ============================================================
+  // PLAYER NAME
+  // ============================================================
+
   const getPlayerName = () => {
-    if (!profile?.profile) {
-      return "";
+    if (!player) {
+      return "Player";
     }
 
-    const firstName = profile.profile.firstName || "";
-    const lastName = profile.profile.lastName || "";
+    const firstName =
+      player.firstName ||
+      player.FirstName ||
+      "";
 
-    return `${firstName} ${lastName}`.trim();
+    const lastName =
+      player.lastName ||
+      player.LastName ||
+      "";
+
+    return (
+      `${firstName} ${lastName}`.trim() ||
+      "Player"
+    );
   };
 
-  const getInitials = () => {
-    const name = getPlayerName();
+  // ============================================================
+  // INITIALS
+  // ============================================================
 
-    if (!name) {
+  const getInitials = () => {
+    const name =
+      getPlayerName();
+
+    if (
+      !name ||
+      name === "Player"
+    ) {
       return "P";
     }
 
-    const parts = name.split(" ");
+    const parts =
+      name.trim().split(/\s+/);
 
-    if (parts.length === 1) {
-      return parts[0].charAt(0).toUpperCase();
+    if (
+      parts.length === 1
+    ) {
+      return parts[0]
+        .charAt(0)
+        .toUpperCase();
     }
 
     return (
       parts[0].charAt(0) +
-      parts[parts.length - 1].charAt(0)
+      parts[
+        parts.length - 1
+      ].charAt(0)
     ).toUpperCase();
   };
 
+  // ============================================================
+  // AGE
+  // ============================================================
+
+  const calculateAge = (
+    dateOfBirth
+  ) => {
+    if (!dateOfBirth) {
+      return null;
+    }
+
+    const birthDate =
+      new Date(dateOfBirth);
+
+    if (
+      Number.isNaN(
+        birthDate.getTime()
+      )
+    ) {
+      return null;
+    }
+
+    const today =
+      new Date();
+
+    let age =
+      today.getFullYear() -
+      birthDate.getFullYear();
+
+    const monthDifference =
+      today.getMonth() -
+      birthDate.getMonth();
+
+    if (
+      monthDifference < 0 ||
+      (
+        monthDifference === 0 &&
+        today.getDate() <
+          birthDate.getDate()
+      )
+    ) {
+      age--;
+    }
+
+    return age;
+  };
+
+  // ============================================================
+  // DATE
+  // ============================================================
+
+  const formatDate = (
+    dateValue
+  ) => {
+    if (!dateValue) {
+      return "-";
+    }
+
+    const date =
+      new Date(dateValue);
+
+    if (
+      Number.isNaN(
+        date.getTime()
+      )
+    ) {
+      return "-";
+    }
+
+    return date.toLocaleDateString(
+      "en-IN",
+      {
+        day: "2-digit",
+        month: "short",
+        year: "numeric"
+      }
+    );
+  };
+
+  // ============================================================
+  // SAFE VALUE
+  // ============================================================
+
+  const formatValue = (
+    value
+  ) => {
+    if (
+      value === null ||
+      value === undefined ||
+      value === ""
+    ) {
+      return "-";
+    }
+
+    return value;
+  };
+
+  // ============================================================
+  // LOADING
+  // ============================================================
+
   if (loading) {
     return (
-      <div className="container py-5 text-center">
-        <div
-          className="spinner-border"
-          role="status"
-        >
-          <span className="visually-hidden">
-            Loading...
-          </span>
-        </div>
+      <>
+        <Navbar
+          onLogin={onLogin}
+          onRegister={onRegister}
+          loggedInUser={
+            loggedInUser
+          }
+          onMatches={onMatches}
+          onPlayerProfile={
+            onPlayerProfile
+          }
+          onUmpireDashboard={
+            onUmpireDashboard
+          }
+          onCreateMatch={
+            onCreateMatch
+          }
+          onLogout={onLogout}
+        />
 
-        <p className="mt-3">
-          Loading profile...
-        </p>
-      </div>
+        <main className="cp-player-profile-page">
+
+          <div className="cp-player-profile-container">
+
+            <div className="cp-profile-loading">
+
+              <div className="cp-profile-loader">
+                <span />
+                <span />
+                <span />
+              </div>
+
+              <h3>
+                Loading your profile
+              </h3>
+
+              <p>
+                Getting your cricket
+                records ready...
+              </p>
+
+            </div>
+
+          </div>
+
+        </main>
+      </>
     );
   }
+
+  // ============================================================
+  // ERROR
+  // ============================================================
 
   if (error) {
     return (
-      <div className="container py-5">
-        <button
-          className="btn btn-outline-secondary mb-4"
-          onClick={() => navigate(-1)}
-        >
-          ← Back
-        </button>
+      <>
+        <Navbar
+          onLogin={onLogin}
+          onRegister={onRegister}
+          loggedInUser={
+            loggedInUser
+          }
+          onMatches={onMatches}
+          onPlayerProfile={
+            onPlayerProfile
+          }
+          onUmpireDashboard={
+            onUmpireDashboard
+          }
+          onCreateMatch={
+            onCreateMatch
+          }
+          onLogout={onLogout}
+        />
 
-        <div className="alert alert-danger">
-          {error}
-        </div>
-      </div>
+        <main className="cp-player-profile-page">
+
+          <div className="cp-player-profile-container">
+
+            <div className="cp-profile-error">
+
+              <div className="cp-profile-error-icon">
+                !
+              </div>
+
+              <h2>
+                Profile unavailable
+              </h2>
+
+              <p>
+                {error}
+              </p>
+
+              <button
+                type="button"
+                className="cp-profile-primary-button"
+                onClick={loadProfile}
+              >
+                Try Again
+              </button>
+
+            </div>
+
+          </div>
+
+        </main>
+      </>
     );
   }
 
-  const player = profile.profile;
-  const statistics = profile.statistics;
+  // ============================================================
+  // PROFILE NOT FOUND
+  // ============================================================
+
+  if (!player) {
+    return (
+      <>
+        <Navbar
+          onLogin={onLogin}
+          onRegister={onRegister}
+          loggedInUser={
+            loggedInUser
+          }
+          onMatches={onMatches}
+          onPlayerProfile={
+            onPlayerProfile
+          }
+          onUmpireDashboard={
+            onUmpireDashboard
+          }
+          onCreateMatch={
+            onCreateMatch
+          }
+          onLogout={onLogout}
+        />
+
+        <main className="cp-player-profile-page">
+
+          <div className="cp-player-profile-container">
+
+            <div className="cp-profile-error">
+
+              <div className="cp-profile-error-icon">
+                !
+              </div>
+
+              <h2>
+                Player profile not found
+              </h2>
+
+              <p>
+                We couldn't find your
+                player profile.
+              </p>
+
+            </div>
+
+          </div>
+
+        </main>
+      </>
+    );
+  }
+
+  // ============================================================
+  // PROFILE DATA
+  // ============================================================
+
+  const playerName =
+    getPlayerName();
+
+  const profileImage =
+    player.profileImageUrl ||
+    player.ProfileImageUrl ||
+    null;
+
+  const mobileNumber =
+    player.mobileNumber ||
+    player.MobileNumber ||
+    "";
+
+  const email =
+    player.email ||
+    player.Email ||
+    "";
+
+  const age =
+    calculateAge(
+      player.dateOfBirth
+    );
+
+  const matchesPlayed =
+    Number(
+      statistics.matches ?? 0
+    );
+
+  const hasPlayedMatches =
+    matchesPlayed > 0;
+
+  // ============================================================
+  // MAIN PROFILE
+  // ============================================================
 
   return (
-    <div className="container py-4">
+    <>
+      {/* ======================================================
+          NAVBAR
+          ====================================================== */}
 
-      {/* Back Button */}
-      <button
-        className="btn btn-outline-secondary mb-4"
-        onClick={() => navigate(-1)}
-      >
-        ← Back
-      </button>
+      <Navbar
+        onLogin={onLogin}
+        onRegister={onRegister}
+        loggedInUser={
+          loggedInUser
+        }
+        onMatches={onMatches}
+        onPlayerProfile={
+          onPlayerProfile
+        }
+        onUmpireDashboard={
+          onUmpireDashboard
+        }
+        onCreateMatch={
+          onCreateMatch
+        }
+        onLogout={onLogout}
+      />
 
-      {/* Page Heading */}
-      <h2 className="fw-bold mb-4">
-        Player Profile
-      </h2>
+      <main className="cp-player-profile-page">
 
-      {/* Player Header */}
-      <div className="text-center mb-5">
+        <div className="cp-player-profile-container">
 
-        {player.profileImageUrl ? (
-          <img
-            src={player.profileImageUrl}
-            alt={getPlayerName()}
-            className="rounded-circle border shadow-sm"
-            style={{
-              width: "150px",
-              height: "150px",
-              objectFit: "cover"
-            }}
-          />
-        ) : (
-          <div
-            className="rounded-circle border shadow-sm mx-auto d-flex align-items-center justify-content-center"
-            style={{
-              width: "150px",
-              height: "150px",
-              fontSize: "48px",
-              fontWeight: "600"
-            }}
-          >
-            {getInitials()}
-          </div>
-        )}
+          {/* ==================================================
+              PROFILE HERO
+              ================================================== */}
 
-        <h3 className="mt-3 mb-0 fw-bold">
-          {getPlayerName()}
-        </h3>
-      </div>
+          <section className="cp-player-profile-hero">
 
-      {/* Player Details */}
-      <section className="mb-5">
+            <div className="cp-profile-hero-glow cp-glow-one" />
 
-        <h4 className="fw-bold mb-3">
-          Player Details
-        </h4>
+            <div className="cp-profile-hero-glow cp-glow-two" />
 
-        <div className="card shadow-sm border-0">
-          <div className="card-body">
+            <div className="cp-profile-avatar-wrapper">
 
-            <div className="row g-4">
-
-              <div className="col-md-6">
-                <small className="text-muted">
-                  Date of Birth
-                </small>
-
-                <div className="fw-semibold">
-                  {new Date(
-                    player.dateOfBirth
-                  ).toLocaleDateString()}
+              {profileImage ? (
+                <img
+                  src={profileImage}
+                  alt={playerName}
+                  className="cp-profile-avatar"
+                />
+              ) : (
+                <div className="cp-profile-avatar cp-profile-avatar-placeholder">
+                  {getInitials()}
                 </div>
+              )}
+
+              <span className="cp-profile-player-badge">
+                🏏
+              </span>
+
+            </div>
+
+            <div className="cp-profile-hero-content">
+
+              <span className="cp-profile-eyebrow">
+                CRICPULSE PLAYER
+              </span>
+
+              <h1>
+                {playerName}
+              </h1>
+
+              <div className="cp-profile-role">
+                <span>
+                  ●
+                </span>
+
+                Player
               </div>
 
-              <div className="col-md-6">
-                <small className="text-muted">
-                  Gender
-                </small>
+              <div className="cp-profile-contact-row">
 
-                <div className="fw-semibold">
-                  {player.gender || "-"}
-                </div>
-              </div>
+                {mobileNumber && (
+                  <div className="cp-profile-contact">
 
-              <div className="col-md-6">
-                <small className="text-muted">
-                  Batting Style
-                </small>
+                    <span className="cp-contact-icon">
+                      ☎
+                    </span>
 
-                <div className="fw-semibold">
-                  {player.battingStyle || "-"}
-                </div>
-              </div>
+                    <span>
+                      {mobileNumber}
+                    </span>
 
-              <div className="col-md-6">
-                <small className="text-muted">
-                  Bowling Style
-                </small>
+                  </div>
+                )}
 
-                <div className="fw-semibold">
-                  {player.bowlingStyle || "-"}
-                </div>
-              </div>
+                {mobileNumber &&
+                  email && (
+                    <span className="cp-profile-contact-divider" />
+                  )}
 
-              <div className="col-md-6">
-                <small className="text-muted">
-                  Player Role
-                </small>
+                {email && (
+                  <div className="cp-profile-contact">
 
-                <div className="fw-semibold">
-                  {player.playerRole || "-"}
-                </div>
-              </div>
+                    <span className="cp-contact-icon">
+                      ✉
+                    </span>
 
-              <div className="col-md-6">
-                <small className="text-muted">
-                  State
-                </small>
+                    <span>
+                      {email}
+                    </span>
 
-                <div className="fw-semibold">
-                  {player.state || "-"}
-                </div>
-              </div>
+                  </div>
+                )}
 
-              <div className="col-md-6">
-                <small className="text-muted">
-                  Pin Code
-                </small>
-
-                <div className="fw-semibold">
-                  {player.pinCode || "-"}
-                </div>
               </div>
 
             </div>
 
-          </div>
-        </div>
+          </section>
 
-      </section>
+          {/* ==================================================
+              SUMMARY CARDS
+              ================================================== */}
 
-      {/* Career Statistics */}
-      <section className="mb-5">
+          <section className="cp-profile-summary-grid">
 
-        <div className="d-flex justify-content-center mb-4">
-
-          <div
-            className="btn-group"
-            role="group"
-            aria-label="Player statistics"
-          >
-
-            <button
-              type="button"
-              className={`btn ${
-                activeSection === "batting"
-                  ? "btn-primary"
-                  : "btn-outline-primary"
-              }`}
-              onClick={() =>
-                setActiveSection("batting")
+            <ProfileSummaryCard
+              icon="🏏"
+              label="Matches"
+              value={
+                statistics.matches
               }
-            >
-              Batting
-            </button>
+              accent="orange"
+            />
 
-            <button
-              type="button"
-              className={`btn ${
-                activeSection === "bowling"
-                  ? "btn-primary"
-                  : "btn-outline-primary"
-              }`}
-              onClick={() =>
-                setActiveSection("bowling")
+            <ProfileSummaryCard
+              icon="🏃"
+              label="Runs"
+              value={
+                statistics.runs
               }
-            >
-              Bowling
-            </button>
+              accent="green"
+            />
 
-          </div>
+            <ProfileSummaryCard
+              icon="🎯"
+              label="Wickets"
+              value={
+                statistics.wickets
+              }
+              accent="red"
+            />
 
-        </div>
+            <ProfileSummaryCard
+              icon="🏆"
+              label="MVP Awards"
+              value={
+                statistics.mvpCount
+              }
+              accent="gold"
+            />
 
-        {/* Batting */}
-        {activeSection === "batting" && (
-          <div>
+          </section>
 
-            <h4 className="fw-bold mb-3">
-              Batting
-            </h4>
+          {/* ==================================================
+              PERSONAL INFORMATION
+              ================================================== */}
 
-            <div className="row g-3">
+          <section className="cp-profile-section">
 
-              <StatCard
-                title="Matches"
-                value={statistics.matches}
-              />
+            <div className="cp-profile-section-heading">
 
-              <StatCard
-                title="Innings"
-                value={statistics.battingInnings}
-              />
+              <div>
 
-              <StatCard
-                title="Runs"
-                value={statistics.runs}
-              />
+                <span className="cp-profile-section-eyebrow">
+                  PLAYER DETAILS
+                </span>
 
-              <StatCard
-                title="Balls Faced"
-                value={statistics.ballsFaced}
-              />
+                <h2>
+                  Personal Information
+                </h2>
 
-              <StatCard
-                title="4s"
-                value={statistics.fours}
-              />
+                <p>
+                  Your registered player
+                  information on CricPulse.
+                </p>
 
-              <StatCard
-                title="6s"
-                value={statistics.sixes}
-              />
-
-              <StatCard
-                title="50s"
-                value={statistics.fifties}
-              />
-
-              <StatCard
-                title="100s"
-                value={statistics.hundreds}
-              />
-
-              <StatCard
-                title="Highest Score"
-                value={statistics.highestScore}
-              />
-
-              <StatCard
-                title="Strike Rate"
-                value={
-                  statistics.strikeRate?.toFixed(2)
-                }
-              />
-
-              <StatCard
-                title="Batting Average"
-                value={
-                  statistics.battingAverage?.toFixed(2)
-                }
-              />
+              </div>
 
             </div>
 
-          </div>
-        )}
+            <div className="cp-personal-info-card">
 
-        {/* Bowling */}
-        {activeSection === "bowling" && (
-          <div>
+              <div className="cp-personal-info-column">
 
-            <h4 className="fw-bold mb-3">
-              Bowling
-            </h4>
+                <ProfileDetail
+                  label="Age"
+                  value={
+                    age !== null
+                      ? `${age} years`
+                      : "-"
+                  }
+                />
 
-            <div className="row g-3">
+                <ProfileDetail
+                  label="Gender"
+                  value={
+                    player.gender
+                  }
+                />
 
-              <StatCard
-                title="Innings"
-                value={statistics.bowlingInnings}
-              />
+                <ProfileDetail
+                  label="Player Role"
+                  value={
+                    player.playerRole
+                  }
+                />
 
-              <StatCard
-                title="Balls Bowled"
-                value={statistics.ballsBowled}
-              />
+                <ProfileDetail
+                  label="Batting Style"
+                  value={
+                    player.battingStyle
+                  }
+                />
 
-              <StatCard
-                title="Runs Conceded"
-                value={statistics.runsConceded}
-              />
+              </div>
 
-              <StatCard
-                title="Wickets"
-                value={statistics.wickets}
-              />
+              <div className="cp-personal-info-column">
 
-              <StatCard
-                title="Maiden Overs"
-                value={statistics.maidenOvers}
-              />
+                <ProfileDetail
+                  label="Bowling Style"
+                  value={
+                    player.bowlingStyle
+                  }
+                />
 
-              <StatCard
-                title="Economy"
-                value={
-                  statistics.economy?.toFixed(2)
-                }
-              />
+                <ProfileDetail
+                  label="State"
+                  value={
+                    player.state
+                  }
+                />
+
+                <ProfileDetail
+                  label="PIN Code"
+                  value={
+                    player.pinCode
+                  }
+                />
+
+                <ProfileDetail
+                  label="Date of Birth"
+                  value={
+                    formatDate(
+                      player.dateOfBirth
+                    )
+                  }
+                />
+
+              </div>
 
             </div>
 
-          </div>
-        )}
+          </section>
 
-      </section>
+          {/* ==================================================
+              ZERO MATCH STATE
+              ================================================== */}
 
-      {/* MVP */}
-      <section className="mb-4">
+          {!hasPlayedMatches ? (
+            <section className="cp-profile-section">
 
-        <h4 className="fw-bold mb-3">
-          MVP Awards
-        </h4>
+              <div
+                style={{
+                  background:
+                    "linear-gradient(135deg, #fffaf3 0%, #ffffff 55%, #f7fbff 100%)",
+                  border:
+                    "1px solid rgba(0,0,0,0.07)",
+                  borderRadius:
+                    "24px",
+                  padding:
+                    "56px 28px",
+                  textAlign:
+                    "center",
+                  boxShadow:
+                    "0 18px 50px rgba(0,0,0,0.06)"
+                }}
+              >
 
-        <div className="card shadow-sm border-0 text-center">
-          <div className="card-body py-4">
+                <div
+                  style={{
+                    width: "76px",
+                    height: "76px",
+                    margin:
+                      "0 auto 20px",
+                    borderRadius:
+                      "50%",
+                    display:
+                      "flex",
+                    alignItems:
+                      "center",
+                    justifyContent:
+                      "center",
+                    background:
+                      "rgba(245, 158, 11, 0.12)",
+                    fontSize:
+                      "34px"
+                  }}
+                >
+                  🏏
+                </div>
 
-            <div
-              style={{
-                fontSize: "48px"
-              }}
-            >
+                <span className="cp-profile-section-eyebrow">
+                  YOUR CRICKET JOURNEY
+                </span>
+
+                <h2
+                  style={{
+                    marginTop:
+                      "10px"
+                  }}
+                >
+                  No matches played yet
+                </h2>
+
+                <p
+                  style={{
+                    marginBottom:
+                      "8px",
+                    fontSize:
+                      "17px",
+                    fontWeight:
+                      "600"
+                  }}
+                >
+                  Your CricPulse record
+                  is ready to begin.
+                </p>
+
+                <p
+                  style={{
+                    maxWidth:
+                      "650px",
+                    margin:
+                      "0 auto",
+                    color:
+                      "#6b7280",
+                    lineHeight:
+                      "1.7"
+                  }}
+                >
+                  Join local matches
+                  organized by umpires
+                  on CricPulse and
+                  start building your
+                  cricket journey.
+                </p>
+
+                <div
+                  style={{
+                    maxWidth:
+                      "680px",
+                    margin:
+                      "36px auto 0",
+                    padding:
+                      "24px",
+                    borderRadius:
+                      "18px",
+                    background:
+                      "rgba(255,255,255,0.8)",
+                    border:
+                      "1px solid rgba(0,0,0,0.06)"
+                  }}
+                >
+
+                  <strong
+                    style={{
+                      display:
+                        "block",
+                      marginBottom:
+                        "8px"
+                    }}
+                  >
+                    Your cricket journey
+                    starts with your
+                    first match. 🏏
+                  </strong>
+
+                  <span
+                    style={{
+                      color:
+                        "#6b7280",
+                      lineHeight:
+                        "1.6"
+                    }}
+                  >
+                    Join a local game
+                    organized by a
+                    CricPulse umpire,
+                    and your performances
+                    will appear here
+                    automatically.
+                  </span>
+
+                </div>
+
+              </div>
+
+            </section>
+          ) : (
+            /* ==================================================
+               PLAYER STATISTICS
+               ================================================== */
+
+            <section className="cp-profile-section">
+
+              <div className="cp-profile-section-heading cp-stats-heading">
+
+                <div>
+
+                  <span className="cp-profile-section-eyebrow">
+                    CAREER RECORDS
+                  </span>
+
+                  <h2>
+                    Player Statistics
+                  </h2>
+
+                  <p>
+                    Track your batting and
+                    bowling performance.
+                  </p>
+
+                </div>
+
+                <div className="cp-stats-toggle">
+
+                  <button
+                    type="button"
+                    className={
+                      activeSection ===
+                      "batting"
+                        ? "active"
+                        : ""
+                    }
+                    onClick={() =>
+                      setActiveSection(
+                        "batting"
+                      )
+                    }
+                  >
+                    🏏 Batting
+                  </button>
+
+                  <button
+                    type="button"
+                    className={
+                      activeSection ===
+                      "bowling"
+                        ? "active"
+                        : ""
+                    }
+                    onClick={() =>
+                      setActiveSection(
+                        "bowling"
+                      )
+                    }
+                  >
+                    🎯 Bowling
+                  </button>
+
+                </div>
+
+              </div>
+
+              {/* ==================================================
+                  BATTING
+                  ================================================== */}
+
+              {activeSection ===
+                "batting" && (
+                <div className="cp-stat-panel">
+
+                  <div className="cp-stat-panel-header">
+
+                    <div className="cp-stat-panel-icon">
+                      🏏
+                    </div>
+
+                    <div>
+
+                      <h3>
+                        Batting Records
+                      </h3>
+
+                      <p>
+                        Your career batting
+                        performance
+                      </p>
+
+                    </div>
+
+                  </div>
+
+                  <div className="cp-stat-grid">
+
+                    <StatCard
+                      title="Matches"
+                      value={
+                        statistics.matches
+                      }
+                      icon="🏏"
+                    />
+
+                    <StatCard
+                      title="Innings"
+                      value={
+                        statistics.battingInnings
+                      }
+                      icon="📋"
+                    />
+
+                    <StatCard
+                      title="Runs"
+                      value={
+                        statistics.runs
+                      }
+                      icon="⚡"
+                      highlight
+                    />
+
+                    <StatCard
+                      title="Balls Faced"
+                      value={
+                        statistics.ballsFaced
+                      }
+                      icon="🔵"
+                    />
+
+                    <StatCard
+                      title="4s"
+                      value={
+                        statistics.fours
+                      }
+                      icon="4️⃣"
+                    />
+
+                    <StatCard
+                      title="6s"
+                      value={
+                        statistics.sixes
+                      }
+                      icon="6️⃣"
+                    />
+
+                    <StatCard
+                      title="50s"
+                      value={
+                        statistics.fifties
+                      }
+                      icon="5️⃣"
+                    />
+
+                    <StatCard
+                      title="100s"
+                      value={
+                        statistics.hundreds
+                      }
+                      icon="💯"
+                    />
+
+                    <StatCard
+                      title="Highest Score"
+                      value={
+                        statistics.highestScore
+                      }
+                      icon="🔥"
+                      highlight
+                    />
+
+                    <StatCard
+                      title="Strike Rate"
+                      value={
+                        statistics.strikeRate !==
+                          null &&
+                        statistics.strikeRate !==
+                          undefined
+                          ? Number(
+                              statistics.strikeRate
+                            ).toFixed(2)
+                          : 0
+                      }
+                      icon="📈"
+                    />
+
+                    <StatCard
+                      title="Batting Average"
+                      value={
+                        statistics.battingAverage !==
+                          null &&
+                        statistics.battingAverage !==
+                          undefined
+                          ? Number(
+                              statistics.battingAverage
+                            ).toFixed(2)
+                          : 0
+                      }
+                      icon="📊"
+                    />
+
+                  </div>
+
+                </div>
+              )}
+
+              {/* ==================================================
+                  BOWLING
+                  ================================================== */}
+
+              {activeSection ===
+                "bowling" && (
+                <div className="cp-stat-panel">
+
+                  <div className="cp-stat-panel-header">
+
+                    <div className="cp-stat-panel-icon bowling">
+                      🎯
+                    </div>
+
+                    <div>
+
+                      <h3>
+                        Bowling Records
+                      </h3>
+
+                      <p>
+                        Your career bowling
+                        performance
+                      </p>
+
+                    </div>
+
+                  </div>
+
+                  <div className="cp-stat-grid">
+
+                    <StatCard
+                      title="Innings"
+                      value={
+                        statistics.bowlingInnings
+                      }
+                      icon="📋"
+                    />
+
+                    <StatCard
+                      title="Balls Bowled"
+                      value={
+                        statistics.ballsBowled
+                      }
+                      icon="🔵"
+                    />
+
+                    <StatCard
+                      title="Runs Conceded"
+                      value={
+                        statistics.runsConceded
+                      }
+                      icon="🏃"
+                    />
+
+                    <StatCard
+                      title="Wickets"
+                      value={
+                        statistics.wickets
+                      }
+                      icon="🎯"
+                      highlight
+                    />
+
+                    <StatCard
+                      title="Maiden Overs"
+                      value={
+                        statistics.maidenOvers
+                      }
+                      icon="🛡️"
+                    />
+
+                    <StatCard
+                      title="Economy"
+                      value={
+                        statistics.economy !==
+                          null &&
+                        statistics.economy !==
+                          undefined
+                          ? Number(
+                              statistics.economy
+                            ).toFixed(2)
+                          : 0
+                      }
+                      icon="📉"
+                    />
+
+                  </div>
+
+                </div>
+              )}
+
+            </section>
+          )}
+
+          {/* ==================================================
+              MVP
+              ================================================== */}
+
+          <section className="cp-mvp-section">
+
+            <div className="cp-mvp-content">
+
+              <span className="cp-mvp-eyebrow">
+                🏆 MATCH PERFORMANCE
+              </span>
+
+              <h2>
+                Most Valuable Player
+              </h2>
+
+              <p>
+                Your MVP recognition
+                across CricPulse matches.
+              </p>
+
+              <div className="cp-mvp-count">
+
+                <strong>
+                  {statistics.mvpCount ??
+                    0}
+                </strong>
+
+                <span>
+                  MVP Awards
+                </span>
+
+              </div>
+
+            </div>
+
+            <div className="cp-mvp-trophy">
               🏆
             </div>
 
-            <h3 className="fw-bold mb-1">
-              {statistics.mvpCount}
-            </h3>
+            <div className="cp-mvp-glow" />
 
-            <p className="text-muted mb-0">
-              MVP Awards
-            </p>
+          </section>
 
-          </div>
         </div>
 
-      </section>
+      </main>
+    </>
+  );
+};
+
+/* =========================================================
+   PROFILE SUMMARY CARD
+========================================================= */
+
+const ProfileSummaryCard = ({
+  icon,
+  label,
+  value,
+  accent
+}) => {
+  return (
+    <div
+      className={`cp-profile-summary-card cp-accent-${accent}`}
+    >
+
+      <div className="cp-summary-icon">
+        {icon}
+      </div>
+
+      <div>
+
+        <span>
+          {label}
+        </span>
+
+        <strong>
+          {value ?? 0}
+        </strong>
+
+      </div>
 
     </div>
   );
 };
 
-const StatCard = ({ title, value }) => {
+/* =========================================================
+   PROFILE DETAIL
+========================================================= */
+
+const ProfileDetail = ({
+  label,
+  value
+}) => {
   return (
-    <div className="col-6 col-md-4 col-lg-3">
+    <div className="cp-profile-detail-row">
 
-      <div className="card h-100 shadow-sm border-0">
+      <span className="cp-profile-detail-label">
+        {label}
+      </span>
 
-        <div className="card-body text-center">
+      <strong className="cp-profile-detail-value">
+        {value === null ||
+        value === undefined ||
+        value === ""
+          ? "-"
+          : value}
+      </strong>
 
-          <div className="text-muted small mb-1">
-            {title}
-          </div>
+    </div>
+  );
+};
 
-          <div className="fs-4 fw-bold">
-            {value ?? 0}
-          </div>
+/* =========================================================
+   STAT CARD
+========================================================= */
 
-        </div>
+const StatCard = ({
+  title,
+  value,
+  icon,
+  highlight = false
+}) => {
+  return (
+    <div
+      className={`cp-stat-card ${
+        highlight
+          ? "highlight"
+          : ""
+      }`}
+    >
+
+      <div className="cp-stat-card-icon">
+        {icon}
+      </div>
+
+      <div className="cp-stat-card-content">
+
+        <span>
+          {title}
+        </span>
+
+        <strong>
+          {value ?? 0}
+        </strong>
 
       </div>
 

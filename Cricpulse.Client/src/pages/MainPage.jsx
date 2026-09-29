@@ -6,11 +6,16 @@ function MainPage({
   onLogin,
   onRegister,
   loggedInUser,
+  appMode,
   onCreateMatch,
-  onMatches
+  onMatches,
+  onPlayerProfile,
+  onUmpireDashboard,
+  onBackToPlayerMode,
+  onAbout,
+  onLogout,
 }) {
-
-   const isLoggedIn = !!loggedInUser;
+  const isLoggedIn = !!loggedInUser;
 
   const isUmpire =
     loggedInUser?.isUmpire === true ||
@@ -21,18 +26,28 @@ function MainPage({
 
   return (
     <div className="cricpulse-home">
+
       {/* ================= NAVBAR ================= */}
-        <Navbar
-          onLogin={onLogin}
-          onRegister={onRegister}
-          loggedInUser={loggedInUser}
-          onMatches={onMatches}
-        />
+
+      <Navbar
+        onLogin={onLogin}
+        onRegister={onRegister}
+        loggedInUser={loggedInUser}
+        appMode={appMode}
+        onMatches={onMatches}
+        onPlayerProfile={onPlayerProfile}
+        onUmpireDashboard={onUmpireDashboard}
+        onBackToPlayerMode={onBackToPlayerMode}
+        onAbout={onAbout}
+        onLogout={onLogout}
+      />
 
       {/* ================= HERO ================= */}
+
       <main>
 
         <section className="cp-hero">
+
           <div className="cp-hero-overlay" />
 
           <div className="cp-hero-content">
@@ -60,6 +75,7 @@ function MainPage({
               </p>
 
               <div className="cp-hero-actions">
+
                 {!isLoggedIn ? (
                   <>
                     <button
@@ -84,7 +100,7 @@ function MainPage({
                   <button
                     type="button"
                     className="cp-primary-button"
-                    onClick={onCreateMatch}
+                    onClick={onUmpireDashboard}
                   >
                     <span>🏏</span>
                     Create a Match
@@ -93,31 +109,42 @@ function MainPage({
                   <button
                     type="button"
                     className="cp-primary-button"
-                    onClick={() => {
-                      window.location.hash = "player-profile";
-                    }}
+                    onClick={onPlayerProfile}
                   >
                     <span>📊</span>
                     View My Records
                   </button>
                 )}
+
               </div>
             </div>
 
-          <div className="cp-hero-visual" aria-hidden="true" />
+            <div
+              className="cp-hero-visual"
+              aria-hidden="true"
+            />
+
           </div>
 
           <div className="cp-hero-scroll">
-            <span>SCROLL TO EXPLORE</span>
+            <span>
+              SCROLL TO EXPLORE
+            </span>
+
             <span className="cp-scroll-line" />
           </div>
+
         </section>
 
         {/* ================= CTA SECTION ================= */}
+
         <section className="cp-action-section">
 
           <div className="cp-section-heading">
-            <span>YOUR GAME. YOUR COMMUNITY.</span>
+
+            <span>
+              YOUR GAME. YOUR COMMUNITY.
+            </span>
 
             <h2>
               What brings you
@@ -128,20 +155,19 @@ function MainPage({
               CricPulse connects players, umpires and local
               cricket communities in one place.
             </p>
+
           </div>
 
-      
-    
           <div className="cp-action-grid">
 
             {/* ================= LIVE MATCHES ================= */}
+
             <button
               type="button"
               className="cp-action-card cp-action-live"
-              onClick={() => {
-                onMatches();
-              }}
+              onClick={onMatches}
             >
+
               <div className="cp-action-image" />
 
               <div className="cp-action-overlay" />
@@ -151,6 +177,7 @@ function MainPage({
               </div>
 
               <div className="cp-action-content">
+
                 <span className="cp-action-label">
                   FOLLOW THE GAME
                 </span>
@@ -165,27 +192,30 @@ function MainPage({
                   See matches happening now and
                   follow the action live.
                 </p>
+
               </div>
 
               <div className="cp-card-arrow">
                 ↗
               </div>
+
             </button>
 
-
             {/* ================= CREATE MATCH ================= */}
+
             <button
               type="button"
               className="cp-action-card cp-action-create"
               onClick={() => {
                 if (isUmpire) {
-                  onCreateMatch();
+                  onUmpireDashboard?.();
                 } else {
-                  onRegister();
+                  onRegister?.();
                 }
               }}
             >
-             <div className="cp-action-image" />
+
+              <div className="cp-action-image" />
 
               <div className="cp-action-overlay" />
 
@@ -194,6 +224,7 @@ function MainPage({
               </div>
 
               <div className="cp-action-content">
+
                 <span className="cp-action-label">
                   ORGANIZE THE GAME
                 </span>
@@ -208,26 +239,29 @@ function MainPage({
                   Bring your cricket crew together
                   and start a new match.
                 </p>
+
               </div>
 
               <div className="cp-card-arrow">
                 ↗
               </div>
+
             </button>
 
-
             {/* ================= PLAYER RECORDS ================= */}
+
             <button
               type="button"
               className="cp-action-card cp-action-records"
               onClick={() => {
                 if (isPlayer) {
-                  window.location.hash = "player-profile";
+                  onPlayerProfile?.();
                 } else {
-                  onRegister();
+                  onRegister?.();
                 }
               }}
             >
+
               <div className="cp-action-image" />
 
               <div className="cp-action-overlay" />
@@ -237,6 +271,7 @@ function MainPage({
               </div>
 
               <div className="cp-action-content">
+
                 <span className="cp-action-label">
                   BUILD YOUR LEGACY
                 </span>
@@ -251,32 +286,36 @@ function MainPage({
                   Track your matches, runs, wickets
                   and cricket milestones.
                 </p>
+
               </div>
 
               <div className="cp-card-arrow">
                 ↗
               </div>
+
             </button>
 
           </div>
 
-
-
-
         </section>
 
         {/* ================= ABOUT ================= */}
+
         <section
           id="about"
           className="cp-about-section"
         >
+
           <div className="cp-about-inner">
 
             <div className="cp-about-badge">
-              <span>CP</span>
+              <span>
+                CP
+              </span>
             </div>
 
             <div className="cp-about-copy">
+
               <span className="cp-section-label">
                 ABOUT CRICPULSE
               </span>
@@ -300,10 +339,15 @@ function MainPage({
                 players, live scoring and records
                 that follow the journey.
               </p>
+
             </div>
 
             <div className="cp-about-quote">
-              <span>“</span>
+
+              <span>
+                “
+              </span>
+
               <p>
                 Local Cricket.
                 <br />
@@ -311,20 +355,21 @@ function MainPage({
                 <br />
                 Real Matches.
               </p>
+
             </div>
 
           </div>
+
         </section>
 
       </main>
-        
-        {/* ================= FOOTER ================= */}
-        <Footer/>
-    
+
+      {/* ================= FOOTER ================= */}
+
+      <Footer />
 
     </div>
   );
 }
 
 export default MainPage;
-
