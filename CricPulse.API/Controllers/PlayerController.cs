@@ -1,14 +1,14 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
 using CricPulse.Application.DTOs.Player;
 using CricPulse.Application.Interfaces.Player;
-using Microsoft.AspNetCore.Authorization;
 
 namespace CricPulse.API.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    [Authorize(Roles = "Player")]
+    [Authorize]
     public class PlayerController : ControllerBase
     {
         private readonly IPlayerService _playerService;
@@ -17,6 +17,10 @@ namespace CricPulse.API.Controllers
         {
             _playerService = playerService;
         }
+
+        // ============================================================
+        // CREATE PLAYER PROFILE
+        // ============================================================
 
         [HttpPost("profile")]
         public async Task<IActionResult> CreateProfile(
@@ -30,7 +34,10 @@ namespace CricPulse.API.Controllers
                 return Unauthorized();
             }
 
-            var userId = int.Parse(userIdClaim.Value);
+            if (!int.TryParse(userIdClaim.Value, out var userId))
+            {
+                return Unauthorized();
+            }
 
             try
             {
@@ -47,6 +54,10 @@ namespace CricPulse.API.Controllers
             }
         }
 
+        // ============================================================
+        // GET PLAYER PROFILE + STATISTICS
+        // ============================================================
+
         [HttpGet("profile")]
         public async Task<IActionResult> GetProfile()
         {
@@ -58,7 +69,10 @@ namespace CricPulse.API.Controllers
                 return Unauthorized();
             }
 
-            var userId = int.Parse(userIdClaim.Value);
+            if (!int.TryParse(userIdClaim.Value, out var userId))
+            {
+                return Unauthorized();
+            }
 
             var playerProfile =
                 await _playerService.GetPlayerProfileAsync(userId);
@@ -70,6 +84,10 @@ namespace CricPulse.API.Controllers
 
             return Ok(playerProfile);
         }
+
+        // ============================================================
+        // UPDATE PLAYER PROFILE
+        // ============================================================
 
         [HttpPut("profile")]
         public async Task<IActionResult> UpdateProfile(
@@ -83,7 +101,10 @@ namespace CricPulse.API.Controllers
                 return Unauthorized();
             }
 
-            var userId = int.Parse(userIdClaim.Value);
+            if (!int.TryParse(userIdClaim.Value, out var userId))
+            {
+                return Unauthorized();
+            }
 
             try
             {

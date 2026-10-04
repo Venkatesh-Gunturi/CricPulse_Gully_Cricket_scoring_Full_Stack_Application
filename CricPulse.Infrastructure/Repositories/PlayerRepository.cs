@@ -10,7 +10,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace CricPulse.Infrastructure.Repositories
 {
-    public class PlayerRepository :IPlayerRepository
+    public class PlayerRepository : IPlayerRepository
     {
         private readonly CricPulseDbContext _context;
 
@@ -22,6 +22,7 @@ namespace CricPulse.Infrastructure.Repositories
         public async Task<Player?> GetByUserIdAsync(int userId)
         {
             return await _context.Players
+                .Include(p => p.User)
                 .FirstOrDefaultAsync(p => p.UserId == userId);
         }
 
