@@ -1,30 +1,32 @@
-﻿using CricPulse.Application.DTOs.Match;
+﻿namespace CricPulse.Application.DTOs.Match;
 
 public class CreateMatchDto
 {
-    public string Team1Name { get; set; } = string.Empty;
-    public string Team1Logo { get; set; } = string.Empty;
+    public Guid CreatedByUserId { get; set; }
 
-    public string Team2Name { get; set; } = string.Empty;
-    public string Team2Logo { get; set; } = string.Empty;
+    public string Name { get; set; } = string.Empty;
 
-    public int PlayersPerTeam { get; set; }
+    public string TeamAName { get; set; } = string.Empty;
 
-    public int Overs { get; set; }
+    public string? TeamALogo { get; set; }
 
-    public DateTime MatchDate { get; set; }
+    public string TeamBName { get; set; } = string.Empty;
 
-    public TimeSpan MatchTime { get; set; }
+    public string? TeamBLogo { get; set; }
 
-    public string VenueName { get; set; } = string.Empty;
+    public DateTime ScheduledAt { get; set; }
 
-    public string Address { get; set; } = string.Empty;
+    public string Venue { get; set; } = string.Empty;
+
+    public string? LocationAddress { get; set; }
 
     public double Latitude { get; set; }
 
     public double Longitude { get; set; }
 
-    public string? LiveStreamUrl { get; set; }
+    public int Overs { get; set; }
 
-    public List<MatchPlayerDto> Players { get; set; } = new();
+    public int PlayersPerTeam { get; set; }
+
+    public List<MatchPlayerInputDto> Players { get; set; } = new();
 }

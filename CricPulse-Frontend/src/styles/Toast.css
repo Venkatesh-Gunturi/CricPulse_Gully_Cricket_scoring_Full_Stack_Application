@@ -1,0 +1,20 @@
+.app-toast {
+  position: fixed;
+  z-index: 9999;
+  top: 24px;
+  right: 24px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  max-width: min(420px, calc(100vw - 32px));
+  padding: 14px 16px;
+  color: #fff;
+  background: #16794b;
+  border-radius: 12px;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, .2);
+  font-weight: 600;
+  animation: app-toast-in .18s ease-out;
+}
+.app-toast button { margin-left: auto; display: inline-grid; place-items: center; border: 0; background: transparent; color: inherit; cursor: pointer; padding: 4px; }
+.app-toast-error { background: #a52b2b; }
+@keyframes app-toast-in { from { opacity: 0; transform: translateY(-8px); } to { opacity: 1; transform: translateY(0); } }

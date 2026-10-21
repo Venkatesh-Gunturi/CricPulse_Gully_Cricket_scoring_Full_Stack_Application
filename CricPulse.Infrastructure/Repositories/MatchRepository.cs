@@ -1,238 +1,184 @@
-﻿using CricPulse.Infrastructure.Data;
-using CricPulse.Application.Interfaces.Match;
+﻿using CricPulse.Application.Interfaces.Repositories;
 using CricPulse.Domain.Entities;
-using CricPulse.Domain.Enums;
+using CricPulse.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 
-namespace CricPulse.Infrastructure.Repositories
+namespace CricPulse.Infrastructure.Repositories;
+
+public class MatchRepository : RepositoryBase<Match>, IMatchRepository
 {
-    public class MatchRepository : IMatchRepository
+    public MatchRepository(CricPulseDbContext context)
+        : base(context)
     {
-        private readonly CricPulseDbContext _context;
-
-        public MatchRepository(CricPulseDbContext context)
-        {
-            _context = context;
-        }
-
-        public async Task<Match> CreateAsync(Match match)
-        {
-            await _context.Matches.AddAsync(match);
-            await _context.SaveChangesAsync();
-
-            return match;
-        }
-
-        public async Task<Match?> GetByIdAsync(int id)
-        {
-            return await _context.Matches
-                .Include(m => m.MatchPlayers)
-                    .ThenInclude(mp => mp.Player)
-                        .ThenInclude(p => p.User)
-                .Include(m => m.Innings)
-                    .ThenInclude(i => i.Balls)
-                        .ThenInclude(b => b.Wicket)
-                .FirstOrDefaultAsync(m => m.Id == id);
-        }
-
-        public async Task<Match?> GetByIdForUpdateAsync(int id)
-        {
-            return await _context.Matches
-                .Include(m => m.MatchPlayers)
-                    .ThenInclude(mp => mp.Player)
-                        .ThenInclude(p => p.User)
-                .Include(m => m.Innings)
-                    .ThenInclude(i => i.Balls)
-                        .ThenInclude(b => b.Wicket)
-                .FirstOrDefaultAsync(m => m.Id == id);
-        }
-
-        public async Task<List<Match>> GetAllAsync()
-        {
-            return await _context.Matches
-                .Include(m => m.MatchPlayers)
-                    .ThenInclude(mp => mp.Player)
-                        .ThenInclude(p => p.User)
-                .Include(m => m.Innings)
-                .ToListAsync();
-        }
-
-        public async Task<List<NearbyMatchResult>> GetNearbyMatchesAsync(
-     double latitude,
-     double longitude,
-     double radiusInKm)
-        {
-            var matches = await _context.Matches
-                .Include(m => m.MatchPlayers)
-                    .ThenInclude(mp => mp.Player)
-                        .ThenInclude(p => p.User)
-                .Where(m =>
-                    m.Status == MatchStatus.Scheduled ||
-                    m.Status == MatchStatus.Live)
-                .ToListAsync();
-
-            return matches
-                .Select(match =>
-                {
-                    var distance = CalculateDistanceInKm(
-                        latitude,
-                        longitude,
-                        match.Latitude,
-                        match.Longitude);
-
-                    return new NearbyMatchResult
-                    {
-                        Match = match,
-                        DistanceInKm = distance
-                    };
-                })
-                .Where(x => x.DistanceInKm <= radiusInKm)
-                .OrderBy(x => x.DistanceInKm)
-                .ToList();
-        }
-
-        public async Task<List<Match>> GetMatchesByStateAsync(
-            string state)
-        {
-            return await _context.Matches
-                .Include(m => m.MatchPlayers)
-                    .ThenInclude(mp => mp.Player)
-                        .ThenInclude(p => p.User)
-                .Where(m =>
-                    m.State == state)
-                .ToListAsync();
-        }
-
-        public async Task<Match?> UpdateAsync(Match match)
-        {
-            _context.Matches.Update(match);
-
-            await _context.SaveChangesAsync();
-
-            return match;
-        }
-
-        public async Task<bool> CancelAsync(int matchId)
-        {
-            var match = await _context.Matches
-                .FirstOrDefaultAsync(m => m.Id == matchId);
-
-            if (match == null)
-            {
-                return false;
-            }
-
-            match.Status = MatchStatus.Cancelled;
-            match.UpdatedAt = DateTime.UtcNow;
-
-            await _context.SaveChangesAsync();
-
-            return true;
-        }
-
-        public async Task<List<Match>> GetMatchesByUmpireAsync(
-            int umpireId)
-        {
-            return await _context.Matches
-                .Include(m => m.MatchPlayers)
-                    .ThenInclude(mp => mp.Player)
-                        .ThenInclude(p => p.User)
-                .Include(m => m.Innings)
-                .Where(m =>
-                    m.UmpireId == umpireId)
-                .OrderByDescending(m =>
-                    m.CreatedAt)
-                .ToListAsync();
-        }
-
-        public async Task<Match?> GetLiveMatchAsync(
-            int matchId)
-        {
-            return await _context.Matches
-
-                .Include(m => m.MatchPlayers)
-                    .ThenInclude(mp => mp.Player)
-                        .ThenInclude(p => p.User)
-
-                .Include(m => m.Innings)
-                    .ThenInclude(i => i.StrikerMatchPlayer)
-                        .ThenInclude(mp => mp.Player)
-                            .ThenInclude(p => p.User)
-
-                .Include(m => m.Innings)
-                    .ThenInclude(i => i.NonStrikerMatchPlayer)
-                        .ThenInclude(mp => mp.Player)
-                            .ThenInclude(p => p.User)
-
-                .Include(m => m.Innings)
-                    .ThenInclude(i => i.CurrentBowlerMatchPlayer)
-                        .ThenInclude(mp => mp.Player)
-                            .ThenInclude(p => p.User)
-
-                .Include(m => m.Innings)
-                    .ThenInclude(i => i.Balls)
-                        .ThenInclude(b => b.Wicket)
-                            .ThenInclude(w => w.CaughtByMatchPlayer)
-                                .ThenInclude(mp => mp.Player)
-                                    .ThenInclude(p => p.User)
-
-                .Include(m => m.Innings)
-                    .ThenInclude(i => i.Balls)
-                        .ThenInclude(b => b.Wicket)
-                            .ThenInclude(w => w.StumpedByMatchPlayer)
-                                .ThenInclude(mp => mp.Player)
-                                    .ThenInclude(p => p.User)
-
-                .FirstOrDefaultAsync(m =>
-                    m.Id == matchId);
-        }
-
-        private static double CalculateDistanceInKm(
-            double latitude1,
-            double longitude1,
-            double latitude2,
-            double longitude2)
-        {
-            const double earthRadiusKm = 6371.0;
-
-            var dLat =
-                DegreesToRadians(
-                    latitude2 - latitude1);
-
-            var dLon =
-                DegreesToRadians(
-                    longitude2 - longitude1);
-
-            var lat1 =
-                DegreesToRadians(latitude1);
-
-            var lat2 =
-                DegreesToRadians(latitude2);
-
-            var a =
-                Math.Sin(dLat / 2) *
-                Math.Sin(dLat / 2)
-                +
-                Math.Cos(lat1) *
-                Math.Cos(lat2) *
-                Math.Sin(dLon / 2) *
-                Math.Sin(dLon / 2);
-
-            var c =
-                2 *
-                Math.Atan2(
-                    Math.Sqrt(a),
-                    Math.Sqrt(1 - a));
-
-            return earthRadiusKm * c;
-        }
-
-        private static double DegreesToRadians(
-            double degrees)
-        {
-            return degrees *
-                   Math.PI /
-                   180.0;
-        }
     }
+
+    public async Task<Match?> GetByIdAsync(Guid matchId)
+    {
+        return await DbSet
+            .Include(x => x.CreatedByUser)
+            .Include(x => x.MatchPlayers)
+                .ThenInclude(x => x.User)
+            .Include(x => x.Innings)
+                .ThenInclude(x => x.Balls)
+                    .ThenInclude(x => x.Wicket)
+            .FirstOrDefaultAsync(x => x.Id == matchId);
+    }
+
+    public async Task AddAsync(Match match)
+    {
+        await AddEntityAsync(match);
+    }
+
+    public Task UpdateAsync(Match match)
+    {
+        UpdateEntity(match);
+        return Task.CompletedTask;
+    }
+
+    public async Task<IReadOnlyList<Match>> GetByStateAsync(string state)
+    {
+        return await DbSet
+            .AsNoTracking()
+            .Where(x => x.State != null && x.State == state)
+            .OrderBy(x => x.ScheduledAt)
+            .ToListAsync();
+    }
+
+    public async Task<IReadOnlyList<Match>> GetByStatusAsync(string status)
+    {
+        return await DbSet
+            .AsNoTracking()
+            .Where(x => x.Status == status)
+            .OrderBy(x => x.ScheduledAt)
+            .ToListAsync();
+    }
+
+    public async Task<IReadOnlyList<Match>> GetForDiscoveryAsync(
+        string? status,
+        string? state,
+        double? minLatitude,
+        double? maxLatitude,
+        double? minLongitude,
+        double? maxLongitude)
+    {
+        IQueryable<Match> query = DbSet
+            .AsNoTracking()
+            .Include(x => x.Innings);
+
+        if (!string.IsNullOrWhiteSpace(status))
+        {
+            query = query.Where(x => x.Status == status);
+        }
+
+        if (!string.IsNullOrWhiteSpace(state))
+        {
+            query = query.Where(
+                x => x.State != null && x.State == state);
+        }
+
+        if (minLatitude.HasValue && maxLatitude.HasValue)
+        {
+            query = query.Where(x =>
+                x.Latitude >= minLatitude.Value &&
+                x.Latitude <= maxLatitude.Value);
+        }
+
+        if (minLongitude.HasValue && maxLongitude.HasValue)
+        {
+            query = query.Where(x =>
+                x.Longitude >= minLongitude.Value &&
+                x.Longitude <= maxLongitude.Value);
+        }
+
+        return await query
+            .OrderBy(x => x.ScheduledAt)
+            .ToListAsync();
+    }
+
+    public async Task<IReadOnlyList<Match>> GetNearestAsync(
+        double latitude,
+        double longitude,
+        int count)
+    {
+        // A fast geographic pre-filter. Exact distance should be
+        // calculated with the Haversine formula in the application layer.
+        var latitudeDelta = 30d / 110.574d;
+        var longitudeDelta =
+            30d / (111.320d * Math.Max(
+                0.01d,
+                Math.Abs(Math.Cos(latitude * Math.PI / 180d))));
+
+        return await DbSet
+            .AsNoTracking()
+            .Where(x =>
+                x.Latitude >= latitude - latitudeDelta &&
+                x.Latitude <= latitude + latitudeDelta &&
+                x.Longitude >= longitude - longitudeDelta &&
+                x.Longitude <= longitude + longitudeDelta)
+            .Take(count)
+            .ToListAsync();
+    }
+
+
+    public async Task<IReadOnlyList<Match>> GetByCreatorAsync(
+        Guid createdByUserId,
+        string? status)
+    {
+        IQueryable<Match> query = DbSet
+            .AsNoTracking()
+            .Where(x => x.CreatedByUserId == createdByUserId);
+
+        if (!string.IsNullOrWhiteSpace(status))
+        {
+            query = query.Where(x => x.Status == status);
+        }
+
+        return await query
+            .OrderBy(x => x.ScheduledAt)
+            .ToListAsync();
+    }
+
+
+    public async Task DeleteAsync(Match match)
+    {
+        // Load dependent records so they can be deleted in a safe order.
+        var innings = await Context.Set<Innings>()
+            .Where(x => x.MatchId == match.Id)
+            .ToListAsync();
+
+        var inningsIds = innings.Select(x => x.Id).ToList();
+
+        var balls = inningsIds.Count == 0
+            ? new List<Ball>()
+            : await Context.Set<Ball>()
+                .Where(x => inningsIds.Contains(x.InningsId))
+                .ToListAsync();
+
+        var ballIds = balls.Select(x => x.Id).ToList();
+
+        var wickets = ballIds.Count == 0
+            ? new List<Wicket>()
+            : await Context.Set<Wicket>()
+                .Where(x => ballIds.Contains(x.BallId))
+                .ToListAsync();
+
+        var matchPlayers = await Context.Set<MatchPlayer>()
+            .Where(x => x.MatchId == match.Id)
+            .ToListAsync();
+
+        // Remove dependents before the records they reference.
+        Context.Set<Wicket>().RemoveRange(wickets);
+        Context.Set<Ball>().RemoveRange(balls);
+        Context.Set<Innings>().RemoveRange(innings);
+        Context.Set<MatchPlayer>().RemoveRange(matchPlayers);
+
+        // Reuse an already tracked instance if one exists.
+        var trackedMatch = Context.Set<Match>()
+            .Local
+            .FirstOrDefault(x => x.Id == match.Id);
+
+        Context.Set<Match>().Remove(trackedMatch ?? match);
+    }
+
+
 }

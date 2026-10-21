@@ -1,209 +1,35 @@
 ﻿using CricPulse.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
 
-namespace CricPulse.Infrastructure.Data
+namespace CricPulse.Infrastructure.Data;
+
+public class CricPulseDbContext : DbContext
 {
-    public class CricPulseDbContext : DbContext
+    public CricPulseDbContext(DbContextOptions<CricPulseDbContext> options)
+        : base(options)
     {
-        public CricPulseDbContext(DbContextOptions<CricPulseDbContext> options)
-            : base(options)
-        {
-        }
+    }
 
-        public DbSet<User> Users { get; set; }
-        public DbSet<OtpVerification> OtpVerification { get; set; }
+    public DbSet<User> Users => Set<User>();
 
-        public DbSet<Player> Players { get; set; }
-        public DbSet<PlayerStatistics> PlayerStatistics { get; set; }
+    public DbSet<Match> Matches => Set<Match>();
 
-        public DbSet<Match> Matches { get; set; }
-        public DbSet<MatchPlayer> MatchPlayers { get; set; }
+    public DbSet<MatchPlayer> MatchPlayers => Set<MatchPlayer>();
 
-        public DbSet<Innings> Innings { get; set; }
-        public DbSet<Ball> Balls { get; set; }
-        public DbSet<Wicket> Wickets { get; set; }
-        public DbSet<PendingRegistration> PendingRegistrations { get; set; }
-        protected override void OnModelCreating(ModelBuilder modelBuilder)
-        {
-            base.OnModelCreating(modelBuilder);
+    public DbSet<Innings> Innings => Set<Innings>();
 
-            // ================================================================
-            // USER
-            // ================================================================
+    public DbSet<Ball> Balls => Set<Ball>();
 
-            modelBuilder.Entity<User>()
-                .HasIndex(u => u.Email)
-                .IsUnique();
+    public DbSet<Wicket> Wickets => Set<Wicket>();
 
-            modelBuilder.Entity<User>()
-                .HasIndex(u => u.MobileNumber)
-                .IsUnique();
+    public DbSet<PlayerStatistics> PlayerStatistics => Set<PlayerStatistics>();
 
+    public DbSet<OrganizerStatistics> OrganizerStatistics => Set<OrganizerStatistics>();
 
-            // ================================================================
-            // OTP VERIFICATION
-            // ================================================================
+    protected override void OnModelCreating(ModelBuilder modelBuilder)
+    {
+        modelBuilder.ApplyConfigurationsFromAssembly(typeof(CricPulseDbContext).Assembly);
 
-            modelBuilder.Entity<OtpVerification>()
-                .HasOne(o => o.User)
-                .WithMany(u => u.OtpVerifications)
-                .HasForeignKey(o => o.UserId)
-                .OnDelete(DeleteBehavior.Cascade);
-
-
-            // ================================================================
-            // PLAYER
-            // ================================================================
-
-            modelBuilder.Entity<Player>()
-    .HasKey(p => p.Id);
-
-            modelBuilder.Entity<Player>()
-                .HasOne(p => p.User)
-                .WithOne(u => u.Player)
-                .HasForeignKey<Player>(p => p.UserId)
-                .IsRequired()
-                .OnDelete(DeleteBehavior.Cascade);
-
-
-            // ================================================================
-            // PLAYER STATISTICS
-            // ================================================================
-
-            modelBuilder.Entity<PlayerStatistics>()
-                .HasOne(ps => ps.Player)
-                .WithMany()
-                .HasForeignKey(ps => ps.PlayerId)
-                .OnDelete(DeleteBehavior.Cascade);
-
-
-            // ================================================================
-            // MATCH
-            // ================================================================
-
-            modelBuilder.Entity<Match>()
-                .HasOne(m => m.Umpire)
-                .WithMany()
-                .HasForeignKey(m => m.UmpireId)
-                .OnDelete(DeleteBehavior.Restrict);
-
-
-            // ================================================================
-            // MATCH PLAYER
-            // ================================================================
-
-            modelBuilder.Entity<MatchPlayer>()
-     .HasKey(mp => mp.Id);
-
-            modelBuilder.Entity<MatchPlayer>()
-                .HasOne(mp => mp.Match)
-                .WithMany(m => m.MatchPlayers)
-                .HasForeignKey(mp => mp.MatchId)
-                .OnDelete(DeleteBehavior.Cascade);
-
-            modelBuilder.Entity<MatchPlayer>()
-                .HasOne(mp => mp.Player)
-                .WithMany(p => p.MatchPlayers)
-                .HasForeignKey(mp => mp.PlayerId)
-                .OnDelete(DeleteBehavior.Restrict);
-
-            modelBuilder.Entity<MatchPlayer>()
-                .HasIndex(mp => new
-                {
-                    mp.MatchId,
-                    mp.PlayerId
-                })
-                .IsUnique();
-
-
-            // ================================================================
-            // INNINGS
-            // ================================================================
-
-            modelBuilder.Entity<Innings>()
-                .HasOne(i => i.Match)
-                .WithMany(m => m.Innings)
-                .HasForeignKey(i => i.MatchId)
-                .OnDelete(DeleteBehavior.Cascade);
-
-            modelBuilder.Entity<Innings>()
-                .HasOne(i => i.StrikerMatchPlayer)
-                .WithMany()
-                .HasForeignKey(i => i.StrikerMatchPlayerId)
-                .OnDelete(DeleteBehavior.Restrict);
-
-            modelBuilder.Entity<Innings>()
-                .HasOne(i => i.NonStrikerMatchPlayer)
-                .WithMany()
-                .HasForeignKey(i => i.NonStrikerMatchPlayerId)
-                .OnDelete(DeleteBehavior.Restrict);
-
-            modelBuilder.Entity<Innings>()
-                .HasOne(i => i.CurrentBowlerMatchPlayer)
-                .WithMany()
-                .HasForeignKey(i => i.CurrentBowlerMatchPlayerId)
-                .OnDelete(DeleteBehavior.Restrict);
-
-
-            // ================================================================
-            // BALL
-            // ================================================================
-
-            modelBuilder.Entity<Ball>()
-                .HasOne(b => b.Innings)
-                .WithMany(i => i.Balls)
-                .HasForeignKey(b => b.InningsId)
-                .OnDelete(DeleteBehavior.Cascade);
-
-            modelBuilder.Entity<Ball>()
-                .HasOne(b => b.StrikerMatchPlayer)
-                .WithMany(mp => mp.BallsAsStriker)
-                .HasForeignKey(b => b.StrikerMatchPlayerId)
-                .OnDelete(DeleteBehavior.Restrict);
-
-            modelBuilder.Entity<Ball>()
-                .HasOne(b => b.NonStrikerMatchPlayer)
-                .WithMany(mp => mp.BallsAsNonStriker)
-                .HasForeignKey(b => b.NonStrikerMatchPlayerId)
-                .OnDelete(DeleteBehavior.Restrict);
-
-            modelBuilder.Entity<Ball>()
-                .HasOne(b => b.BowlerMatchPlayer)
-                .WithMany(mp => mp.BallsAsBowler)
-                .HasForeignKey(b => b.BowlerMatchPlayerId)
-                .OnDelete(DeleteBehavior.Restrict);
-
-
-            // ================================================================
-            // WICKET
-            // ================================================================
-
-            modelBuilder.Entity<Wicket>()
-                .HasOne(w => w.Ball)
-                .WithOne(b => b.Wicket)
-                .HasForeignKey<Wicket>(w => w.BallId)
-                .OnDelete(DeleteBehavior.Cascade);
-
-            modelBuilder.Entity<Wicket>()
-                .HasOne(w => w.DismissedMatchPlayer)
-                .WithMany(mp => mp.Dismissals)
-                .HasForeignKey(w => w.DismissedMatchPlayerId)
-                .OnDelete(DeleteBehavior.Restrict);
-
-            modelBuilder.Entity<Wicket>()
-                .HasOne(w => w.CaughtByMatchPlayer)
-                .WithMany(mp => mp.Catches)
-                .HasForeignKey(w => w.CaughtByMatchPlayerId)
-                .OnDelete(DeleteBehavior.Restrict);
-
-            // Stumping fielder.
-            // Kept separate from CaughtBy because the two represent
-            // different dismissal actions.
-            modelBuilder.Entity<Wicket>()
-                .HasOne(w => w.StumpedByMatchPlayer)
-                .WithMany()
-                .HasForeignKey(w => w.StumpedByMatchPlayerId)
-                .OnDelete(DeleteBehavior.Restrict);
-        }
+        base.OnModelCreating(modelBuilder);
     }
 }

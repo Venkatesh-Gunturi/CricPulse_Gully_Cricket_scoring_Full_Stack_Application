@@ -1,0 +1,122 @@
+.start-match-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1200;
+  display: grid;
+  place-items: center;
+  padding: 1rem;
+  background: rgb(15 23 42 / 58%);
+  backdrop-filter: blur(3px);
+}
+
+.start-match-modal {
+  width: min(100%, 420px);
+  padding: 1.5rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 18px;
+  background: #fff;
+  color: #172033;
+  box-shadow: 0 24px 70px rgb(15 23 42 / 25%);
+  text-align: center;
+}
+
+.start-match-modal-icon {
+  display: grid;
+  place-items: center;
+  width: 46px;
+  height: 46px;
+  margin: 0 auto 0.85rem;
+  border-radius: 14px;
+  background: #eaf2ff;
+  color: #2457a7;
+  font-size: 1.25rem;
+}
+
+.start-match-modal h2 {
+  margin: 0;
+  color: #172033;
+  font-size: 1.25rem;
+  font-weight: 750;
+}
+
+.start-match-modal > p {
+  margin: 0.65rem 0 0;
+  color: #334155;
+  font-size: 0.98rem;
+}
+
+.start-match-modal .start-match-modal-hint {
+  margin-top: 0.45rem;
+  color: #64748b;
+  font-size: 0.84rem;
+  line-height: 1.5;
+}
+
+.start-match-modal .start-match-modal-error {
+  margin-top: 1rem;
+  padding: 0.65rem 0.75rem;
+  border: 1px solid #fecaca;
+  border-radius: 9px;
+  background: #fef2f2;
+  color: #b91c1c;
+  font-size: 0.875rem;
+  text-align: left;
+}
+
+.start-match-modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.65rem;
+  margin-top: 1.4rem;
+}
+
+.start-match-modal-actions button {
+  min-height: 40px;
+  padding: 0.65rem 1.1rem;
+  border: 1px solid transparent;
+  border-radius: 9px;
+  font: inherit;
+  font-size: 0.9rem;
+  font-weight: 650;
+  cursor: pointer;
+  transition: background 150ms ease, border-color 150ms ease, transform 150ms ease;
+}
+
+.start-match-modal-actions button:focus-visible {
+  outline: 3px solid #93c5fd;
+  outline-offset: 2px;
+}
+
+.start-match-modal-actions button:disabled {
+  cursor: wait;
+  opacity: 0.65;
+}
+
+.start-match-cancel-button {
+  border-color: #cbd5e1 !important;
+  background: #fff;
+  color: #334155;
+}
+
+.start-match-cancel-button:hover:not(:disabled) {
+  background: #f8fafc;
+}
+
+.start-match-confirm-button {
+  background: #2563eb;
+  color: #fff;
+}
+
+.start-match-confirm-button:hover:not(:disabled) {
+  background: #1d4ed8;
+}
+
+@media (max-width: 420px) {
+  .start-match-modal {
+    padding: 1.25rem;
+  }
+
+  .start-match-modal-actions button {
+    flex: 1;
+  }
+}

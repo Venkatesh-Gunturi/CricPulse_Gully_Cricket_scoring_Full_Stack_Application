@@ -1,81 +1,44 @@
-﻿//Namespaces which are communicated by UserRepository
-using CricPulse.Application.Interfaces.User;
+﻿using CricPulse.Application.Interfaces.Repositories;
 using CricPulse.Domain.Entities;
 using CricPulse.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using UserEntity = CricPulse.Domain.Entities.User;
 
-namespace CricPulse.Infrastructure.Repositories
+namespace CricPulse.Infrastructure.Repositories;
+
+public class UserRepository : RepositoryBase<User>, IUserRepository
 {
-    // communicates with the database using dbcontext 
-    public class UserRepository : IUserRepository
+    public UserRepository(CricPulseDbContext context) : base(context) { }
+
+    public Task<User?> GetByIdAsync(Guid userId) =>
+        DbSet.FirstOrDefaultAsync(x => x.Id == userId);
+
+    public Task<User?> GetByMobileNumberAsync(string mobileNumber) =>
+        DbSet.FirstOrDefaultAsync(x => x.MobileNumber == mobileNumber);
+
+    public Task<User?> GetByEmailAsync(string email) =>
+        DbSet.FirstOrDefaultAsync(x => x.Email == email.Trim().ToLowerInvariant());
+
+    public Task<User?> GetByLoginIdentifierAsync(string loginIdentifier)
     {
-        private readonly CricPulseDbContext _context;
+        var value = loginIdentifier.Trim();
+        return DbSet.FirstOrDefaultAsync(x =>
+            x.MobileNumber == value || x.Email == value.ToLowerInvariant());
+    }
 
-        public UserRepository(CricPulseDbContext context)
-        {
-            _context = context;
-        }
+    public Task AddAsync(User user) => AddEntityAsync(user);
 
-        //checks Email exists in Db
-        public async Task<bool> EmailExistsAsync(string email)
-        {
-            return await _context.Users
-                .AnyAsync(u => u.Email == email);
-        }
+    public Task UpdateAsync(User user)
+    {
+        UpdateEntity(user);
+        return Task.CompletedTask;
+    }
 
-        //checks mobile  number exists in Db
-        public async Task<bool> MobileExistsAsync(string mobileNumber)
-        {
-            return await _context.Users
-                .AnyAsync(u => u.MobileNumber == mobileNumber);
-        }
+    public Task<bool> ExistsByMobileNumberAsync(string mobileNumber) =>
+        DbSet.AnyAsync(x => x.MobileNumber == mobileNumber);
 
-        //Creates user Record in Db
-        public async Task<UserEntity> CreateAsync(UserEntity user)
-        {
-            await _context.Users.AddAsync(user);
-            await _context.SaveChangesAsync();
-
-            return user;
-        }
-
-        //checks User Id exists in Db
-        public async Task<UserEntity?> GetByIdAsync(int id)
-        {
-            return await _context.Users
-                .FirstOrDefaultAsync(u => u.Id == id);
-        }
-
-        //checking all users records in Db
-        public async Task<List<UserEntity>> GetAllAsync()
-        {
-            return await _context.Users.AsNoTracking().ToListAsync();
-        }
-
-        public async Task UpdateAsync(UserEntity user)
-        {
-            _context.Users.Update(user);
-            await _context.SaveChangesAsync();
-        }
-
-        public async Task<UserEntity?> GetByEmailAsync(string email)
-        {
-            return await _context.Users
-            .FirstOrDefaultAsync(u => u.Email == email);
-        }
-
-        public async Task<User?> GetByMobileNumberAsync(string mobileNumber)
-        {
-            return await _context.Users
-                .Include(u => u.Player)
-                .FirstOrDefaultAsync(u => u.MobileNumber == mobileNumber);
-        }
-
+    public Task<bool> ExistsByEmailAsync(string email)
+    {
+        var normalizedEmail = email.Trim().ToLowerInvariant();
+        return DbSet.AnyAsync(x => x.Email == normalizedEmail);
     }
 }

@@ -1,93 +1,81 @@
 ﻿using CricPulse.Application.DTOs.Auth;
-using CricPulse.Application.DTOs.User;
-using CricPulse.Application.Interfaces.Auth;
-using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Http;
+using CricPulse.Application.Interfaces.Services;
 using Microsoft.AspNetCore.Mvc;
-using System.Security.Claims;
 
+namespace CricPulse.API.Controllers;
 
-
-namespace CricPulse.API.Controllers
+[ApiController]
+[Route("api/[controller]")]
+public class AuthController : ControllerBase
 {
-    [Route("api/[controller]")]
-    [ApiController]
-    public class AuthController : ControllerBase
+    private readonly IAuthService _authService;
+    private readonly IForgotPasswordService _forgotPasswordService;
+
+    public AuthController(
+        IAuthService authService,
+        IForgotPasswordService forgotPasswordService)
     {
-        private readonly IAuthService _authService;
+        _authService = authService;
+        _forgotPasswordService = forgotPasswordService;
+    }
 
-        public AuthController(IAuthService authService)
+    [HttpPost("register")]
+    public async Task<IActionResult> Register(RegisterDto dto)
+    {
+        try
         {
-            _authService = authService;
+            var result = await _authService.RegisterAsync(dto);
+            return Ok(result);
         }
-
-        [HttpPost("register")]
-        public async Task<ActionResult<RegistrationOtpResponseDto>> Register(RegisterPlayerDto dto)
+        catch (ArgumentException ex)
         {
-            var user = await _authService.RegisterPlayerAsync(dto);
-
-            return StatusCode(StatusCodes.Status201Created,user);
+            return BadRequest(new { message = ex.Message });
         }
-
-        [HttpPost("verify-otp")]
-        public async Task<IActionResult> VerifyOtp(VerifyOtpDto dto)
+        catch (InvalidOperationException ex)
         {
-            var result = await _authService.VerifyOtpAsync(dto);
+            return Conflict(new { message = ex.Message });
+        }
+    }
 
-            if (!result)
-            {
-                return BadRequest(new
-                {
-                    message = "Invalid or expired OTP."
-                });
-            }
+    [HttpPost("login")]
+    public async Task<IActionResult> Login(LoginDto dto)
+    {
+        try
+        {
+            var result = await _authService.LoginAsync(dto);
+            return Ok(result);
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+        catch (InvalidOperationException ex)
+        {
+            return Unauthorized(new { message = ex.Message });
+        }
+    }
+
+    [HttpPost("forgot-password")]
+    public async Task<IActionResult> ForgotPassword(
+        ForgotPasswordDto dto)
+    {
+        try
+        {
+            await _forgotPasswordService
+                .RequestPasswordResetAsync(dto);
 
             return Ok(new
             {
-                message = "OTP verified successfully."
+                message = "Password reset successful."
             });
         }
-
-
-        [HttpPost("login")]
-        public async Task<IActionResult> Login(LoginDto dto)
+        catch (ArgumentException ex)
         {
-            var result = await _authService.LoginAsync(dto);
-
-            if (result == null)
-            {
-                return Unauthorized(new
-                {
-                    message = "Unable to login."
-                });
-            }
-
-            return Ok(result);
+            return BadRequest(new { message = ex.Message });
         }
-
-
-        // Purpose:
-        // Allow an authenticated registered user to become an umpire.
-        [Authorize]
-        [HttpPost("become-umpire")]
-        public async Task<IActionResult> BecomeUmpire()
+        catch (InvalidOperationException ex)
         {
-            var userIdClaim =
-                User.FindFirst(ClaimTypes.NameIdentifier);
-
-            if (userIdClaim == null)
-            {
-                return Unauthorized();
-            }
-
-            var userId = int.Parse(userIdClaim.Value);
-
-            var user =
-                await _authService.BecomeUmpireAsync(userId);
-
-            return Ok(user);
+            return Unauthorized(new { message = ex.Message });
         }
-
-
     }
 }

@@ -1,1226 +1,1394 @@
-﻿using CricPulse.Application.DTOs.Match;
-using CricPulse.Application.Interfaces.Auth;
-using CricPulse.Application.Interfaces.Location;
-using CricPulse.Application.Interfaces.Match;
-using CricPulse.Application.Interfaces.Otp;
-using CricPulse.Application.Interfaces.player;
-using CricPulse.Application.Interfaces.User;
-using CricPulse.Application.Utilities;
-using CricPulse.Domain.Enums;
-using CricPulse.Domain.Exceptions;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using MatchEntity=CricPulse.Domain.Entities.Match;
-using MatchPlayerEntity = CricPulse.Domain.Entities.MatchPlayer;
-using PlayerEntity = CricPulse.Domain.Entities.Player;
-using UserEntity = CricPulse.Domain.Entities.User;
+﻿using System.Security.Cryptography;
+using System.Text.RegularExpressions;
+using CricPulse.Application.DTOs.Match;
+using CricPulse.Application.Interfaces.Repositories;
+using CricPulse.Application.Interfaces.Services;
+using CricPulse.Domain.Entities;
+using MatchEntity = CricPulse.Domain.Entities.Match;
+namespace CricPulse.Application.Services.Match;
 
-
-namespace CricPulse.Application.Services.Match
+public class MatchService : IMatchService
 {
-    public class MatchService : IMatchService
+    private readonly IUserRepository _userRepository;
+    private readonly IPlayerStatisticsRepository _playerStatisticsRepository;
+    private readonly IOrganizerStatisticsRepository _organizerStatisticsRepository;
+    private readonly IMatchRepository _matchRepository;
+    private readonly IUnitOfWork _unitOfWork;
+    private readonly ITransactionManager _transactionManager;
+    private readonly IPasswordHasherService _passwordHasher;
+    private readonly IReverseGeocodingService _reverseGeocodingService;
+
+    public MatchService(
+        IUserRepository userRepository,
+        IPlayerStatisticsRepository playerStatisticsRepository,
+        IOrganizerStatisticsRepository organizerStatisticsRepository,
+        IMatchRepository matchRepository,
+        IUnitOfWork unitOfWork,
+        ITransactionManager transactionManager,
+        IPasswordHasherService passwordHasher,
+        IReverseGeocodingService reverseGeocodingService)
     {
-        private readonly IMatchRepository _matchRepository;
-        private readonly IUserRepository _userRepository;
-        private readonly ILocationService _locationService;
-        private readonly IPlayerRepository _playerRepository;
-        private readonly IOtpService _otpService;
-        private readonly IOtpRepository _otpRepository;
-        private readonly IPasswordHasher _passwordHasher;
-
-        public MatchService(IMatchRepository matchRepository, IUserRepository userRepository, ILocationService locationService,IOtpRepository otpRepository,IOtpService otpService,IPasswordHasher passwordHasher,IPlayerRepository playerRepository)
-        {
-            _matchRepository = matchRepository;
-            _userRepository = userRepository;
-            _locationService = locationService;
-            _otpRepository = otpRepository;
-            _passwordHasher = passwordHasher;
-            _playerRepository = playerRepository;
-            _otpService = otpService;
+        _userRepository = userRepository;
+        _playerStatisticsRepository = playerStatisticsRepository;
+        _organizerStatisticsRepository = organizerStatisticsRepository;
+        _matchRepository = matchRepository;
+        _unitOfWork = unitOfWork;
+        _transactionManager = transactionManager;
+        _passwordHasher = passwordHasher;
+        _reverseGeocodingService = reverseGeocodingService;
+    }
 
 
-        }
+    public async Task<MatchCreatedDto> CreateMatchAsync(CreateMatchDto dto)
+    {
+        ValidateMatch(dto);
 
-        // Purpose:
-        // Validate match creation details, ensure the user is an approved umpire,
-        // prepare players, capture the match location, and create a new scheduled match.
-        public async Task<MatchResponseDto> CreateMatchAsync(
-            int umpireId,
-            CreateMatchDto dto)
-        {
-            var user = await _userRepository.GetByIdAsync(umpireId);
+        var organizer = await _userRepository.GetByIdAsync(dto.CreatedByUserId);
 
-            if (user == null)
-            {
-                throw new InvalidOperationException("User not found.");
-            }
+        if (organizer is null || !organizer.IsActive)
+            throw new InvalidOperationException(
+                "Organizer account was not found.");
 
-            if (!user.IsUmpire)
-            {
-                throw new UnauthorizedAccessException(
-                    "Only registered umpires can create matches.");
-            }
+        var organizerStatistics =
+            await _organizerStatisticsRepository.GetByUserIdAsync(dto.CreatedByUserId);
+        var createOrganizerStatistics = organizerStatistics is null;
+        organizerStatistics ??= new OrganizerStatistics { UserId = dto.CreatedByUserId };
 
-            if (string.IsNullOrWhiteSpace(dto.Team1Name) ||
-                string.IsNullOrWhiteSpace(dto.Team2Name))
-            {
-                throw new InvalidOperationException(
-                    "Both team names are required.");
-            }
+        ValidatePlayers(dto);
 
-            if (dto.Team1Name.Trim()
-                .Equals(
-                    dto.Team2Name.Trim(),
-                    StringComparison.OrdinalIgnoreCase))
-            {
-                throw new InvalidOperationException(
-                    "Team 1 and Team 2 must have different names.");
-            }
+        // Check the organizer's stored contact details directly before resolving
+        // roster entries. This does not depend on repository lookups matching
+        // the database's exact mobile/email formatting.
+        ValidateCreatorIsNotInRoster(dto.Players, organizer);
 
-            if (!int.TryParse(dto.Team1Logo, out var team1LogoId) ||
-                !Enum.IsDefined(typeof(TeamLogo), team1LogoId))
-            {
-                throw new InvalidOperationException(
-                    "Team 1 logo must be one of the predefined logos.");
-            }
+        var now = DateTime.UtcNow;
 
-            if (!int.TryParse(dto.Team2Logo, out var team2LogoId) ||
-                !Enum.IsDefined(typeof(TeamLogo), team2LogoId))
-            {
-                throw new InvalidOperationException(
-                    "Team 2 logo must be one of the predefined logos.");
-            }
-
-            if (dto.PlayersPerTeam < 4 || dto.PlayersPerTeam > 11)
-            {
-                throw new InvalidOperationException(
-                    "Players per team must be between 4 and 11.");
-            }
-
-            if (dto.Overs < 1 || dto.Overs > 90)
-            {
-                throw new InvalidOperationException(
-                    "Overs must be between 1 and 90.");
-            }
-
-            if (dto.MatchDate == default)
-            {
-                throw new InvalidOperationException(
-                    "Match date is required.");
-            }
-
-            if (string.IsNullOrWhiteSpace(dto.VenueName))
-            {
-                throw new InvalidOperationException(
-                    "Venue name is required.");
-            }
-
-            if (dto.Latitude < -90 || dto.Latitude > 90 ||
-                dto.Longitude < -180 || dto.Longitude > 180)
-            {
-                throw new InvalidOperationException(
-                    "Invalid match location.");
-            }
-
-            if (dto.Players == null)
-            {
-                throw new InvalidOperationException(
-                    "Players are required.");
-            }
-
-            var expectedPlayers = dto.PlayersPerTeam * 2;
-
-            if (dto.Players.Count != expectedPlayers)
-            {
-                throw new InvalidOperationException(
-                    $"Exactly {expectedPlayers} players are required.");
-            }
-
-            var validTeams = new[] { "Team1", "Team2" };
-
-            if (dto.Players.Any(p => !validTeams.Contains(p.Team)))
-            {
-                throw new InvalidOperationException(
-                    "Players must belong to Team1 or Team2.");
-            }
-
-            var team1Players = dto.Players
-                .Where(p => p.Team == "Team1")
-                .ToList();
-
-            var team2Players = dto.Players
-                .Where(p => p.Team == "Team2")
-                .ToList();
-
-            if (team1Players.Count != dto.PlayersPerTeam)
-            {
-                throw new InvalidOperationException(
-                    $"Team 1 must have exactly {dto.PlayersPerTeam} players.");
-            }
-
-            if (team2Players.Count != dto.PlayersPerTeam)
-            {
-                throw new InvalidOperationException(
-                    $"Team 2 must have exactly {dto.PlayersPerTeam} players.");
-            }
-
-            var normalizedMobiles = dto.Players
-                .Select(p => p.MobileNumber.Trim())
-                .ToList();
-
-            if (normalizedMobiles.Any(m =>
-                    m.Length != 10 || !m.All(char.IsDigit)))
-            {
-                throw new InvalidOperationException(
-                    "Every player mobile number must contain exactly 10 digits.");
-            }
-
-            if (normalizedMobiles.Count != normalizedMobiles.Distinct().Count())
-            {
-                throw new InvalidOperationException(
-                    "A player cannot be assigned more than once.");
-            }
-
-            var playersToAdd = new List<MatchPlayerEntity>();
-
-            foreach (var playerDto in dto.Players)
-            {
-                var mobileNumber = playerDto.MobileNumber.Trim();
-
-                var userAccount =
-                    await _userRepository.GetByMobileNumberAsync(mobileNumber);
-
-                if (userAccount == null ||
-                    !userAccount.IsMobileVerified ||
-                    userAccount.Player == null)
-                {
-                    throw new InvalidOperationException(
-                        $"Player with mobile number {mobileNumber} is not onboarded.");
-                }
-
-                if (userAccount.Id == umpireId)
-                {
-                    throw new InvalidOperationException(
-                        "The match umpire cannot participate as a player.");
-                }
-
-                playersToAdd.Add(new MatchPlayerEntity
-                {
-                    PlayerId = userAccount.Player.Id,
-                    Team = playerDto.Team,
-                    CreatedAt = DateTime.UtcNow
-                });
-            }
-
-            if (!string.IsNullOrWhiteSpace(dto.LiveStreamUrl))
-            {
-                if (!Uri.TryCreate(
-                        dto.LiveStreamUrl,
-                        UriKind.Absolute,
-                        out var youtubeUri) ||
-                    (youtubeUri.Host != "youtube.com" &&
-                     youtubeUri.Host != "www.youtube.com" &&
-                     youtubeUri.Host != "youtu.be" &&
-                     youtubeUri.Host != "m.youtube.com"))
-                {
-                    throw new InvalidOperationException(
-                        "Live stream URL must be a valid YouTube URL.");
-                }
-            }
-
-            var state = await _locationService.GetStateAsync(
+        var resolvedLocation =
+            await _reverseGeocodingService.ResolveAsync(
                 dto.Latitude,
                 dto.Longitude);
 
-            if (string.IsNullOrWhiteSpace(state))
-            {
-                throw new InvalidOperationException(
-                    "Unable to determine match state from the current location.");
-            }
-
-            var match = new MatchEntity
-            {
-                UmpireId = umpireId,
-
-                Team1Name = dto.Team1Name.Trim(),
-                Team1Logo = dto.Team1Logo,
-
-                Team2Name = dto.Team2Name.Trim(),
-                Team2Logo = dto.Team2Logo,
-
-                PlayersPerTeam = dto.PlayersPerTeam,
-                Overs = dto.Overs,
-
-                MatchDate = dto.MatchDate,
-                MatchTime = dto.MatchTime,
-
-                VenueName = dto.VenueName.Trim(),
-                Address = dto.Address?.Trim() ?? string.Empty,
-
-                Latitude = dto.Latitude,
-                Longitude = dto.Longitude,
-                State = state,
-
-                LiveStreamUrl = dto.LiveStreamUrl?.Trim(),
-
-                Status = MatchStatus.Scheduled,
-
-                CreatedAt = DateTime.UtcNow
-            };
-
-            foreach (var matchPlayer in playersToAdd)
-            {
-                match.MatchPlayers.Add(matchPlayer);
-            }
-
-            var createdMatch =
-                await _matchRepository.CreateAsync(match);
-
-            return MapToResponse(createdMatch);
+        if (resolvedLocation is null ||
+            string.IsNullOrWhiteSpace(resolvedLocation.State))
+        {
+            throw new InvalidOperationException(
+                "Unable to identify the state from the supplied match coordinates. Please try again.");
         }
 
-        public async Task<MatchResponseDto?> GetMatchByIdAsync(int id)
+        var normalizedState = IndianStatesAndUnionTerritories
+            .FirstOrDefault(x => string.Equals(
+                x,
+                resolvedLocation.State.Trim(),
+                StringComparison.OrdinalIgnoreCase));
+
+        if (normalizedState is null)
         {
-            var match = await _matchRepository.GetByIdAsync(id);
-
-            if (match == null)
-            {
-                return null;
-            }
-
-            return MapToResponse(match);
+            throw new InvalidOperationException(
+                $"The location provider returned an unrecognized Indian state or Union Territory: {resolvedLocation.State}");
         }
 
-        // Purpose:
-        // Map the domain match into the API response while exposing the persisted
-        // toss and innings state needed by the umpire scoring flow.
-        private MatchResponseDto MapToResponse(MatchEntity match)
+        var match = new MatchEntity
         {
-            return new MatchResponseDto
-            {
-                Id = match.Id,
-                UmpireId = match.UmpireId,
+            Id = Guid.NewGuid(),
+            CreatedByUserId = dto.CreatedByUserId,
+            Name = dto.Name.Trim(),
+            TeamAName = dto.TeamAName.Trim(),
+            TeamALogo = NormalizeTeamLogo(dto.TeamALogo, "Team A"),
+            TeamBName = dto.TeamBName.Trim(),
+            TeamBLogo = NormalizeTeamLogo(dto.TeamBLogo, "Team B"),
+            ScheduledAt = dto.ScheduledAt,
+            Venue = dto.Venue.Trim(),
+            Latitude = dto.Latitude,
+            Longitude = dto.Longitude,
+            LocationAddress = resolvedLocation.Address,
+            State = normalizedState,
+            PinCode = resolvedLocation.PinCode,
+            Overs = dto.Overs,
+            PlayersPerTeam = dto.PlayersPerTeam,
+            Status = "Upcoming",
+            CreatedAt = now,
+            UpdatedAt = now
+        };
 
-                Team1Name = match.Team1Name,
-                Team1Logo = match.Team1Logo,
+        await _transactionManager.BeginTransactionAsync();
 
-                Team2Name = match.Team2Name,
-                Team2Logo = match.Team2Logo,
-
-                PlayersPerTeam = match.PlayersPerTeam,
-                Overs = match.Overs,
-
-                MatchDate = match.MatchDate,
-                MatchTime = match.MatchTime,
-
-                VenueName = match.VenueName,
-                Address = match.Address,
-
-                Latitude = match.Latitude,
-                Longitude = match.Longitude,
-
-                State = match.State,
-
-                LiveStreamUrl = match.LiveStreamUrl,
-
-                Status = match.Status.ToString(),
-
-                CreatedAt = match.CreatedAt,
-                UpdatedAt = match.UpdatedAt,
-
-                DistanceInKm = null,
-
-                TossWinnerTeam = match.TossWinnerTeam,
-                TossDecision = match.TossDecision,
-                BattingFirstTeam = match.BattingFirstTeam,
-
-                HasStartedInnings =
-                    match.Innings != null &&
-                    match.Innings.Any(),
-
-                Players = match.MatchPlayers
-                    .Select(mp => new MatchPlayerResponseDto
-                    {
-                        MatchPlayerId=mp.Id,
-                        PlayerId = mp.PlayerId,
-                        MobileNumber = mp.Player.User.MobileNumber,
-                        DisplayName =
-                            $"{mp.Player.User.FirstName} {mp.Player.User.LastName}".Trim(),
-                        Team = mp.Team
-                    })
-                    .ToList()
-            };
-        }
-
-        public async Task<List<MatchResponseDto>> GetAllMatchesAsync()
+        try
         {
-            var matches = await _matchRepository.GetAllAsync();
-
-            return matches
-                .Select(MapToResponse)
-                .ToList();
-        }
-
-        public async Task<List<MatchResponseDto>> GetNearbyMatchesAsync(
-         double latitude,
-         double longitude,
-         double radiusInKm)
-        {
-            var nearbyMatches = await _matchRepository.GetNearbyMatchesAsync(
-                latitude,
-                longitude,
-                radiusInKm);
-
-            return nearbyMatches
-                .Select(x =>
-                {
-                    var response = MapToResponse(x.Match);
-
-                    response.DistanceInKm = x.DistanceInKm;
-
-                    return response;
-                })
-                .ToList();
-        }
-
-        public async Task<List<MatchResponseDto>> GetMatchesByStateAsync(string state)
-        {
-            var matches = await _matchRepository.GetMatchesByStateAsync(state);
-
-            return matches
-                .Select(MapToResponse)
-                .ToList();
-        }
-
-
-        // Purpose:
-        // Validate and update a scheduled match, including its players and match details.
-        public async Task<MatchResponseDto?> UpdateMatchAsync(
-            int matchId,
-            int userId,
-            UpdateMatchDto dto)
-        {
-            var match =
-                await _matchRepository.GetByIdForUpdateAsync(matchId);
-
-            if (match == null)
-            {
-                return null;
-            }
-
-            if (match.UmpireId != userId)
-            {
-                throw new UnauthorizedAccessException(
-                    "Only the match umpire can update this match.");
-            }
-
-            if (match.Status != MatchStatus.Scheduled)
-            {
-                throw new InvalidOperationException(
-                    "Only scheduled matches can be updated.");
-            }
-
-            if (string.IsNullOrWhiteSpace(dto.Team1Name) ||
-                string.IsNullOrWhiteSpace(dto.Team2Name))
-            {
-                throw new InvalidOperationException(
-                    "Both team names are required.");
-            }
-
-            if (dto.Team1Name.Trim()
-                .Equals(
-                    dto.Team2Name.Trim(),
-                    StringComparison.OrdinalIgnoreCase))
-            {
-                throw new InvalidOperationException(
-                    "Team 1 and Team 2 must have different names.");
-            }
-
-            if (!int.TryParse(dto.Team1Logo, out var team1LogoId) ||
-                !Enum.IsDefined(typeof(TeamLogo), team1LogoId))
-            {
-                throw new InvalidOperationException(
-                    "Team 1 logo must be one of the predefined logos.");
-            }
-
-            if (!int.TryParse(dto.Team2Logo, out var team2LogoId) ||
-                !Enum.IsDefined(typeof(TeamLogo), team2LogoId))
-            {
-                throw new InvalidOperationException(
-                    "Team 2 logo must be one of the predefined logos.");
-            }
-
-            if (dto.PlayersPerTeam < 4 ||
-                dto.PlayersPerTeam > 11)
-            {
-                throw new InvalidOperationException(
-                    "Players per team must be between 4 and 11.");
-            }
-
-            if (dto.Overs < 1 ||
-                dto.Overs > 90)
-            {
-                throw new InvalidOperationException(
-                    "Overs must be between 1 and 90.");
-            }
-
-            if (dto.MatchDate == default)
-            {
-                throw new InvalidOperationException(
-                    "Match date is required.");
-            }
-
-            if (dto.MatchTime == default)
-            {
-                throw new InvalidOperationException(
-                    "Match time is required.");
-            }
-
-            if (string.IsNullOrWhiteSpace(dto.VenueName))
-            {
-                throw new InvalidOperationException(
-                    "Venue name is required.");
-            }
-
-            if (dto.Players == null)
-            {
-                throw new InvalidOperationException(
-                    "Players are required.");
-            }
-
-            var expectedPlayers =
-                dto.PlayersPerTeam * 2;
-
-            if (dto.Players.Count != expectedPlayers)
-            {
-                throw new InvalidOperationException(
-                    $"Exactly {expectedPlayers} players are required.");
-            }
-
-            var validTeams = new[]
-            {
-        "Team1",
-        "Team2"
-    };
-
-            if (dto.Players.Any(p =>
-                    !validTeams.Contains(p.Team)))
-            {
-                throw new InvalidOperationException(
-                    "Players must belong to Team1 or Team2.");
-            }
-
-            var team1Players = dto.Players
-                .Where(p => p.Team == "Team1")
-                .ToList();
-
-            var team2Players = dto.Players
-                .Where(p => p.Team == "Team2")
-                .ToList();
-
-            if (team1Players.Count != dto.PlayersPerTeam)
-            {
-                throw new InvalidOperationException(
-                    $"Team 1 must have exactly {dto.PlayersPerTeam} players.");
-            }
-
-            if (team2Players.Count != dto.PlayersPerTeam)
-            {
-                throw new InvalidOperationException(
-                    $"Team 2 must have exactly {dto.PlayersPerTeam} players.");
-            }
-
-            var normalizedMobiles = dto.Players
-                .Select(p => p.MobileNumber.Trim())
-                .ToList();
-
-            if (normalizedMobiles.Any(m =>
-                    m.Length != 10 ||
-                    !m.All(char.IsDigit)))
-            {
-                throw new InvalidOperationException(
-                    "Every player mobile number must contain exactly 10 digits.");
-            }
-
-            if (normalizedMobiles.Count !=
-                normalizedMobiles.Distinct().Count())
-            {
-                throw new InvalidOperationException(
-                    "A player cannot be assigned more than once.");
-            }
-
-            var playersToAssign =
-                new List<MatchPlayerEntity>();
+            var resolvedPlayers = new List<ResolvedPlayer>();
 
             foreach (var playerDto in dto.Players)
             {
-                var mobileNumber =
-                    playerDto.MobileNumber.Trim();
+                var resolvedPlayer = await ResolvePlayerAsync(
+                    dto.CreatedByUserId,
+                    playerDto);
 
-                var userAccount =
-                    await _userRepository
-                        .GetByMobileNumberAsync(mobileNumber);
+                resolvedPlayers.Add(resolvedPlayer);
+            }
 
-                if (userAccount == null ||
-                    !userAccount.IsMobileVerified ||
-                    userAccount.Player == null)
-                {
-                    throw new InvalidOperationException(
-                        $"Player with mobile number {mobileNumber} is not onboarded.");
-                }
+            // Explicitly prevent the match organizer from occupying a player slot.
+            if (resolvedPlayers.Any(
+                player => player.UserId == dto.CreatedByUserId))
+            {
+                throw new InvalidOperationException(
+                    "The match organizer cannot be listed as a player in their own match.");
+            }
 
-                if (userAccount.Id == userId)
-                {
-                    throw new InvalidOperationException(
-                        "The match umpire cannot participate as a player.");
-                }
+            // A registered user can occupy only one roster slot in the match.
+            var duplicateUserIds = resolvedPlayers
+                .GroupBy(player => player.UserId)
+                .Where(group => group.Count() > 1)
+                .Select(group => group.Key)
+                .ToList();
 
-                playersToAssign.Add(
-                    new MatchPlayerEntity
+            if (duplicateUserIds.Count > 0)
+            {
+                throw new InvalidOperationException(
+                    "A player account can appear only once in a match, on one team only.");
+            }
+
+            // Retain the existing team-size and team-validation checks.
+            ValidateResolvedPlayers(dto, resolvedPlayers);
+
+            for (var i = 0; i < resolvedPlayers.Count; i++)
+            {
+                var resolved = resolvedPlayers[i];
+
+                var teamPlayers = resolvedPlayers
+                    .Where(player => player.Team == resolved.Team)
+                    .ToList();
+
+                var isCaptain = teamPlayers[0] == resolved;
+
+                match.MatchPlayers.Add(
+                    new MatchPlayer
                     {
-                        PlayerId = userAccount.Player.Id,
-                        Team = playerDto.Team,
-                        CreatedAt = DateTime.UtcNow
+                        Id = Guid.NewGuid(),
+                        MatchId = match.Id,
+                        UserId = resolved.UserId,
+                        Team = resolved.Team,
+                        IsCaptain = isCaptain,
+                        CreatedAt = now
                     });
             }
 
-            if (!string.IsNullOrWhiteSpace(dto.LiveStreamUrl))
-            {
-                if (!Uri.TryCreate(
-                        dto.LiveStreamUrl,
-                        UriKind.Absolute,
-                        out var youtubeUri) ||
-                    (youtubeUri.Host != "youtube.com" &&
-                     youtubeUri.Host != "www.youtube.com" &&
-                     youtubeUri.Host != "youtu.be" &&
-                     youtubeUri.Host != "m.youtube.com"))
-                {
-                    throw new InvalidOperationException(
-                        "Live stream URL must be a valid YouTube URL.");
-                }
-            }
+            await _matchRepository.AddAsync(match);
 
-            // Replace the existing player assignments because the match
-            // is still scheduled and its player lineup can be changed.
-            match.MatchPlayers.Clear();
+            organizerStatistics.MatchesCreated++;
+            if (createOrganizerStatistics)
+                await _organizerStatisticsRepository.AddAsync(organizerStatistics);
+            else
+                await _organizerStatisticsRepository.UpdateAsync(organizerStatistics);
 
-            foreach (var matchPlayer in playersToAssign)
-            {
-                match.MatchPlayers.Add(matchPlayer);
-            }
+            await _unitOfWork.SaveChangesAsync();
 
-            match.Team1Name =
-                dto.Team1Name.Trim();
+            await _transactionManager.CommitTransactionAsync();
 
-            match.Team1Logo =
-                dto.Team1Logo;
-
-            match.Team2Name =
-                dto.Team2Name.Trim();
-
-            match.Team2Logo =
-                dto.Team2Logo;
-
-            match.PlayersPerTeam =
-                dto.PlayersPerTeam;
-
-            match.Overs =
-                dto.Overs;
-
-            match.MatchDate =
-                dto.MatchDate;
-
-            match.MatchTime =
-                dto.MatchTime;
-
-            match.VenueName =
-                dto.VenueName.Trim();
-
-            match.Address =
-                dto.Address?.Trim() ?? string.Empty;
-
-            match.LiveStreamUrl =
-                dto.LiveStreamUrl?.Trim();
-
-            match.UpdatedAt =
-                DateTime.UtcNow;
-
-            var updatedMatch =
-                await _matchRepository.UpdateAsync(match);
-
-            return updatedMatch == null
-                ? null
-                : MapToResponse(updatedMatch);
+            return MapToDto(match, resolvedPlayers);
         }
-
-        // Purpose:
-        // Start a scheduled match, enforce its 24-hour start window,
-        // capture its final physical location, and change its status to Live.
-        public async Task<MatchResponseDto?> StartMatchAsync(
-            int matchId,
-            int userId,
-            StartMatchDto dto)
+        catch
         {
-            var match =
-                await _matchRepository.GetByIdForUpdateAsync(matchId);
-
-            if (match == null)
-            {
-                return null;
-            }
-
-            if (match.UmpireId != userId)
-            {
-                throw new UnauthorizedAccessException(
-                    "Only the match umpire can start this match.");
-            }
-
-            if (match.Status != MatchStatus.Scheduled)
-            {
-                throw new InvalidOperationException(
-                    "Only scheduled matches can be started.");
-            }
-
-            var scheduledUtc = MatchTimeHelper.GetScheduledUtc(
-                match.MatchDate,
-                match.MatchTime);
-
-            var cancellationDeadline = scheduledUtc.AddHours(24);
-
-            if (DateTime.UtcNow > cancellationDeadline)
-            {
-                match.Status = MatchStatus.Cancelled;
-                match.CancellationReason = "Umpire unavailable";
-                match.UpdatedAt = DateTime.UtcNow;
-
-                await _matchRepository.UpdateAsync(match);
-
-                throw new InvalidOperationException(
-                    "This match was automatically cancelled because it was not started within 24 hours of its scheduled time.");
-            }
-
-            var state = await _locationService.GetStateAsync(
-                dto.Latitude,
-                dto.Longitude);
-
-            if (string.IsNullOrWhiteSpace(state))
-            {
-                throw new InvalidOperationException(
-                    "Unable to determine match state from current location.");
-            }
-
-            // The device's current GPS location becomes the final match location.
-            match.Latitude = dto.Latitude;
-            match.Longitude = dto.Longitude;
-            match.State = state;
-
-            match.Status = MatchStatus.Live;
-            match.StartedAt = DateTime.UtcNow;
-            match.UpdatedAt = DateTime.UtcNow;
-
-            var updatedMatch =
-                await _matchRepository.UpdateAsync(match);
-
-            return updatedMatch == null
-                ? null
-                : MapToResponse(updatedMatch);
-        }
-
-        // Purpose:
-        // Cancel a scheduled or live match when requested by its assigned umpire.
-        public async Task<bool> CancelMatchAsync(
-            int matchId,
-            int userId)
-        {
-            var match =
-                await _matchRepository.GetByIdForUpdateAsync(matchId);
-
-            if (match == null)
-            {
-                return false;
-            }
-
-            if (match.UmpireId != userId)
-            {
-                throw new UnauthorizedAccessException(
-                    "Only the match umpire can cancel this match.");
-            }
-
-            if (match.Status != MatchStatus.Scheduled &&
-                match.Status != MatchStatus.Live)
-            {
-                throw new InvalidOperationException(
-                    "Only scheduled or live matches can be cancelled.");
-            }
-
-            return await _matchRepository.CancelAsync(matchId);
-        }
-
-        public async Task<List<MatchResponseDto>> GetMyMatchesAsync(int umpireId)
-        {
-            var matches = await _matchRepository
-                .GetMatchesByUmpireAsync(umpireId);
-
-            return matches
-                .Select(MapToResponse)
-                .ToList();
-        }
-
-
-        // Purpose:
-        // Find a registered player by mobile number or indicate that onboarding is required.
-        public async Task<PlayerLookupResponseDto>
-            LookupPlayerByMobileAsync(
-                int umpireId,
-                string mobileNumber)
-        {
-            var normalizedMobile = mobileNumber.Trim();
-
-            var umpire = await _userRepository
-                .GetByIdAsync(umpireId);
-
-            if (umpire == null)
-            {
-                throw new InvalidOperationException(
-                    "Umpire account not found.");
-            }
-
-            // The umpire creating the match cannot add their own account as a player.
-            if (umpire.MobileNumber == normalizedMobile)
-            {
-                throw new ConflictException(
-                    "You cannot add yourself as a player in a match you are umpiring.");
-            }
-
-            var user = await _userRepository
-                .GetByMobileNumberAsync(normalizedMobile);
-
-            if (user == null)
-            {
-                return new PlayerLookupResponseDto
-                {
-                    IsRegistered = false,
-                    IsOtpPending = false
-                };
-            }
-
-            if (!user.IsMobileVerified)
-            {
-                return new PlayerLookupResponseDto
-                {
-                    IsRegistered = false,
-                    IsOtpPending = true
-                };
-            }
-
-            // A verified CricPulse user is automatically considered a player.
-            // No separate Player profile is required for match assignment.
-            var displayName = string.Join(
-                " ",
-                new[]
-                {
-            user.FirstName,
-            user.LastName
-                }
-                .Where(x => !string.IsNullOrWhiteSpace(x)));
-
-            return new PlayerLookupResponseDto
-            {
-                IsRegistered = true,
-                IsOtpPending = false,
-                PlayerId = user.Player?.Id,
-                DisplayName = string.IsNullOrWhiteSpace(displayName)
-                    ? "Player"
-                    : displayName
-            };
-        }
-
-
-
-        // Purpose:
-        // Start OTP onboarding for a new player while preventing the match umpire
-        // from onboarding their own mobile number as a player.
-        public async Task<int> StartPlayerOnboardingAsync(
-            int umpireId,
-            string mobileNumber)
-        {
-            var normalizedMobile = mobileNumber.Trim();
-
-            var umpire = await _userRepository.GetByIdAsync(umpireId);
-
-            if (umpire == null)
-            {
-                throw new UnauthorizedAccessException(
-                    "Umpire account could not be found.");
-            }
-
-            if (umpire.MobileNumber == normalizedMobile)
-            {
-                throw new ConflictException(
-                    "You cannot add yourself as a player in a match you are umpiring.");
-            }
-
-            var existingUser =
-                await _userRepository.GetByMobileNumberAsync(
-                    normalizedMobile);
-
-            if (existingUser != null)
-            {
-                if (existingUser.IsMobileVerified)
-                {
-                    throw new ConflictException(
-                        "A verified account already exists for this mobile number.");
-                }
-
-                throw new ConflictException(
-                    "OTP verification is already pending for this mobile number.");
-            }
-
-            // Generate a secure random temporary password.
-            var temporaryPasswordBytes =
-                System.Security.Cryptography.RandomNumberGenerator.GetBytes(24);
-
-            var temporaryPassword =
-                Convert.ToBase64String(temporaryPasswordBytes);
-
-            var user = new UserEntity
-            {
-                FirstName = "Player",
-                LastName = null,
-                Email = null,
-                MobileNumber = normalizedMobile,
-                IsEmailVerified = false,
-                IsMobileVerified = false,
-                IsUmpire = false,
-                IsActive = false,
-                CreatedAt = DateTime.UtcNow
-            };
-
-            user.PasswordHash =
-                _passwordHasher.HashPassword(
-                    user,
-                    temporaryPassword);
-
-            var createdUser =
-                await _userRepository.CreateAsync(user);
-
-            // Create placeholder name after we have the DB ID.
-            createdUser.LastName = createdUser.Id.ToString();
-
-            await _userRepository.UpdateAsync(createdUser);
-
-            var otp = _otpService.GenerateOtp();
-
-            var otpVerification =
-                _otpService.CreateOtpVerification(
-                    createdUser.Id,
-                    otp,
-                    Domain.Enums.OtpType.Mobile);
-
-            await _otpRepository.CreateAsync(otpVerification);
-
-            return createdUser.Id;
-        }
-
-        public async Task<bool> VerifyPlayerOnboardingAsync(
-    int userId,
-    string otpCode)
-        {
-            var verified = await _otpService.VerifyOtpAsync(
-                userId,
-                otpCode,
-                Domain.Enums.OtpType.Mobile);
-
-            if (!verified)
-            {
-                return false;
-            }
-
-            var user = await _userRepository.GetByIdAsync(userId);
-
-            if (user == null)
-            {
-                return false;
-            }
-
-            if (!user.IsMobileVerified)
-            {
-                user.IsMobileVerified = true;
-            }
-
-            user.IsActive = true;
-
-            await _userRepository.UpdateAsync(user);
-
-            var existingPlayer =
-                await _playerRepository.GetByUserIdAsync(user.Id);
-
-            if (existingPlayer == null)
-            {
-                var player = new PlayerEntity
-                {
-                    UserId = user.Id,
-
-                    // Placeholder values until player completes profile.
-                    DateOfBirth = DateTime.UtcNow.Date,
-
-                    Gender = string.Empty,
-                    BattingStyle = string.Empty,
-                    BowlingStyle = string.Empty,
-                    PlayerRole = string.Empty,
-                    State = string.Empty,
-                    PinCode = 0
-                };
-
-                await _playerRepository.CreateAsync(player);
-            }
-
-            return true;
-        }
-
-
-        // Purpose:
-        // Load the live match and map its current innings, teams, first-innings score,
-        // and ball history into a response that the live screens can consume.
-        public async Task<LiveMatchResponseDto?> GetLiveMatchAsync(int matchId)
-        {
-            var match = await _matchRepository
-                .GetLiveMatchAsync(matchId);
-
-            if (match == null)
-            {
-                return null;
-            }
-
-            if (match.Status != MatchStatus.Live &&
-                match.Status != MatchStatus.PendingCompletion &&
-                match.Status != MatchStatus.Completed)
-            {
-                return null;
-            }
-
-            var innings = match.Innings
-                .OrderByDescending(i => i.InningsNumber)
-                .FirstOrDefault();
-
-            var firstInnings = match.Innings
-                .FirstOrDefault(i => i.InningsNumber == 1);
-
-            var response = new LiveMatchResponseDto
-            {
-                MatchId = match.Id,
-
-                Team1Name = match.Team1Name,
-                Team1Logo = match.Team1Logo,
-
-                Team2Name = match.Team2Name,
-                Team2Logo = match.Team2Logo,
-
-                PlayersPerTeam = match.PlayersPerTeam,
-                Overs = match.Overs,
-
-                MatchDate = match.MatchDate,
-                MatchTime = match.MatchTime,
-
-                VenueName = match.VenueName,
-                Address = match.Address,
-                State = match.State,
-
-                Latitude = match.Latitude,
-                Longitude = match.Longitude,
-
-                LiveStreamUrl = match.LiveStreamUrl,
-
-                Status = match.Status.ToString(),
-                StartedAt = match.StartedAt,
-                CreatedAt = match.CreatedAt,
-
-                TossWinnerTeam = match.TossWinnerTeam,
-                TossDecision = match.TossDecision,
-                BattingFirstTeam = match.BattingFirstTeam,
-
-                Result = match.Result.ToString(),
-                CompletionDeadline = match.CompletionDeadline,
-
-                FirstInningsTotalRuns =
-                    firstInnings?.TotalRuns,
-
-                FirstInningsWickets =
-                    firstInnings?.Wickets,
-
-                FirstInningsLegalBalls =
-                    firstInnings?.LegalBalls,
-
-                InningsId =
-                    innings?.Id,
-
-                InningsNumber =
-                    innings?.InningsNumber,
-
-                BattingTeam =
-                    innings?.BattingTeam,
-
-                BowlingTeam =
-                    innings?.BowlingTeam,
-
-                StrikerMatchPlayerId =
-                    innings?.StrikerMatchPlayerId,
-
-                NonStrikerMatchPlayerId =
-                    innings?.NonStrikerMatchPlayerId,
-
-                CurrentBowlerMatchPlayerId =
-                    innings?.CurrentBowlerMatchPlayerId,
-
-                TotalRuns =
-                    innings?.TotalRuns,
-
-                Wickets =
-                    innings?.Wickets,
-
-                LegalBalls =
-                    innings?.LegalBalls,
-
-                InningsStatus =
-                    innings?.Status,
-
-                IsFreeHit =
-                    innings?.IsFreeHit ?? false
-            };
-
-            // ================================================================
-            // MATCH PLAYERS
-            // ================================================================
-
-            response.Players = match.MatchPlayers
-                .Select(mp => new LiveMatchPlayerDto
-                {
-                    MatchPlayerId = mp.Id,
-
-                    PlayerId = mp.PlayerId,
-
-                    PlayerName =
-                        $"{mp.Player.User.FirstName} {mp.Player.User.LastName}"
-                            .Trim(),
-
-                    MobileNumber =
-                        mp.Player.User.MobileNumber,
-
-                    Team = mp.Team,
-
-                    // The first player assigned to each team is the captain
-                    // in the current CricPulse match-assignment design.
-                    IsCaptain =
-                        match.MatchPlayers
-                            .Where(x =>
-                                x.Team.Equals(
-                                    mp.Team,
-                                    StringComparison.OrdinalIgnoreCase))
-                            .OrderBy(x => x.Id)
-                            .FirstOrDefault()?.Id == mp.Id,
-
-                    IsDismissed =
-                        match.Innings
-                            .SelectMany(i => i.Balls)
-                            .Where(b => b.Wicket != null)
-                            .Any(b =>
-                                b.Wicket!.DismissedMatchPlayerId == mp.Id)
-                })
-                .ToList();
-
-            // ================================================================
-            // BALL HISTORY
-            // ================================================================
-
-            if (innings != null)
-            {
-                response.Balls = innings.Balls
-                    .OrderBy(b => b.Id)
-                    .Select(b => new LiveBallDto
-                    {
-                        Id = b.Id,
-
-                        OverNumber =
-                            b.OverNumber,
-
-                        BallNumber =
-                            b.BallNumber,
-
-                        StrikerMatchPlayerId =
-                            b.StrikerMatchPlayerId,
-
-                        NonStrikerMatchPlayerId =
-                            b.NonStrikerMatchPlayerId,
-
-                        BowlerMatchPlayerId =
-                            b.BowlerMatchPlayerId,
-
-                        Runs =
-                            b.Runs,
-
-                        BatterRuns =
-                            b.BatterRuns,
-
-                        IsLegalDelivery =
-                            b.IsLegalDelivery,
-
-                        ExtraType =
-                            b.ExtraType,
-
-                        ExtraRuns =
-                            b.ExtraRuns,
-
-                        Notation =
-                            b.Notation,
-
-                        WicketType =
-                            b.Wicket?.WicketType,
-
-                        DismissedMatchPlayerId =
-                            b.Wicket?.DismissedMatchPlayerId,
-
-                        CaughtByMatchPlayerId =
-                            b.Wicket?.CaughtByMatchPlayerId,
-
-                        StumpedByMatchPlayerId =
-                            b.Wicket?.StumpedByMatchPlayerId,
-
-                        RunsCompleted =
-                            b.Wicket?.RunsCompleted ?? 0,
-
-                        DismissedPlayerWasStriker =
-                            b.Wicket?.DismissedPlayerWasStriker ?? false,
-
-                        DidBattersCross =
-                            b.Wicket?.DidBattersCross ?? false,
-
-                        FreeHitAfterDelivery =
-                            b.FreeHitAfterDelivery,
-
-                        CreatedAt =
-                            b.CreatedAt
-                    })
-                    .ToList();
-
-                // ============================================================
-                // CURRENT OVER
-                // ============================================================
-
-                response.CurrentOverNumber =
-                    innings.LegalBalls / 6;
-
-                response.CurrentOverBalls =
-                    response.Balls
-                        .Where(b =>
-                            b.OverNumber ==
-                            response.CurrentOverNumber)
-                        .ToList();
-            }
-
-            return response;
+            await _transactionManager.RollbackTransactionAsync();
+            throw;
         }
     }
+
+
+    private async Task<ResolvedPlayer> ResolvePlayerAsync(
+        Guid createdByUserId,
+        MatchPlayerInputDto dto)
+    {
+        var mobile =
+            NormalizeMobile(dto.MobileNumber);
+
+        var email =
+            NormalizeEmail(dto.Email);
+
+        if (mobile is null && email is null)
+            throw new ArgumentException(
+                "Mobile number or email is required for every player.");
+
+        User? mobileUser = null;
+        User? emailUser = null;
+
+        if (mobile is not null)
+        {
+            mobileUser =
+                await _userRepository
+                    .GetByMobileNumberAsync(mobile);
+        }
+
+        if (email is not null)
+        {
+            emailUser =
+                await _userRepository
+                    .GetByEmailAsync(email);
+        }
+
+        // When both contacts are supplied, they must either both be unused
+        // (new player) or both resolve to the same existing account. Never
+        // attach an unknown contact to an account found through the other one.
+        if (mobile is not null &&
+            email is not null &&
+            ((mobileUser is null) != (emailUser is null)))
+        {
+            throw new InvalidOperationException(
+                "One contact detail already belongs to an account while the other does not. Use the matching account details; a new account will not be linked automatically.");
+        }
+
+        if (mobileUser is not null &&
+            emailUser is not null &&
+            mobileUser.Id != emailUser.Id)
+        {
+            throw new InvalidOperationException(
+                "The mobile number and email belong to different registered accounts.");
+        }
+
+        var existingUser =
+            mobileUser ?? emailUser;
+
+        if (existingUser is not null)
+        {
+            // A match organizer cannot also occupy a player slot in that match.
+            if (existingUser.Id == createdByUserId)
+            {
+                throw new InvalidOperationException(
+                    "The match organizer cannot be listed as a player in their own match.");
+            }
+
+            if (!existingUser.IsActive)
+            {
+                throw new InvalidOperationException(
+                    "This player account is inactive and cannot be added to a match.");
+            }
+
+            return new ResolvedPlayer
+            {
+                UserId = existingUser.Id,
+                PlayerName = BuildPlayerName(existingUser),
+                Team = NormalizeTeam(dto.Team)
+            };
+        }
+
+        if (mobile is null || email is null)
+        {
+            throw new InvalidOperationException(
+                "This player is not registered. Both mobile number and email are required to create a new player.");
+        }
+
+        ValidateNewPlayerName(dto.FirstName, dto.LastName);
+
+        var password = GenerateTemporaryPassword();
+
+        var newUser = new User
+        {
+            Id = Guid.NewGuid(),
+            FirstName = NormalizeName(dto.FirstName!),
+            LastName = NormalizeOptionalName(dto.LastName),
+            MobileNumber = mobile,
+            Email = email,
+            PasswordHash = _passwordHasher.Hash(password),
+            IsActive = true,
+            CreatedAt = DateTime.UtcNow,
+            UpdatedAt = DateTime.UtcNow
+        };
+
+        var playerStatistics = new PlayerStatistics
+        {
+            UserId = newUser.Id
+        };
+
+        // A roster participant is a normal User account. No Player or organizer
+        // profile row is created or required.
+        await _userRepository.AddAsync(newUser);
+        await _playerStatisticsRepository.AddAsync(playerStatistics);
+
+        await _unitOfWork.SaveChangesAsync();
+
+        return new ResolvedPlayer
+        {
+            UserId = newUser.Id,
+            PlayerName = BuildPlayerName(newUser),
+            Team = NormalizeTeam(dto.Team)
+        };
+    }
+
+    private static void ValidateMatch(CreateMatchDto dto)
+    {
+        if (dto.CreatedByUserId == Guid.Empty)
+            throw new ArgumentException(
+                "Creator user ID is required.");
+
+        if (string.IsNullOrWhiteSpace(dto.Name))
+            throw new ArgumentException(
+                "Match name is required.");
+
+        if (dto.Name.Trim().Length > 200)
+            throw new ArgumentException(
+                "Match name cannot exceed 200 characters.");
+
+        if (string.IsNullOrWhiteSpace(dto.TeamAName))
+            throw new ArgumentException(
+                "Team A name is required.");
+
+        if (dto.TeamAName.Trim().Length > 100)
+            throw new ArgumentException(
+                "Team A name cannot exceed 100 characters.");
+
+        if (string.IsNullOrWhiteSpace(dto.TeamBName))
+            throw new ArgumentException(
+                "Team B name is required.");
+
+        if (dto.TeamBName.Trim().Length > 100)
+            throw new ArgumentException(
+                "Team B name cannot exceed 100 characters.");
+
+        if (string.Equals(
+                dto.TeamAName.Trim(),
+                dto.TeamBName.Trim(),
+                StringComparison.OrdinalIgnoreCase))
+        {
+            throw new ArgumentException(
+                "Team A and Team B must have different names.");
+        }
+
+        // Persist stable keys from the predefined CricPulse logo collection;
+        // arbitrary image URLs are deliberately rejected.
+        _ = NormalizeTeamLogo(dto.TeamALogo, "Team A");
+        _ = NormalizeTeamLogo(dto.TeamBLogo, "Team B");
+
+        if (string.IsNullOrWhiteSpace(dto.Venue))
+            throw new ArgumentException(
+                "Venue is required.");
+
+        if (dto.Venue.Trim().Length > 200)
+            throw new ArgumentException(
+                "Venue cannot exceed 200 characters.");
+
+        if (dto.ScheduledAt == default)
+            throw new ArgumentException(
+                "Match date and time are required.");
+
+        if (dto.ScheduledAt <= DateTime.UtcNow)
+        {
+            throw new ArgumentException(
+                "Match date and time must be in the future.");
+        }
+
+        if (dto.Overs < 1 || dto.Overs > 90)
+            throw new ArgumentException(
+                "Overs must be between 1 and 90.");
+
+        if (dto.PlayersPerTeam < 4 ||
+            dto.PlayersPerTeam > 11)
+        {
+            throw new ArgumentException(
+                "Players per team must be between 4 and 11.");
+        }
+
+        if (dto.Latitude is < -90 or > 90)
+            throw new ArgumentException(
+                "Invalid latitude.");
+
+        if (dto.Longitude is < -180 or > 180)
+            throw new ArgumentException(
+                "Invalid longitude.");
+
+        if (!string.IsNullOrWhiteSpace(dto.LocationAddress) &&
+            dto.LocationAddress.Trim().Length > 500)
+        {
+            throw new ArgumentException(
+                "Address cannot exceed 500 characters.");
+        }
+    }
+
+    private static void ValidateCreatorIsNotInRoster(
+        IEnumerable<MatchPlayerInputDto> players,
+        User organizer)
+    {
+        var organizerMobile = NormalizeStoredMobile(organizer.MobileNumber);
+        var organizerEmail = string.IsNullOrWhiteSpace(organizer.Email)
+            ? null
+            : organizer.Email.Trim().ToLowerInvariant();
+
+        foreach (var player in players)
+        {
+            var mobile = NormalizeMobile(player.MobileNumber);
+            var email = NormalizeEmail(player.Email);
+
+            var matchesOrganizerMobile =
+                mobile is not null &&
+                organizerMobile is not null &&
+                string.Equals(mobile, organizerMobile, StringComparison.Ordinal);
+
+            var matchesOrganizerEmail =
+                email is not null &&
+                organizerEmail is not null &&
+                string.Equals(email, organizerEmail, StringComparison.OrdinalIgnoreCase);
+
+            if (matchesOrganizerMobile || matchesOrganizerEmail)
+            {
+                throw new InvalidOperationException(
+                    "The match organizer cannot be listed as a player in their own match.");
+            }
+        }
+    }
+
+    private static string? NormalizeStoredMobile(string? mobile)
+    {
+        if (string.IsNullOrWhiteSpace(mobile))
+            return null;
+
+        var digits = Regex.Replace(mobile, @"\D", string.Empty);
+
+        // Accept stored values such as +91XXXXXXXXXX while comparing them
+        // with the application's 10-digit Indian mobile input.
+        if (digits.Length == 12 && digits.StartsWith("91", StringComparison.Ordinal))
+            digits = digits[2..];
+
+        return digits.Length == 10 ? digits : null;
+    }
+
+    private static void ValidatePlayers(CreateMatchDto dto)
+    {
+        var expectedCount =
+            dto.PlayersPerTeam * 2;
+
+        if (dto.Players is null ||
+            dto.Players.Count != expectedCount)
+        {
+            throw new ArgumentException(
+                $"Exactly {expectedCount} players are required.");
+        }
+
+        var teamA = dto.Players
+            .Where(x => NormalizeTeam(x.Team) == "TeamA")
+            .ToList();
+
+        var teamB = dto.Players
+            .Where(x => NormalizeTeam(x.Team) == "TeamB")
+            .ToList();
+
+        if (teamA.Count != dto.PlayersPerTeam)
+        {
+            throw new ArgumentException(
+                $"Team A must contain exactly {dto.PlayersPerTeam} players.");
+        }
+
+        if (teamB.Count != dto.PlayersPerTeam)
+        {
+            throw new ArgumentException(
+                $"Team B must contain exactly {dto.PlayersPerTeam} players.");
+        }
+
+        // Catch repeated contact details before performing database lookups.
+        // This is an early check only; the resolved UserId check below is the
+        // authoritative identity check (email and mobile can point to one account).
+        var mobileNumbers = dto.Players
+            .Select(x => NormalizeMobile(x.MobileNumber))
+            .Where(x => x is not null)
+            .Select(x => x!)
+            .ToList();
+
+        if (mobileNumbers.Count != mobileNumbers.Distinct(StringComparer.Ordinal).Count())
+        {
+            throw new InvalidOperationException(
+                "The same mobile number cannot appear in more than one roster slot.");
+        }
+
+        var emails = dto.Players
+            .Select(x => NormalizeEmail(x.Email))
+            .Where(x => x is not null)
+            .Select(x => x!)
+            .ToList();
+
+        if (emails.Count != emails.Distinct(StringComparer.OrdinalIgnoreCase).Count())
+        {
+            throw new InvalidOperationException(
+                "The same email address cannot appear in more than one roster slot.");
+        }
+    }
+
+    private static void ValidateResolvedPlayers(
+        CreateMatchDto dto,
+        List<ResolvedPlayer> players)
+    {
+        var duplicatePlayers = players
+            .GroupBy(x => x.UserId)
+            .Any(x => x.Count() > 1);
+
+        if (duplicatePlayers)
+            throw new InvalidOperationException(
+                "A player account can appear only once in a match, on one team only.");
+
+        var teamA = players
+            .Where(x => x.Team == "TeamA")
+            .ToList();
+
+        var teamB = players
+            .Where(x => x.Team == "TeamB")
+            .ToList();
+
+        if (teamA.Count != dto.PlayersPerTeam ||
+            teamB.Count != dto.PlayersPerTeam)
+        {
+            throw new InvalidOperationException(
+                "Both teams must contain the selected number of players.");
+        }
+    }
+
+    private static string NormalizeTeam(string team)
+    {
+        if (string.IsNullOrWhiteSpace(team))
+            throw new ArgumentException(
+                "Player team is required.");
+
+        return team.Trim().ToLowerInvariant() switch
+        {
+            "teama" => "TeamA",
+            "team a" => "TeamA",
+            "teamb" => "TeamB",
+            "team b" => "TeamB",
+            _ => throw new ArgumentException(
+                "Player team must be TeamA or TeamB.")
+        };
+    }
+
+    private static string? NormalizeMobile(string? mobile)
+    {
+        if (string.IsNullOrWhiteSpace(mobile))
+            return null;
+
+        var value = mobile.Trim();
+
+        if (!Regex.IsMatch(value, @"^[6-9]\d{9}$"))
+            throw new ArgumentException(
+                "Mobile number must contain exactly 10 digits and start with 6, 7, 8 or 9.");
+
+        return value;
+    }
+
+    private static string? NormalizeEmail(string? email)
+    {
+        if (string.IsNullOrWhiteSpace(email))
+            return null;
+
+        var value = email.Trim().ToLowerInvariant();
+
+        if (value.Length > 255 ||
+            !Regex.IsMatch(
+                value,
+                @"^[^@\s]+@[^@\s]+\.[^@\s]+$"))
+        {
+            throw new ArgumentException(
+                "Please provide a valid email address.");
+        }
+
+        return value;
+    }
+
+    private static void ValidateNewPlayerName(
+        string? firstName,
+        string? lastName)
+    {
+        if (string.IsNullOrWhiteSpace(firstName))
+            throw new ArgumentException(
+                "First name is required for a new player.");
+
+        if (firstName.Trim().Length > 15)
+            throw new ArgumentException(
+                "First name cannot exceed 15 characters.");
+
+        if (!string.IsNullOrWhiteSpace(lastName) &&
+            lastName.Trim().Length > 15)
+        {
+            throw new ArgumentException(
+                "Last name cannot exceed 15 characters.");
+        }
+    }
+
+    private static string NormalizeName(string value)
+    {
+        var trimmed = value.Trim();
+
+        if (trimmed.Length == 1)
+            return trimmed.ToUpperInvariant();
+
+        return char.ToUpperInvariant(trimmed[0]) +
+               trimmed[1..];
+    }
+
+    private static string? NormalizeOptionalName(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+            return null;
+
+        return NormalizeName(value);
+    }
+
+    private static string BuildPlayerName(User user)
+    {
+        return string.Join(
+            " ",
+            new[]
+            {
+                user.FirstName,
+                user.LastName
+            }
+            .Where(x => !string.IsNullOrWhiteSpace(x)));
+    }
+
+    private static readonly string[] PredefinedTeamLogoKeys =
+    {
+        "crest-blue",
+        "crest-red",
+        "crest-green",
+        "crest-purple",
+        "crest-orange",
+        "crest-black",
+        "crest-gold",
+        "crest-teal"
+    };
+
+    private static string NormalizeTeamLogo(
+        string? value,
+        string teamLabel)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            throw new ArgumentException(
+                $"Select a predefined logo for {teamLabel}.");
+        }
+
+        var normalized = PredefinedTeamLogoKeys.FirstOrDefault(
+            key => string.Equals(
+                key,
+                value.Trim(),
+                StringComparison.OrdinalIgnoreCase));
+
+        if (normalized is null)
+        {
+            throw new ArgumentException(
+                $"{teamLabel} logo must be selected from the predefined CricPulse logo collection.");
+        }
+
+        return normalized;
+    }
+
+    private static string? NormalizeOptional(string? value)
+    {
+        return string.IsNullOrWhiteSpace(value)
+            ? null
+            : value.Trim();
+    }
+
+    private static string GenerateTemporaryPassword()
+    {
+        return Convert.ToBase64String(
+            RandomNumberGenerator.GetBytes(32));
+    }
+
+    private sealed class ResolvedPlayer
+    {
+        public Guid UserId { get; set; }
+
+        public string PlayerName { get; set; } = string.Empty;
+
+        public string Team { get; set; } = string.Empty;
+    }
+
+    private static MatchCreatedDto MapToDto(
+    MatchEntity match,
+    List<ResolvedPlayer> players)
+    {
+        var playerLookup = players
+            .ToDictionary(x => x.UserId);
+
+        return new MatchCreatedDto
+        {
+            MatchId = match.Id,
+            CreatedByUserId = match.CreatedByUserId,
+            Name = match.Name,
+            TeamAName = match.TeamAName,
+            TeamALogo = match.TeamALogo,
+            TeamBName = match.TeamBName,
+            TeamBLogo = match.TeamBLogo,
+            ScheduledAt = match.ScheduledAt,
+            Venue = match.Venue,
+            LocationAddress = match.LocationAddress,
+            State = match.State,
+            PinCode = match.PinCode,
+            Latitude = match.Latitude,
+            Longitude = match.Longitude,
+            Overs = match.Overs,
+            PlayersPerTeam = match.PlayersPerTeam,
+            Status = match.Status,
+            Players = match.MatchPlayers
+                .OrderBy(x => x.Team)
+                .ThenBy(x => x.CreatedAt)
+                .Select(x =>
+                {
+                    var player =
+                        playerLookup[x.UserId];
+
+                    return new CreatedMatchPlayerDto
+                    {
+                        MatchPlayerId = x.Id,
+                        UserId = x.UserId,
+                        PlayerName = player.PlayerName,
+                        Team = x.Team,
+                        IsCaptain = x.IsCaptain
+                    };
+                })
+                .ToList()
+        };
+    }
+
+    private static readonly string[] IndianStatesAndUnionTerritories =
+{
+    "Andhra Pradesh",
+    "Arunachal Pradesh",
+    "Assam",
+    "Bihar",
+    "Chhattisgarh",
+    "Goa",
+    "Gujarat",
+    "Haryana",
+    "Himachal Pradesh",
+    "Jharkhand",
+    "Karnataka",
+    "Kerala",
+    "Madhya Pradesh",
+    "Maharashtra",
+    "Manipur",
+    "Meghalaya",
+    "Mizoram",
+    "Nagaland",
+    "Odisha",
+    "Punjab",
+    "Rajasthan",
+    "Sikkim",
+    "Tamil Nadu",
+    "Telangana",
+    "Tripura",
+    "Uttar Pradesh",
+    "Uttarakhand",
+    "West Bengal",
+    "Andaman and Nicobar Islands",
+    "Chandigarh",
+    "Dadra and Nagar Haveli and Daman and Diu",
+    "Delhi",
+    "Jammu and Kashmir",
+    "Ladakh",
+    "Lakshadweep",
+    "Puducherry"
+};
+
+    public Task<IReadOnlyList<string>> GetIndianStatesAsync()
+    {
+        return Task.FromResult<IReadOnlyList<string>>(
+            IndianStatesAndUnionTerritories);
+    }
+
+    public async Task<IReadOnlyList<MatchDiscoveryDto>> GetMatchesAsync(
+        MatchDiscoveryQueryDto query)
+    {
+        ArgumentNullException.ThrowIfNull(query);
+
+        string? status = null;
+
+        if (!string.IsNullOrWhiteSpace(query.Status))
+        {
+            status = query.Status.Trim();
+
+            var allowedStatuses = new[]
+            {
+            "Upcoming", "Live", "Finished", "Cancelled"
+        };
+
+            status = allowedStatuses.FirstOrDefault(
+                x => string.Equals(
+                    x, status, StringComparison.OrdinalIgnoreCase));
+
+            if (status is null)
+                throw new ArgumentException("Invalid match status.");
+        }
+
+        string? state = null;
+
+        if (!string.IsNullOrWhiteSpace(query.State))
+        {
+            state = IndianStatesAndUnionTerritories.FirstOrDefault(
+                x => string.Equals(
+                    x, query.State.Trim(),
+                    StringComparison.OrdinalIgnoreCase));
+
+            if (state is null)
+                throw new ArgumentException(
+                    "Select a valid Indian state or Union Territory.");
+        }
+
+        var hasLatitude = query.Latitude.HasValue;
+        var hasLongitude = query.Longitude.HasValue;
+
+        if (hasLatitude != hasLongitude)
+            throw new ArgumentException(
+                "Latitude and longitude must be provided together.");
+
+        var useNearby = hasLatitude && hasLongitude;
+
+        if (useNearby &&
+            (query.Latitude is < -90 or > 90 ||
+             query.Longitude is < -180 or > 180))
+        {
+            throw new ArgumentException("Invalid coordinates.");
+        }
+
+        if (query.RadiusKm <= 0 || query.RadiusKm > 30)
+            throw new ArgumentException(
+                "Radius must be greater than 0 and at most 30 km.");
+
+        double? minLat = null;
+        double? maxLat = null;
+        double? minLon = null;
+        double? maxLon = null;
+
+        if (useNearby)
+        {
+            var lat = query.Latitude!.Value;
+            var lon = query.Longitude!.Value;
+            var latDelta = query.RadiusKm / 110.574;
+            var cosLat = Math.Abs(Math.Cos(lat * Math.PI / 180));
+
+            minLat = Math.Max(-90, lat - latDelta);
+            maxLat = Math.Min(90, lat + latDelta);
+
+            var lonDelta = cosLat < 0.000001
+                ? 180
+                : Math.Min(180, query.RadiusKm / (111.320 * cosLat));
+
+            minLon = Math.Max(-180, lon - lonDelta);
+            maxLon = Math.Min(180, lon + lonDelta);
+        }
+
+        var matches = await _matchRepository.GetForDiscoveryAsync(
+            status, state, minLat, maxLat, minLon, maxLon);
+
+        var results = matches
+            .Select(match =>
+            {
+                double? distance = useNearby
+                    ? CalculateDistanceKm(
+                        query.Latitude!.Value,
+                        query.Longitude!.Value,
+                        match.Latitude,
+                        match.Longitude)
+                    : null;
+
+                return new { Match = match, Distance = distance };
+            })
+            .Where(x => !useNearby ||
+                        x.Distance!.Value <= query.RadiusKm)
+            .OrderBy(x => useNearby ? x.Distance : null)
+            .ThenBy(x => x.Match.ScheduledAt)
+            .Select(x =>
+            {
+                var match = x.Match;
+                var showLocation =
+                    match.Status is "Upcoming" or "Live";
+
+                var lat = match.Latitude.ToString(
+                    System.Globalization.CultureInfo.InvariantCulture);
+
+                var lon = match.Longitude.ToString(
+                    System.Globalization.CultureInfo.InvariantCulture);
+
+                return new MatchDiscoveryDto
+                {
+                    MatchId = match.Id,
+                    Name = match.Name,
+                    TeamAName = match.TeamAName,
+                    TeamALogo = match.TeamALogo,
+                    TeamBName = match.TeamBName,
+                    TeamBLogo = match.TeamBLogo,
+                    ScheduledAt = match.ScheduledAt,
+                    Status = match.Status,
+                    Overs = match.Overs,
+                    Venue = showLocation ? match.Venue : null,
+                    LocationAddress = showLocation
+                        ? match.LocationAddress : null,
+                    State = showLocation ? match.State : null,
+                    Latitude = showLocation ? match.Latitude : null,
+                    Longitude = showLocation ? match.Longitude : null,
+                    MapsUrl = showLocation
+                        ? $"https://www.google.com/maps/dir/?api=1&destination={lat},{lon}"
+                        : null,
+                    DistanceKm = x.Distance is null
+                        ? null
+                        : Math.Round(x.Distance.Value, 2),
+                    WinnerTeam = match.WinnerTeam,
+                    ResultText = match.ResultText,
+                    Innings = match.Innings
+                        .OrderBy(i => i.InningsNumber)
+                        .Select(i => new MatchInningsSummaryDto
+                        {
+                            InningsNumber = i.InningsNumber,
+                            BattingTeam = i.BattingTeam,
+                            TotalRuns = i.TotalRuns,
+                            Wickets = i.Wickets,
+                            LegalBalls = i.LegalBalls,
+                            TotalOvers = i.TotalOvers,
+                            Status = i.Status
+                        })
+                        .ToList()
+                };
+            })
+            .ToList();
+
+        return results;
+    }
+
+    private static double CalculateDistanceKm(
+        double latitude1,
+        double longitude1,
+        double latitude2,
+        double longitude2)
+    {
+        const double earthRadiusKm = 6371.0088;
+
+        var lat1 = latitude1 * Math.PI / 180;
+        var lat2 = latitude2 * Math.PI / 180;
+        var deltaLat = (latitude2 - latitude1) * Math.PI / 180;
+        var deltaLon = (longitude2 - longitude1) * Math.PI / 180;
+
+        var a =
+            Math.Pow(Math.Sin(deltaLat / 2), 2) +
+            Math.Cos(lat1) * Math.Cos(lat2) *
+            Math.Pow(Math.Sin(deltaLon / 2), 2);
+
+        return earthRadiusKm *
+            2 * Math.Atan2(Math.Sqrt(a), Math.Sqrt(1 - a));
+    }
+
+
+    public async Task<IReadOnlyList<MatchDiscoveryDto>> GetMyMatchesAsync(
+        Guid createdByUserId,
+        string? status)
+    {
+        if (createdByUserId == Guid.Empty)
+        {
+            throw new ArgumentException(
+                "organizer user ID is required.");
+        }
+
+        string? normalizedStatus = null;
+
+        if (!string.IsNullOrWhiteSpace(status))
+        {
+            var allowedStatuses = new[]
+            {
+            "Upcoming",
+            "Live",
+            "Finished",
+            "Cancelled"
+        };
+
+            normalizedStatus = allowedStatuses.FirstOrDefault(
+                x => string.Equals(
+                    x,
+                    status.Trim(),
+                    StringComparison.OrdinalIgnoreCase));
+
+            if (normalizedStatus is null)
+            {
+                throw new ArgumentException(
+                    "Invalid match status.");
+            }
+        }
+
+        var matches = await _matchRepository.GetByCreatorAsync(
+            createdByUserId,
+            normalizedStatus);
+
+        return matches.Select(match => new MatchDiscoveryDto
+        {
+            MatchId = match.Id,
+            Name = match.Name,
+            TeamAName = match.TeamAName,
+            TeamALogo = match.TeamALogo,
+            TeamBName = match.TeamBName,
+            TeamBLogo = match.TeamBLogo,
+            ScheduledAt = match.ScheduledAt,
+            Status = match.Status,
+            PlayersPerTeam = match.PlayersPerTeam,
+            CancellationReasonType = match.CancellationReasonType,
+            CancellationReason = match.CancellationReason,
+            Overs = match.Overs,
+            Venue = match.Venue,
+            LocationAddress = match.LocationAddress,
+            State = match.State,
+            Latitude = match.Status is "Upcoming" or "Live"
+                ? match.Latitude
+                : null,
+            Longitude = match.Status is "Upcoming" or "Live"
+                ? match.Longitude
+                : null,
+            MapsUrl = match.Status is "Upcoming" or "Live"
+                ? $"https://www.google.com/maps/dir/?api=1&destination={match.Latitude.ToString(System.Globalization.CultureInfo.InvariantCulture)},{match.Longitude.ToString(System.Globalization.CultureInfo.InvariantCulture)}"
+                : null,
+            WinnerTeam = match.WinnerTeam,
+            ResultText = match.ResultText,
+            Innings = match.Innings
+                .OrderBy(i => i.InningsNumber)
+                .Select(i => new MatchInningsSummaryDto
+                {
+                    InningsNumber = i.InningsNumber,
+                    BattingTeam = i.BattingTeam,
+                    TotalRuns = i.TotalRuns,
+                    Wickets = i.Wickets,
+                    LegalBalls = i.LegalBalls,
+                    TotalOvers = i.TotalOvers,
+                    Status = i.Status
+                })
+                .ToList()
+        }).ToList();
+    }
+
+
+
+    public async Task<MatchCreatedDto?> GetMatchByIdAsync(
+        Guid matchId,
+        Guid createdByUserId)
+    {
+        if (matchId == Guid.Empty)
+            throw new ArgumentException("Match ID is required.");
+
+        if (createdByUserId == Guid.Empty)
+            throw new ArgumentException("Organizer user ID is required.");
+
+        var match = await _matchRepository.GetByIdAsync(matchId);
+
+        // Only the organizer who created this match can access it
+        // through this management endpoint.
+        if (match is null || match.CreatedByUserId != createdByUserId)
+            return null;
+
+        return new MatchCreatedDto
+        {
+            MatchId = match.Id,
+            CreatedByUserId = match.CreatedByUserId,
+            Name = match.Name,
+            TeamAName = match.TeamAName,
+            TeamALogo = match.TeamALogo,
+            TeamBName = match.TeamBName,
+            TeamBLogo = match.TeamBLogo,
+            ScheduledAt = match.ScheduledAt,
+            Venue = match.Venue,
+            LocationAddress = match.LocationAddress,
+            State = match.State,
+            PinCode = match.PinCode,
+            Latitude = match.Latitude,
+            Longitude = match.Longitude,
+            Overs = match.Overs,
+            PlayersPerTeam = match.PlayersPerTeam,
+            Status = match.Status,
+            TossAgreed = match.TossAgreed,
+            TossWinnerTeam = match.TossWinnerTeam,
+            TossDecision = match.TossDecision,
+
+            Players = match.MatchPlayers
+                .OrderBy(p => p.Team)
+                .ThenBy(p => p.CreatedAt)
+                .Select(p => new CreatedMatchPlayerDto
+                {
+                    MatchPlayerId = p.Id,
+                    UserId = p.UserId,
+                    PlayerName = BuildPlayerName(p.User),
+                    MobileNumber = p.User.MobileNumber,
+                    Email = p.User.Email,
+                    Team = p.Team,
+                    IsCaptain = p.IsCaptain
+                })
+                .ToList()
+        };
+    }
+
+
+
+    public async Task<MatchCreatedDto> UpdateMatchAsync(
+        Guid matchId,
+        Guid createdByUserId,
+        UpdateMatchDto dto)
+    {
+        ArgumentNullException.ThrowIfNull(dto);
+
+        if (matchId == Guid.Empty)
+            throw new ArgumentException("Match ID is required.");
+
+        if (createdByUserId == Guid.Empty)
+            throw new ArgumentException("Organizer user ID is required.");
+
+        var match = await _matchRepository.GetByIdAsync(matchId);
+
+        if (match is null || match.CreatedByUserId != createdByUserId)
+            throw new InvalidOperationException(
+                "Match was not found or you are not its organizer.");
+
+        if (!string.Equals(match.Status, "Upcoming",
+                StringComparison.OrdinalIgnoreCase))
+            throw new InvalidOperationException(
+                "Only upcoming matches can be updated.");
+
+        ValidateUpdateMatch(dto);
+
+        var organizer = await _userRepository.GetByIdAsync(createdByUserId);
+
+        if (organizer is null || !organizer.IsActive)
+            throw new InvalidOperationException(
+                "Organizer account was not found.");
+
+        var createDto = new CreateMatchDto
+        {
+            CreatedByUserId = createdByUserId,
+            Name = dto.Name,
+            TeamAName = dto.TeamAName,
+            TeamALogo = dto.TeamALogo,
+            TeamBName = dto.TeamBName,
+            TeamBLogo = dto.TeamBLogo,
+            ScheduledAt = dto.ScheduledAt,
+            Venue = dto.Venue,
+            Latitude = dto.Latitude,
+            Longitude = dto.Longitude,
+            Overs = dto.Overs,
+            PlayersPerTeam = dto.PlayersPerTeam,
+            Players = dto.Players
+        };
+
+        ValidatePlayers(createDto);
+        ValidateCreatorIsNotInRoster(createDto.Players, organizer);
+
+        var resolvedPlayers = new List<ResolvedPlayer>();
+
+        foreach (var playerDto in createDto.Players)
+        {
+            var resolved = await ResolvePlayerAsync(
+                createdByUserId,
+                playerDto);
+
+            resolvedPlayers.Add(resolved);
+        }
+
+        if (resolvedPlayers.Any(p => p.UserId == createdByUserId))
+            throw new InvalidOperationException(
+                "The match organizer cannot be listed as a player.");
+
+        if (resolvedPlayers.GroupBy(p => p.UserId).Any(g => g.Count() > 1))
+            throw new InvalidOperationException(
+                "A player account can appear only once in a match.");
+
+        ValidateResolvedPlayers(createDto, resolvedPlayers);
+
+        var now = DateTime.UtcNow;
+
+        // Update the existing match; do not create a new match.
+        match.Name = dto.Name.Trim();
+        match.TeamAName = dto.TeamAName.Trim();
+        match.TeamALogo = NormalizeTeamLogo(dto.TeamALogo, "Team A");
+        match.TeamBName = dto.TeamBName.Trim();
+        match.TeamBLogo = NormalizeTeamLogo(dto.TeamBLogo, "Team B");
+        match.ScheduledAt = dto.ScheduledAt;
+        match.Venue = dto.Venue.Trim();
+        match.Latitude = dto.Latitude;
+        match.Longitude = dto.Longitude;
+        match.Overs = dto.Overs;
+        match.PlayersPerTeam = dto.PlayersPerTeam;
+        match.UpdatedAt = now;
+
+        // Preserve existing roster records where possible.
+        var existingByUserId = match.MatchPlayers
+            .ToDictionary(p => p.UserId);
+
+        var submittedIds = resolvedPlayers
+            .Select(p => p.UserId)
+            .ToHashSet();
+
+        foreach (var existing in match.MatchPlayers.ToList())
+        {
+            if (!submittedIds.Contains(existing.UserId))
+                match.MatchPlayers.Remove(existing);
+        }
+
+        foreach (var player in resolvedPlayers)
+        {
+            if (existingByUserId.TryGetValue(player.UserId, out var existing))
+            {
+                existing.Team = player.Team;
+                existing.IsCaptain = false;
+            }
+            else
+            {
+                match.MatchPlayers.Add(new MatchPlayer
+                {
+                    Id = Guid.NewGuid(),
+                    MatchId = match.Id,
+                    UserId = player.UserId,
+                    Team = player.Team,
+                    IsCaptain = false,
+                    CreatedAt = now
+                });
+            }
+        }
+
+        // First player in each team becomes captain.
+        foreach (var team in new[] { "TeamA", "TeamB" })
+        {
+            var captain = resolvedPlayers.First(p => p.Team == team);
+
+            var captainRecord = match.MatchPlayers
+                .Single(p => p.UserId == captain.UserId);
+
+            captainRecord.IsCaptain = true;
+        }
+
+        await _matchRepository.UpdateAsync(match);
+        await _unitOfWork.SaveChangesAsync();
+
+        // Reload the updated match with its related data.
+        var updatedMatch = await _matchRepository.GetByIdAsync(match.Id)
+            ?? throw new InvalidOperationException(
+                "The updated match could not be reloaded.");
+
+        return new MatchCreatedDto
+        {
+            MatchId = updatedMatch.Id,
+            CreatedByUserId = updatedMatch.CreatedByUserId,
+            Name = updatedMatch.Name,
+            TeamAName = updatedMatch.TeamAName,
+            TeamALogo = updatedMatch.TeamALogo,
+            TeamBName = updatedMatch.TeamBName,
+            TeamBLogo = updatedMatch.TeamBLogo,
+            ScheduledAt = updatedMatch.ScheduledAt,
+            Venue = updatedMatch.Venue,
+            LocationAddress = updatedMatch.LocationAddress,
+            State = updatedMatch.State,
+            PinCode = updatedMatch.PinCode,
+            Latitude = updatedMatch.Latitude,
+            Longitude = updatedMatch.Longitude,
+            Overs = updatedMatch.Overs,
+            PlayersPerTeam = updatedMatch.PlayersPerTeam,
+            Status = updatedMatch.Status,
+            Players = updatedMatch.MatchPlayers
+                .OrderBy(p => p.Team)
+                .ThenBy(p => p.CreatedAt)
+                .Select(p => new CreatedMatchPlayerDto
+                {
+                    MatchPlayerId = p.Id,
+                    UserId = p.UserId,
+                    PlayerName = BuildPlayerName(p.User),
+                    MobileNumber = p.User.MobileNumber,
+                    Email = p.User.Email,
+                    Team = p.Team,
+                    IsCaptain = p.IsCaptain
+                })
+                .ToList()
+        };
+    }
+
+
+
+    private static void ValidateUpdateMatch(UpdateMatchDto dto)
+    {
+        if (string.IsNullOrWhiteSpace(dto.Name) ||
+            dto.Name.Trim().Length > 200)
+            throw new ArgumentException(
+                "Match name is required and cannot exceed 200 characters.");
+
+        if (string.IsNullOrWhiteSpace(dto.TeamAName) ||
+            dto.TeamAName.Trim().Length > 100)
+            throw new ArgumentException(
+                "Team A name is required and cannot exceed 100 characters.");
+
+        if (string.IsNullOrWhiteSpace(dto.TeamBName) ||
+            dto.TeamBName.Trim().Length > 100)
+            throw new ArgumentException(
+                "Team B name is required and cannot exceed 100 characters.");
+
+        if (string.Equals(dto.TeamAName.Trim(), dto.TeamBName.Trim(),
+            StringComparison.OrdinalIgnoreCase))
+            throw new ArgumentException(
+                "Team A and Team B must have different names.");
+
+        _ = NormalizeTeamLogo(dto.TeamALogo, "Team A");
+        _ = NormalizeTeamLogo(dto.TeamBLogo, "Team B");
+
+        if (string.IsNullOrWhiteSpace(dto.Venue) ||
+            dto.Venue.Trim().Length > 200)
+            throw new ArgumentException(
+                "Venue is required and cannot exceed 200 characters.");
+
+        if (dto.ScheduledAt == default)
+            throw new ArgumentException(
+                "Match date and time are required.");
+
+        if (dto.Overs is < 1 or > 90)
+            throw new ArgumentException(
+                "Overs must be between 1 and 90.");
+
+        if (dto.PlayersPerTeam is < 4 or > 11)
+            throw new ArgumentException(
+                "Players per team must be between 4 and 11.");
+
+        if (dto.Latitude is < -90 or > 90 ||
+            dto.Longitude is < -180 or > 180)
+            throw new ArgumentException("Invalid coordinates.");
+    }
+
+    public async Task CancelMatchAsync(
+    Guid matchId,
+    Guid createdByUserId,
+    CancelMatchDto dto)
+    {
+        if (matchId == Guid.Empty)
+            throw new ArgumentException("Invalid match ID.");
+
+        if (createdByUserId == Guid.Empty)
+            throw new ArgumentException("Invalid organizer ID.");
+
+        if (dto == null)
+            throw new ArgumentNullException(nameof(dto));
+
+        if (string.IsNullOrWhiteSpace(dto.CancellationReasonType))
+            throw new ArgumentException("Cancellation reason type is required.");
+
+        var match = await _matchRepository.GetByIdAsync(matchId);
+
+        if (match == null)
+            throw new KeyNotFoundException("Match not found.");
+
+        if (match.CreatedByUserId != createdByUserId)
+            throw new UnauthorizedAccessException(
+                "You are not authorized to cancel this match.");
+
+        var canCancel =
+    string.Equals(match.Status, "Upcoming",
+        StringComparison.OrdinalIgnoreCase) ||
+    string.Equals(match.Status, "Live",
+        StringComparison.OrdinalIgnoreCase);
+
+        if (!canCancel)
+        {
+            throw new InvalidOperationException(
+                "Only upcoming or live matches can be cancelled.");
+        }
+
+        match.Status = "Cancelled";
+        match.CancellationReasonType = dto.CancellationReasonType.Trim();
+        match.CancellationReason = string.IsNullOrWhiteSpace(dto.CancellationReason)
+            ? null
+            : dto.CancellationReason.Trim();
+        match.UpdatedAt = DateTime.UtcNow;
+
+        await _matchRepository.UpdateAsync(match);
+        await _unitOfWork.SaveChangesAsync();
+    }
+
 }

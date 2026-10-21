@@ -1,0 +1,371 @@
+
+.toss-page {
+  min-height: 100vh;
+  color: #f8fafc;
+  background:
+    radial-gradient(ellipse at 50% 35%, rgba(31, 101, 76, 0.35), transparent 48%),
+    linear-gradient(145deg, #071c19, #0c2822 55%, #071511);
+  font-family: inherit;
+}
+
+.toss-header {
+  min-height: 76px;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: 16px;
+  padding: 16px clamp(18px, 5vw, 72px);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.toss-brand {
+  color: #f4c95d;
+  font-size: 1.05rem;
+  font-weight: 900;
+  letter-spacing: 0.16em;
+}
+
+.toss-header-label {
+  justify-self: end;
+  color: #a7c3b7;
+  font-size: 0.75rem;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+}
+
+.toss-back-button {
+  justify-self: start;
+  padding: 9px 0;
+  border: 0;
+  color: #d4e6dc;
+  background: transparent;
+  font: inherit;
+  cursor: pointer;
+}
+
+.toss-content {
+  width: min(100% - 32px, 760px);
+  margin: 0 auto;
+  padding: 48px 0 64px;
+  text-align: center;
+}
+
+.toss-eyebrow {
+  margin: 0 0 10px;
+  color: #e9c45b;
+  font-size: 0.75rem;
+  font-weight: 900;
+  letter-spacing: 0.2em;
+}
+
+.toss-content > h1 {
+  margin: 0;
+  font-size: clamp(2rem, 5vw, 3.5rem);
+  line-height: 1.1;
+  letter-spacing: -0.04em;
+}
+
+.toss-subtitle {
+  margin: 14px 0 30px;
+  color: #b4c9bf;
+  line-height: 1.6;
+}
+
+.toss-team-strip {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: center;
+  gap: 16px;
+  padding: 18px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.045);
+}
+
+.toss-team {
+  min-width: 0;
+  display: grid;
+  gap: 7px;
+}
+
+.toss-team-label {
+  color: #9bb8aa;
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.13em;
+}
+
+.toss-team strong {
+  overflow-wrap: anywhere;
+  font-size: clamp(0.95rem, 2.5vw, 1.25rem);
+}
+
+.toss-versus {
+  color: #e9c45b;
+  font-size: 0.8rem;
+  font-weight: 900;
+}
+
+.toss-stage {
+  min-height: 265px;
+  display: grid;
+  place-items: center;
+  perspective: 1000px;
+}
+
+.toss-coin {
+  width: 176px;
+  height: 176px;
+  border-radius: 50%;
+  filter: drop-shadow(0 18px 22px rgba(0, 0, 0, 0.4));
+  transform-style: preserve-3d;
+}
+
+.toss-coin-inner {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  transform-style: preserve-3d;
+  transition: transform 300ms ease;
+}
+
+.toss-coin.is-flipping .toss-coin-inner {
+  animation: toss-coin-flip-a 3s linear forwards;
+}
+.toss-coin.is-flipping.show-team-b .toss-coin-inner {
+  animation-name: toss-coin-flip-b;
+}
+.toss-coin.show-team-b .toss-coin-inner {
+  transform: rotateY(180deg);
+}
+
+.toss-coin-face {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
+  padding: 18px;
+  overflow: hidden;
+  border: 7px double #a46b13;
+  border-radius: 50%;
+  color: #57340a;
+  background:
+    radial-gradient(circle at 35% 25%, #fff3ad, transparent 35%),
+    linear-gradient(145deg, #f9e28b, #dba936 48%, #f5d978 75%, #b87919);
+  box-shadow:
+    inset 0 0 0 3px rgba(255, 250, 199, 0.6),
+    inset 0 0 18px rgba(103, 61, 8, 0.45);
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  text-align: center;
+}
+
+.toss-coin-face strong {
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  font-size: 0.95rem;
+  font-weight: 950;
+  line-height: 1.15;
+  text-transform: uppercase;
+}
+
+.toss-coin-caption {
+  font-size: 0.55rem;
+  font-weight: 900;
+  letter-spacing: 0.16em;
+}
+
+.toss-coin-star {
+  font-size: 1.3rem;
+}
+
+.toss-coin-back {
+  transform: rotateY(180deg);
+}
+
+@keyframes toss-coin-flip-a {
+  from {
+    transform: rotateY(0deg);
+  }
+  to {
+    transform: rotateY(2880deg);
+  }
+}
+@keyframes toss-coin-flip-b {
+  from {
+    transform: rotateY(0deg);
+  }
+  to {
+    transform: rotateY(3060deg);
+  }
+}
+
+.toss-result {
+  min-height: 100px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: 7px;
+}
+
+.toss-result h2 {
+  margin: 0;
+  font-size: clamp(1.45rem, 4vw, 2rem);
+}
+
+.toss-result p {
+  margin: 0;
+  color: #b4c9bf;
+  line-height: 1.5;
+}
+
+.toss-result-label {
+  color: #e9c45b;
+  font-size: 0.7rem;
+  font-weight: 900;
+  letter-spacing: 0.16em;
+}
+
+.toss-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 12px;
+  margin-top: 22px;
+}
+
+.toss-button {
+  min-width: 145px;
+  min-height: 46px;
+  padding: 12px 22px;
+  border: 1px solid transparent;
+  border-radius: 12px;
+  font: inherit;
+  font-weight: 800;
+  cursor: pointer;
+  transition: transform 150ms ease, opacity 150ms ease;
+}
+
+.toss-button:hover:not(:disabled) {
+  transform: translateY(-2px);
+}
+
+.toss-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.toss-button-primary {
+  color: #1a2417;
+  background: linear-gradient(135deg, #f6dc82, #d9ad3c);
+  box-shadow: 0 6px 18px rgba(217, 173, 60, 0.14);
+}
+
+.toss-button-secondary {
+  border-color: rgba(255, 255, 255, 0.22);
+  color: #f8fafc;
+  background: rgba(255, 255, 255, 0.07);
+}
+
+.toss-error,
+.toss-success {
+  margin: 18px 0 0;
+  padding: 12px 15px;
+  border-radius: 10px;
+  line-height: 1.5;
+}
+
+.toss-error {
+  border: 1px solid rgba(255, 120, 120, 0.35);
+  color: #ffd0d0;
+  background: rgba(145, 30, 30, 0.2);
+}
+
+.toss-success {
+  border: 1px solid rgba(112, 224, 164, 0.25);
+  color: #bdf7d4;
+  background: rgba(25, 130, 75, 0.15);
+}
+
+.toss-loading {
+  padding: 60px 20px;
+  color: #d4e6dc;
+  text-align: center;
+}
+
+.toss-next-step {
+  color: #e9c45b;
+  font-weight: 700;
+}
+
+@media (max-width: 520px) {
+  .toss-header {
+    grid-template-columns: 1fr auto;
+    gap: 8px;
+    padding: 14px 16px;
+  }
+
+  .toss-brand {
+    grid-column: 1;
+    grid-row: 1;
+  }
+
+  .toss-back-button {
+    grid-column: 1;
+    grid-row: 2;
+  }
+
+  .toss-header-label {
+    grid-column: 2;
+    grid-row: 1 / span 2;
+  }
+
+  .toss-content {
+    padding-top: 36px;
+  }
+
+  .toss-team-strip {
+    gap: 8px;
+    padding: 14px 10px;
+  }
+
+  .toss-stage {
+    min-height: 235px;
+  }
+
+  .toss-coin {
+    width: 150px;
+    height: 150px;
+  }
+
+  .toss-coin-face {
+    padding: 13px;
+  }
+
+  .toss-coin-face strong {
+    font-size: 0.8rem;
+  }
+
+  .toss-actions {
+    flex-direction: column;
+  }
+
+  .toss-button {
+    width: 100%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .toss-coin.is-flipping .toss-coin-inner {
+    animation-duration: 3s;
+  }
+
+  .toss-button {
+    transition: none;
+  }
+}

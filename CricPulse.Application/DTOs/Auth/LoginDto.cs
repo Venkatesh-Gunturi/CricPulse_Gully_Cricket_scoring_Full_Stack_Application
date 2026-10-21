@@ -1,15 +1,8 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿namespace CricPulse.Application.DTOs.Auth;
 
-namespace CricPulse.Application.DTOs.Auth
+public class LoginDto
 {
-    public class LoginDto
-    {
-        public required string Identifier { get; set; }
+    public string LoginIdentifier { get; set; } = string.Empty;
 
-        public required string Password { get; set; }
-    }
+    public string Password { get; set; } = string.Empty;
 }

@@ -1,46 +1,31 @@
-﻿using CricPulse.Application.Interfaces.Player;
+﻿using CricPulse.Application.Interfaces.Repositories;
 using CricPulse.Domain.Entities;
 using CricPulse.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 
-namespace CricPulse.Infrastructure.Repositories
+namespace CricPulse.Infrastructure.Repositories;
+
+public class PlayerStatisticsRepository : RepositoryBase<PlayerStatistics>, IPlayerStatisticsRepository
 {
-    public class PlayerStatisticsRepository : IPlayerStatisticsRepository
+    public PlayerStatisticsRepository(CricPulseDbContext context)
+        : base(context)
     {
-        private readonly CricPulseDbContext _context;
+    }
 
-        public PlayerStatisticsRepository(CricPulseDbContext context)
-        {
-            _context = context;
-        }
+    public async Task<PlayerStatistics?> GetByUserIdAsync(Guid userId)
+    {
+        return await DbSet
+            .FirstOrDefaultAsync(x => x.UserId == userId);
+    }
 
-        public async Task<PlayerStatistics?> GetByPlayerIdAsync(
-            int playerId)
-        {
-            return await _context.PlayerStatistics
-                .FirstOrDefaultAsync(
-                    ps => ps.PlayerId == playerId);
-        }
+    public async Task AddAsync(PlayerStatistics statistics)
+    {
+        await AddEntityAsync(statistics);
+    }
 
-        public async Task<PlayerStatistics> CreateAsync(
-            PlayerStatistics statistics)
-        {
-            await _context.PlayerStatistics.AddAsync(
-                statistics);
-
-            await _context.SaveChangesAsync();
-
-            return statistics;
-        }
-
-        public async Task<PlayerStatistics> UpdateAsync(
-            PlayerStatistics statistics)
-        {
-            _context.PlayerStatistics.Update(statistics);
-
-            await _context.SaveChangesAsync();
-
-            return statistics;
-        }
+    public Task UpdateAsync(PlayerStatistics statistics)
+    {
+        UpdateEntity(statistics);
+        return Task.CompletedTask;
     }
 }

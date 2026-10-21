@@ -1,63 +1,73 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using InningsEntity = CricPulse.Domain.Entities;
-using CricPulse.Domain.Enums;
+﻿namespace CricPulse.Domain.Entities;
 
-namespace CricPulse.Domain.Entities
+public class Match
 {
-    public class Match
-    {
-        public int Id { get; set; }
+    public Guid Id { get; set; }
 
-        public int UmpireId { get; set; }
+    public Guid CreatedByUserId { get; set; }
 
-        public string Team1Name { get; set; } = string.Empty;
-        public string Team1Logo { get; set; } = string.Empty;
+    public string Name { get; set; } = string.Empty;
 
-        public string Team2Name { get; set; } = string.Empty;
-        public string Team2Logo { get; set; } = string.Empty;
+    public string TeamAName { get; set; } = string.Empty;
 
-        public int PlayersPerTeam { get; set; }
-        public int Overs { get; set; }
+    public string? TeamALogo { get; set; }
 
-        public DateTime MatchDate { get; set; }
-        public TimeSpan MatchTime { get; set; }
+    public string TeamBName { get; set; } = string.Empty;
 
-        //Location details 
-        public string VenueName { get; set; } = string.Empty;
-        public string Address { get; set; } = string.Empty;
-        public double Latitude { get; set; }
-        public double Longitude { get; set; }
-        public string State { get; set; } = string.Empty;
-        public DateTime? StartedAt { get; set; }
+    public string? TeamBLogo { get; set; }
 
-        public string? LiveStreamUrl { get; set; }
+    public DateTime ScheduledAt { get; set; }
 
-        public MatchStatus Status { get; set; } = MatchStatus.Scheduled;
-        public string? CancellationReason { get; set; }
+    public string Venue { get; set; } = string.Empty;
 
-        public DateTime CreatedAt { get; set; }
-        public DateTime? UpdatedAt { get; set; }
+    public string? LocationAddress { get; set; }
 
-        public User Umpire { get; set; } = null!;
+    public string? State { get; set; }
 
-        public ICollection<MatchPlayer> MatchPlayers { get; set; }= new List<MatchPlayer>();
+    public string? PinCode { get; set; }
 
-        public ICollection<Innings> Innings { get; set; }
-    = new List<Innings>();
+    public double Latitude { get; set; }
 
-        // Toss result recorded before the first innings begins.
-        public string? TossWinnerTeam { get; set; }
+    public double Longitude { get; set; }
 
-        public string? TossDecision { get; set; }
+    public double? ActualStartLatitude { get; set; }
 
-        public string? BattingFirstTeam { get; set; }
+    public double? ActualStartLongitude { get; set; }
 
-        public MatchResult Result { get; set; } = MatchResult.None;
-        public DateTime? CompletionDeadline { get; set; }
+    public DateTime? ActualStartedAt { get; set; }
 
-    }
+    public int Overs { get; set; }
+
+    public int PlayersPerTeam { get; set; }
+
+    public string Status { get; set; } = "Upcoming";
+
+    public string? TossWinnerTeam { get; set; }
+
+    public string? TossDecision { get; set; }
+
+    public bool TossAgreed { get; set; }
+
+    public string? CancellationReasonType { get; set; }
+
+    public string? CancellationReason { get; set; }
+
+    public DateTime? CancelledAt { get; set; }
+
+    public DateTime? FinishedAt { get; set; }
+
+    public string? WinnerTeam { get; set; }
+    public string? ResultText { get; set; }
+    public bool PlayerStatisticsFinalized { get; set; }
+    public DateTime CreatedAt { get; set; }
+
+    public DateTime UpdatedAt { get; set; }
+
+    public User CreatedByUser { get; set; } = null!;
+
+    public ICollection<MatchPlayer> MatchPlayers { get; set; } =
+        new List<MatchPlayer>();
+
+    public ICollection<Innings> Innings { get; set; } =
+        new List<Innings>();
 }

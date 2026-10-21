@@ -1,58 +1,30 @@
-﻿
+﻿namespace CricPulse.Domain.Entities;
 
-namespace CricPulse.Domain.Entities
+public class Wicket
 {
-    public class Wicket
-    {
-        public int Id { get; set; }
+    public Guid Id { get; set; }
 
-        public int BallId { get; set; }
+    public Guid BallId { get; set; }
 
-        public int DismissedMatchPlayerId { get; set; }
+    public Guid DismissedMatchPlayerId { get; set; }
 
-        public string WicketType { get; set; } = string.Empty;
+    public string WicketType { get; set; } = string.Empty;
 
-        /// <summary>
-        /// Used for Caught.
-        /// Any player from the fielding team can be selected
-        /// because CricPulse supports gully-cricket fielding.
-        /// </summary>
-        public int? CaughtByMatchPlayerId { get; set; }
+    public Guid? CaughtByMatchPlayerId { get; set; }
 
-        /// <summary>
-        /// Used for Stumped.
-        /// Any player from the fielding team can be selected
-        /// because CricPulse supports gully-cricket fielding.
-        /// </summary>
-        public int? StumpedByMatchPlayerId { get; set; }
+    public Guid? RunOutByMatchPlayerId { get; set; }
 
-        /// <summary>
-        /// Number of completed runs before the dismissal.
-        /// For Run Out this comes from the run-out flow.
-        /// </summary>
-        public int RunsCompleted { get; set; }
+    public Guid? StumpedByMatchPlayerId { get; set; }
 
-        /// <summary>
-        /// True when the dismissed batter was the striker
-        /// when the delivery started.
-        /// </summary>
-        public bool DismissedPlayerWasStriker { get; set; }
+    public int RunsCompleted { get; set; }
 
-        /// <summary>
-        /// Relevant to Run Out.
-        /// Indicates whether the batters had crossed before
-        /// the wicket was broken.
-        /// </summary>
-        public bool DidBattersCross { get; set; }
+    public Ball Ball { get; set; } = null!;
 
-        // Navigation properties
+    public MatchPlayer DismissedMatchPlayer { get; set; } = null!;
 
-        public Ball Ball { get; set; } = null!;
+    public MatchPlayer? CaughtByMatchPlayer { get; set; }
 
-        public MatchPlayer DismissedMatchPlayer { get; set; } = null!;
+    public MatchPlayer? RunOutByMatchPlayer { get; set; }
 
-        public MatchPlayer? CaughtByMatchPlayer { get; set; }
-
-        public MatchPlayer? StumpedByMatchPlayer { get; set; }
-    }
+    public MatchPlayer? StumpedByMatchPlayer { get; set; }
 }

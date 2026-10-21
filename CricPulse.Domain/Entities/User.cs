@@ -1,33 +1,30 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿namespace CricPulse.Domain.Entities;
 
-namespace CricPulse.Domain.Entities
+/// <summary>
+/// The single canonical CricPulse identity. Cricket and organizer details are
+/// optional attributes of the same account; they do not create separate roles.
+/// </summary>
+public class User
 {
-    public class User
-    {
-        public int Id { get; set; }
-        public string FirstName { get; set; } = string.Empty;
-        public string? LastName { get; set; } 
-        public string? Email { get; set; } 
-        public string MobileNumber {  get; set; } = string.Empty;   
-        public string PasswordHash { get; set; }= string.Empty;
-        public bool IsEmailVerified { get; set; }
-        public bool IsMobileVerified { get; set; }
-        public bool IsUmpire { get; set; }
-        public string? ProfileImageUrl { get; set; }
-        public bool IsActive { get; set; }=true;
-        public DateTime CreatedAt { get; set; }
-        public DateTime? UpdatedAt { get; set; }
+    public Guid Id { get; set; }
+    public string FirstName { get; set; } = string.Empty;
+    public string? LastName { get; set; }
+    public string MobileNumber { get; set; } = string.Empty;
+    public string Email { get; set; } = string.Empty;
+    public string PasswordHash { get; set; } = string.Empty;
+    public string? ProfileImageUrl { get; set; }
 
-        
-        //Relation Section
-        public Player? Player { get; set; }
-        public ICollection<OtpVerification> OtpVerifications { get; set; } = new List<OtpVerification>();
+    // Optional cricket profile details. A user does not need to fill these in
+    // to create an account, join a match, or organize a match.
+    public DateTime? DateOfBirth { get; set; }
+    public string? Gender { get; set; }
+    public string? State { get; set; }
+    public string? PinCode { get; set; }
+    public string? BattingStyle { get; set; }
+    public string? BowlingStyle { get; set; }
+    public string? PlayerRole { get; set; }
 
-        public ICollection<Match> MatchesAsUmpire { get; set; } = new List<Match>();
-
-    }
+    public bool IsActive { get; set; } = true;
+    public DateTime CreatedAt { get; set; }
+    public DateTime UpdatedAt { get; set; }
 }

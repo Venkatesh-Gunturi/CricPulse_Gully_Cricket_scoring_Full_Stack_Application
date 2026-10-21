@@ -17,18 +17,16 @@ namespace CricPulse.Infrastructure.Migrations
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "8.0.30")
+                .HasAnnotation("ProductVersion", "8.0.31")
                 .HasAnnotation("Relational:MaxIdentifierLength", 128);
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
 
             modelBuilder.Entity("CricPulse.Domain.Entities.Ball", b =>
                 {
-                    b.Property<int>("Id")
+                    b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<int>("BallNumber")
                         .HasColumnType("int");
@@ -36,11 +34,8 @@ namespace CricPulse.Infrastructure.Migrations
                     b.Property<int>("BatterRuns")
                         .HasColumnType("int");
 
-                    b.Property<int>("BowlerMatchPlayerId")
-                        .HasColumnType("int");
-
-                    b.Property<bool>("CanUndo")
-                        .HasColumnType("bit");
+                    b.Property<Guid>("BowlerMatchPlayerId")
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
@@ -49,55 +44,47 @@ namespace CricPulse.Infrastructure.Migrations
                         .HasColumnType("int");
 
                     b.Property<string>("ExtraType")
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)");
 
-                    b.Property<bool>("FreeHitAfterDelivery")
-                        .HasColumnType("bit");
-
-                    b.Property<int>("InningsId")
-                        .HasColumnType("int");
+                    b.Property<Guid>("InningsId")
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<bool>("IsLegalDelivery")
                         .HasColumnType("bit");
 
-                    b.Property<int>("NonStrikerMatchPlayerId")
-                        .HasColumnType("int");
+                    b.Property<Guid>("NonStrikerMatchPlayerId")
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<string>("Notation")
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
 
                     b.Property<int>("OverNumber")
                         .HasColumnType("int");
 
-                    b.Property<int?>("PreviousBowlerMatchPlayerId")
-                        .HasColumnType("int");
+                    b.Property<Guid>("PreviousBowlerMatchPlayerId")
+                        .HasColumnType("uniqueidentifier");
 
-                    b.Property<DateTime?>("PreviousCompletionDeadline")
-                        .HasColumnType("datetime2");
-
-                    b.Property<bool>("PreviousFreeHit")
+                    b.Property<bool>("PreviousCompletionPending")
                         .HasColumnType("bit");
 
                     b.Property<string>("PreviousInningsStatus")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)");
+
+                    b.Property<bool>("PreviousIsFreeHit")
+                        .HasColumnType("bit");
 
                     b.Property<int>("PreviousLegalBalls")
                         .HasColumnType("int");
 
-                    b.Property<string>("PreviousMatchResult")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                    b.Property<Guid>("PreviousNonStrikerMatchPlayerId")
+                        .HasColumnType("uniqueidentifier");
 
-                    b.Property<string>("PreviousMatchStatus")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<int>("PreviousNonStrikerMatchPlayerId")
-                        .HasColumnType("int");
-
-                    b.Property<int>("PreviousStrikerMatchPlayerId")
-                        .HasColumnType("int");
+                    b.Property<Guid>("PreviousStrikerMatchPlayerId")
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<int>("PreviousTotalRuns")
                         .HasColumnType("int");
@@ -108,43 +95,52 @@ namespace CricPulse.Infrastructure.Migrations
                     b.Property<int>("Runs")
                         .HasColumnType("int");
 
-                    b.Property<int>("StrikerMatchPlayerId")
-                        .HasColumnType("int");
+                    b.Property<Guid>("StrikerMatchPlayerId")
+                        .HasColumnType("uniqueidentifier");
 
                     b.HasKey("Id");
 
                     b.HasIndex("BowlerMatchPlayerId");
 
-                    b.HasIndex("InningsId");
-
                     b.HasIndex("NonStrikerMatchPlayerId");
 
                     b.HasIndex("StrikerMatchPlayerId");
 
-                    b.ToTable("Balls");
+                    b.HasIndex("InningsId", "OverNumber", "BallNumber");
+
+                    b.ToTable("Balls", (string)null);
                 });
 
             modelBuilder.Entity("CricPulse.Domain.Entities.Innings", b =>
                 {
-                    b.Property<int>("Id")
+                    b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<string>("BattingTeam")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
 
                     b.Property<string>("BowlingTeam")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
 
-                    b.Property<DateTime>("CreatedAt")
+                    b.Property<DateTime?>("CompletedAt")
                         .HasColumnType("datetime2");
 
-                    b.Property<int?>("CurrentBowlerMatchPlayerId")
-                        .HasColumnType("int");
+                    b.Property<bool>("CompletionPending")
+                        .HasColumnType("bit");
+
+                    b.Property<Guid?>("CurrentBowlerMatchPlayerId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid?>("CurrentNonStrikerMatchPlayerId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid?>("CurrentStrikerMatchPlayerId")
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<int>("InningsNumber")
                         .HasColumnType("int");
@@ -155,184 +151,215 @@ namespace CricPulse.Infrastructure.Migrations
                     b.Property<int>("LegalBalls")
                         .HasColumnType("int");
 
-                    b.Property<int>("MatchId")
-                        .HasColumnType("int");
+                    b.Property<Guid>("MatchId")
+                        .HasColumnType("uniqueidentifier");
 
-                    b.Property<int>("NonStrikerMatchPlayerId")
-                        .HasColumnType("int");
+                    b.Property<DateTime?>("StartedAt")
+                        .HasColumnType("datetime2");
 
                     b.Property<string>("Status")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)");
 
-                    b.Property<int>("StrikerMatchPlayerId")
+                    b.Property<int?>("TargetRuns")
+                        .HasColumnType("int");
+
+                    b.Property<int>("TotalOvers")
                         .HasColumnType("int");
 
                     b.Property<int>("TotalRuns")
                         .HasColumnType("int");
 
-                    b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("datetime2");
+                    b.Property<bool>("UndoUsed")
+                        .HasColumnType("bit");
 
                     b.Property<int>("Wickets")
                         .HasColumnType("int");
 
                     b.HasKey("Id");
 
-                    b.HasIndex("CurrentBowlerMatchPlayerId");
+                    b.HasIndex("MatchId", "InningsNumber")
+                        .IsUnique();
 
-                    b.HasIndex("MatchId");
-
-                    b.HasIndex("NonStrikerMatchPlayerId");
-
-                    b.HasIndex("StrikerMatchPlayerId");
-
-                    b.ToTable("Innings");
+                    b.ToTable("Innings", (string)null);
                 });
 
             modelBuilder.Entity("CricPulse.Domain.Entities.Match", b =>
                 {
-                    b.Property<int>("Id")
+                    b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
+                        .HasColumnType("uniqueidentifier");
 
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+                    b.Property<double?>("ActualStartLatitude")
+                        .HasColumnType("float");
 
-                    b.Property<string>("Address")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                    b.Property<double?>("ActualStartLongitude")
+                        .HasColumnType("float");
 
-                    b.Property<string>("BattingFirstTeam")
-                        .HasColumnType("nvarchar(max)");
+                    b.Property<DateTime?>("ActualStartedAt")
+                        .HasColumnType("datetime2");
 
                     b.Property<string>("CancellationReason")
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
 
-                    b.Property<DateTime?>("CompletionDeadline")
+                    b.Property<string>("CancellationReasonType")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<DateTime?>("CancelledAt")
                         .HasColumnType("datetime2");
 
                     b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("FinishedAt")
                         .HasColumnType("datetime2");
 
                     b.Property<double>("Latitude")
                         .HasColumnType("float");
 
-                    b.Property<string>("LiveStreamUrl")
-                        .HasColumnType("nvarchar(max)");
+                    b.Property<string>("LocationAddress")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
 
                     b.Property<double>("Longitude")
                         .HasColumnType("float");
 
-                    b.Property<DateTime>("MatchDate")
-                        .HasColumnType("datetime2");
-
-                    b.Property<TimeSpan>("MatchTime")
-                        .HasColumnType("time");
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
 
                     b.Property<int>("Overs")
                         .HasColumnType("int");
 
+                    b.Property<string>("PinCode")
+                        .HasMaxLength(10)
+                        .HasColumnType("nvarchar(10)");
+
+                    b.Property<bool>("PlayerStatisticsFinalized")
+                        .HasColumnType("bit");
+
                     b.Property<int>("PlayersPerTeam")
                         .HasColumnType("int");
 
-                    b.Property<int>("Result")
-                        .HasColumnType("int");
+                    b.Property<string>("ResultText")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
 
-                    b.Property<DateTime?>("StartedAt")
+                    b.Property<DateTime>("ScheduledAt")
                         .HasColumnType("datetime2");
 
                     b.Property<string>("State")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
 
-                    b.Property<int>("Status")
-                        .HasColumnType("int");
-
-                    b.Property<string>("Team1Logo")
+                    b.Property<string>("Status")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)");
 
-                    b.Property<string>("Team1Name")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                    b.Property<string>("TeamALogo")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
 
-                    b.Property<string>("Team2Logo")
+                    b.Property<string>("TeamAName")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
 
-                    b.Property<string>("Team2Name")
+                    b.Property<string>("TeamBLogo")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("TeamBName")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<bool>("TossAgreed")
+                        .HasColumnType("bit");
 
                     b.Property<string>("TossDecision")
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
 
                     b.Property<string>("TossWinnerTeam")
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
 
-                    b.Property<int>("UmpireId")
-                        .HasColumnType("int");
+                    b.Property<Guid>("CreatedByUserId")
+                        .HasColumnType("uniqueidentifier");
 
-                    b.Property<DateTime?>("UpdatedAt")
+                    b.Property<DateTime>("UpdatedAt")
                         .HasColumnType("datetime2");
 
-                    b.Property<int?>("UserId")
-                        .HasColumnType("int");
-
-                    b.Property<string>("VenueName")
+                    b.Property<string>("Venue")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<string>("WinnerTeam")
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
 
                     b.HasKey("Id");
 
-                    b.HasIndex("UmpireId");
+                    b.HasIndex("ScheduledAt");
 
-                    b.HasIndex("UserId");
+                    b.HasIndex("State");
 
-                    b.ToTable("Matches");
+                    b.HasIndex("Status");
+
+                    b.HasIndex("CreatedByUserId");
+
+                    b.HasIndex("Latitude", "Longitude");
+
+                    b.ToTable("Matches", (string)null);
                 });
 
             modelBuilder.Entity("CricPulse.Domain.Entities.MatchPlayer", b =>
                 {
-                    b.Property<int>("Id")
+                    b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
 
-                    b.Property<int>("MatchId")
-                        .HasColumnType("int");
+                    b.Property<bool>("IsCaptain")
+                        .HasColumnType("bit");
 
-                    b.Property<int>("PlayerId")
-                        .HasColumnType("int");
+                    b.Property<Guid>("MatchId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<string>("Team")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
 
                     b.HasKey("Id");
 
-                    b.HasIndex("PlayerId");
+                    b.HasIndex("UserId");
 
-                    b.HasIndex("MatchId", "PlayerId")
+                    b.HasIndex("MatchId", "UserId")
                         .IsUnique();
 
-                    b.ToTable("MatchPlayers");
+                    b.HasIndex("MatchId", "Team");
+
+                    b.ToTable("MatchPlayers", (string)null);
                 });
 
-            modelBuilder.Entity("CricPulse.Domain.Entities.OtpVerification", b =>
+            modelBuilder.Entity("CricPulse.Domain.Entities.PasswordResetToken", b =>
                 {
-                    b.Property<int>("Id")
+                    b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<int>("AttemptedCount")
-                        .HasColumnType("int");
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
@@ -340,121 +367,33 @@ namespace CricPulse.Infrastructure.Migrations
                     b.Property<DateTime>("ExpiresAt")
                         .HasColumnType("datetime2");
 
-                    b.Property<bool>("IsUsed")
-                        .HasColumnType("bit");
-
-                    b.Property<string>("OtpCode")
+                    b.Property<string>("TokenHash")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
 
-                    b.Property<int>("OtpType")
-                        .HasColumnType("int");
+                    b.Property<DateTime?>("UsedAt")
+                        .HasColumnType("datetime2");
 
-                    b.Property<int>("UserId")
-                        .HasColumnType("int");
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uniqueidentifier");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("TokenHash")
+                        .IsUnique();
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("OtpVerification");
+                    b.ToTable("PasswordResetTokens", (string)null);
                 });
 
-            modelBuilder.Entity("CricPulse.Domain.Entities.PendingRegistration", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<int>("AttemptedCount")
-                        .HasColumnType("int");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("FirstName")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<bool>("IsOtpVerified")
-                        .HasColumnType("bit");
-
-                    b.Property<string>("LastName")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("MobileNumber")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("OtpCode")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<DateTime>("OtpExpiresAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("PasswordHash")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("PendingRegistrations");
-                });
-
-            modelBuilder.Entity("CricPulse.Domain.Entities.Player", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<string>("BattingStyle")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("BowlingStyle")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<DateTime>("DateOfBirth")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("Gender")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<int>("PinCode")
-                        .HasColumnType("int");
-
-                    b.Property<string>("PlayerRole")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("State")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<int>("UserId")
-                        .HasColumnType("int");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("UserId")
-                        .IsUnique();
-
-                    b.ToTable("Players");
-                });
+            
 
             modelBuilder.Entity("CricPulse.Domain.Entities.PlayerStatistics", b =>
                 {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<int>("BallsBowled")
                         .HasColumnType("int");
@@ -462,13 +401,20 @@ namespace CricPulse.Infrastructure.Migrations
                     b.Property<int>("BallsFaced")
                         .HasColumnType("int");
 
-                    b.Property<int>("BattingInnings")
-                        .HasColumnType("int");
+                    b.Property<string>("BestBowling")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
 
                     b.Property<int>("BowlingInnings")
                         .HasColumnType("int");
 
+                    b.Property<int>("Catches")
+                        .HasColumnType("int");
+
                     b.Property<int>("Fifties")
+                        .HasColumnType("int");
+
+                    b.Property<int>("FiveWicketHauls")
                         .HasColumnType("int");
 
                     b.Property<int>("Fours")
@@ -480,16 +426,22 @@ namespace CricPulse.Infrastructure.Migrations
                     b.Property<int>("Hundreds")
                         .HasColumnType("int");
 
+                    b.Property<int>("Innings")
+                        .HasColumnType("int");
+
                     b.Property<int>("MVPCount")
                         .HasColumnType("int");
 
-                    b.Property<int>("MaidenOvers")
+                    b.Property<int>("Maidens")
                         .HasColumnType("int");
 
                     b.Property<int>("Matches")
                         .HasColumnType("int");
 
-                    b.Property<int>("PlayerId")
+                    b.Property<int>("NotOuts")
+                        .HasColumnType("int");
+
+                    b.Property<int>("RunOuts")
                         .HasColumnType("int");
 
                     b.Property<int>("Runs")
@@ -501,107 +453,156 @@ namespace CricPulse.Infrastructure.Migrations
                     b.Property<int>("Sixes")
                         .HasColumnType("int");
 
+                    b.Property<int>("Stumpings")
+                        .HasColumnType("int");
+
+                    b.Property<int>("ThreeWicketHauls")
+                        .HasColumnType("int");
+
                     b.Property<int>("Wickets")
                         .HasColumnType("int");
 
-                    b.HasKey("Id");
+                    b.HasKey("UserId");
 
-                    b.HasIndex("PlayerId");
+                    b.ToTable("PlayerStatistics", (string)null);
+                });
 
-                    b.ToTable("PlayerStatistics");
+            
+
+            modelBuilder.Entity("CricPulse.Domain.Entities.OrganizerStatistics", b =>
+                {
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int>("MatchesCancelled")
+                        .HasColumnType("int");
+
+                    b.Property<int>("MatchesCreated")
+                        .HasColumnType("int");
+
+                    b.Property<int>("MatchesFinished")
+                        .HasColumnType("int");
+
+                    b.Property<int>("MatchesManaged")
+                        .HasColumnType("int");
+
+                    b.Property<int>("MatchesSuccessfullyOrganized")
+                        .HasColumnType("int");
+
+                    b.HasKey("UserId");
+
+                    b.ToTable("UmpireStatistics", (string)null);
                 });
 
             modelBuilder.Entity("CricPulse.Domain.Entities.User", b =>
                 {
-                    b.Property<int>("Id")
+                    b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
 
                     b.Property<string>("Email")
-                        .HasColumnType("nvarchar(450)");
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("nvarchar(255)");
 
                     b.Property<string>("FirstName")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("BattingStyle")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<string>("BowlingStyle")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<DateTime?>("DateOfBirth")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Gender")
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)");
+
+                    b.Property<string>("PinCode")
+                        .HasMaxLength(10)
+                        .HasColumnType("nvarchar(10)");
+
+                    b.Property<string>("PlayerRole")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<string>("State")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
 
                     b.Property<bool>("IsActive")
                         .HasColumnType("bit");
 
-                    b.Property<bool>("IsEmailVerified")
-                        .HasColumnType("bit");
-
-                    b.Property<bool>("IsMobileVerified")
-                        .HasColumnType("bit");
-
-                    b.Property<bool>("IsUmpire")
-                        .HasColumnType("bit");
-
                     b.Property<string>("LastName")
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
 
                     b.Property<string>("MobileNumber")
                         .IsRequired()
-                        .HasColumnType("nvarchar(450)");
+                        .HasMaxLength(10)
+                        .HasColumnType("nvarchar(10)");
 
                     b.Property<string>("PasswordHash")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
 
                     b.Property<string>("ProfileImageUrl")
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
 
-                    b.Property<DateTime?>("UpdatedAt")
+                    b.Property<DateTime>("UpdatedAt")
                         .HasColumnType("datetime2");
 
                     b.HasKey("Id");
 
                     b.HasIndex("Email")
-                        .IsUnique()
-                        .HasFilter("[Email] IS NOT NULL");
+                        .IsUnique();
 
                     b.HasIndex("MobileNumber")
                         .IsUnique();
 
-                    b.ToTable("Users");
+                    b.ToTable("Users", (string)null);
                 });
 
             modelBuilder.Entity("CricPulse.Domain.Entities.Wicket", b =>
                 {
-                    b.Property<int>("Id")
+                    b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
+                        .HasColumnType("uniqueidentifier");
 
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+                    b.Property<Guid>("BallId")
+                        .HasColumnType("uniqueidentifier");
 
-                    b.Property<int>("BallId")
-                        .HasColumnType("int");
+                    b.Property<Guid?>("CaughtByMatchPlayerId")
+                        .HasColumnType("uniqueidentifier");
 
-                    b.Property<int?>("CaughtByMatchPlayerId")
-                        .HasColumnType("int");
+                    b.Property<Guid>("DismissedMatchPlayerId")
+                        .HasColumnType("uniqueidentifier");
 
-                    b.Property<bool>("DidBattersCross")
-                        .HasColumnType("bit");
-
-                    b.Property<int>("DismissedMatchPlayerId")
-                        .HasColumnType("int");
-
-                    b.Property<bool>("DismissedPlayerWasStriker")
-                        .HasColumnType("bit");
+                    b.Property<Guid?>("RunOutByMatchPlayerId")
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<int>("RunsCompleted")
                         .HasColumnType("int");
 
-                    b.Property<int?>("StumpedByMatchPlayerId")
-                        .HasColumnType("int");
+                    b.Property<Guid?>("StumpedByMatchPlayerId")
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<string>("WicketType")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)");
 
                     b.HasKey("Id");
 
@@ -612,15 +613,17 @@ namespace CricPulse.Infrastructure.Migrations
 
                     b.HasIndex("DismissedMatchPlayerId");
 
+                    b.HasIndex("RunOutByMatchPlayerId");
+
                     b.HasIndex("StumpedByMatchPlayerId");
 
-                    b.ToTable("Wickets");
+                    b.ToTable("Wickets", (string)null);
                 });
 
             modelBuilder.Entity("CricPulse.Domain.Entities.Ball", b =>
                 {
                     b.HasOne("CricPulse.Domain.Entities.MatchPlayer", "BowlerMatchPlayer")
-                        .WithMany("BallsAsBowler")
+                        .WithMany()
                         .HasForeignKey("BowlerMatchPlayerId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
@@ -632,13 +635,13 @@ namespace CricPulse.Infrastructure.Migrations
                         .IsRequired();
 
                     b.HasOne("CricPulse.Domain.Entities.MatchPlayer", "NonStrikerMatchPlayer")
-                        .WithMany("BallsAsNonStriker")
+                        .WithMany()
                         .HasForeignKey("NonStrikerMatchPlayerId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.HasOne("CricPulse.Domain.Entities.MatchPlayer", "StrikerMatchPlayer")
-                        .WithMany("BallsAsStriker")
+                        .WithMany()
                         .HasForeignKey("StrikerMatchPlayerId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
@@ -654,51 +657,24 @@ namespace CricPulse.Infrastructure.Migrations
 
             modelBuilder.Entity("CricPulse.Domain.Entities.Innings", b =>
                 {
-                    b.HasOne("CricPulse.Domain.Entities.MatchPlayer", "CurrentBowlerMatchPlayer")
-                        .WithMany()
-                        .HasForeignKey("CurrentBowlerMatchPlayerId")
-                        .OnDelete(DeleteBehavior.Restrict);
-
                     b.HasOne("CricPulse.Domain.Entities.Match", "Match")
                         .WithMany("Innings")
                         .HasForeignKey("MatchId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("CricPulse.Domain.Entities.MatchPlayer", "NonStrikerMatchPlayer")
-                        .WithMany()
-                        .HasForeignKey("NonStrikerMatchPlayerId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.HasOne("CricPulse.Domain.Entities.MatchPlayer", "StrikerMatchPlayer")
-                        .WithMany()
-                        .HasForeignKey("StrikerMatchPlayerId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.Navigation("CurrentBowlerMatchPlayer");
-
                     b.Navigation("Match");
-
-                    b.Navigation("NonStrikerMatchPlayer");
-
-                    b.Navigation("StrikerMatchPlayer");
                 });
 
             modelBuilder.Entity("CricPulse.Domain.Entities.Match", b =>
                 {
-                    b.HasOne("CricPulse.Domain.Entities.User", "Umpire")
+                    b.HasOne("CricPulse.Domain.Entities.User", "CreatedByUser")
                         .WithMany()
-                        .HasForeignKey("UmpireId")
+                        .HasForeignKey("CreatedByUserId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
-                    b.HasOne("CricPulse.Domain.Entities.User", null)
-                        .WithMany("MatchesAsUmpire")
-                        .HasForeignKey("UserId");
-
-                    b.Navigation("Umpire");
+                    b.Navigation("CreatedByUser");
                 });
 
             modelBuilder.Entity("CricPulse.Domain.Entities.MatchPlayer", b =>
@@ -709,21 +685,21 @@ namespace CricPulse.Infrastructure.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("CricPulse.Domain.Entities.Player", "Player")
-                        .WithMany("MatchPlayers")
-                        .HasForeignKey("PlayerId")
+                    b.HasOne("CricPulse.Domain.Entities.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.Navigation("Match");
 
-                    b.Navigation("Player");
+                    b.Navigation("User");
                 });
 
-            modelBuilder.Entity("CricPulse.Domain.Entities.OtpVerification", b =>
+            modelBuilder.Entity("CricPulse.Domain.Entities.PasswordResetToken", b =>
                 {
                     b.HasOne("CricPulse.Domain.Entities.User", "User")
-                        .WithMany("OtpVerifications")
+                        .WithMany()
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
@@ -731,26 +707,30 @@ namespace CricPulse.Infrastructure.Migrations
                     b.Navigation("User");
                 });
 
-            modelBuilder.Entity("CricPulse.Domain.Entities.Player", b =>
+            
+
+            modelBuilder.Entity("CricPulse.Domain.Entities.PlayerStatistics", b =>
                 {
                     b.HasOne("CricPulse.Domain.Entities.User", "User")
-                        .WithOne("Player")
-                        .HasForeignKey("CricPulse.Domain.Entities.Player", "UserId")
+                        .WithOne()
+                        .HasForeignKey("CricPulse.Domain.Entities.PlayerStatistics", "UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
                     b.Navigation("User");
                 });
 
-            modelBuilder.Entity("CricPulse.Domain.Entities.PlayerStatistics", b =>
+            
+
+            modelBuilder.Entity("CricPulse.Domain.Entities.OrganizerStatistics", b =>
                 {
-                    b.HasOne("CricPulse.Domain.Entities.Player", "Player")
-                        .WithMany()
-                        .HasForeignKey("PlayerId")
+                    b.HasOne("CricPulse.Domain.Entities.User", "User")
+                        .WithOne()
+                        .HasForeignKey("CricPulse.Domain.Entities.OrganizerStatistics", "UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.Navigation("Player");
+                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("CricPulse.Domain.Entities.Wicket", b =>
@@ -762,15 +742,20 @@ namespace CricPulse.Infrastructure.Migrations
                         .IsRequired();
 
                     b.HasOne("CricPulse.Domain.Entities.MatchPlayer", "CaughtByMatchPlayer")
-                        .WithMany("Catches")
+                        .WithMany()
                         .HasForeignKey("CaughtByMatchPlayerId")
                         .OnDelete(DeleteBehavior.Restrict);
 
                     b.HasOne("CricPulse.Domain.Entities.MatchPlayer", "DismissedMatchPlayer")
-                        .WithMany("Dismissals")
+                        .WithMany()
                         .HasForeignKey("DismissedMatchPlayerId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
+
+                    b.HasOne("CricPulse.Domain.Entities.MatchPlayer", "RunOutByMatchPlayer")
+                        .WithMany()
+                        .HasForeignKey("RunOutByMatchPlayerId")
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.HasOne("CricPulse.Domain.Entities.MatchPlayer", "StumpedByMatchPlayer")
                         .WithMany()
@@ -782,6 +767,8 @@ namespace CricPulse.Infrastructure.Migrations
                     b.Navigation("CaughtByMatchPlayer");
 
                     b.Navigation("DismissedMatchPlayer");
+
+                    b.Navigation("RunOutByMatchPlayer");
 
                     b.Navigation("StumpedByMatchPlayer");
                 });
@@ -801,33 +788,6 @@ namespace CricPulse.Infrastructure.Migrations
                     b.Navigation("Innings");
 
                     b.Navigation("MatchPlayers");
-                });
-
-            modelBuilder.Entity("CricPulse.Domain.Entities.MatchPlayer", b =>
-                {
-                    b.Navigation("BallsAsBowler");
-
-                    b.Navigation("BallsAsNonStriker");
-
-                    b.Navigation("BallsAsStriker");
-
-                    b.Navigation("Catches");
-
-                    b.Navigation("Dismissals");
-                });
-
-            modelBuilder.Entity("CricPulse.Domain.Entities.Player", b =>
-                {
-                    b.Navigation("MatchPlayers");
-                });
-
-            modelBuilder.Entity("CricPulse.Domain.Entities.User", b =>
-                {
-                    b.Navigation("MatchesAsUmpire");
-
-                    b.Navigation("OtpVerifications");
-
-                    b.Navigation("Player");
                 });
 #pragma warning restore 612, 618
         }

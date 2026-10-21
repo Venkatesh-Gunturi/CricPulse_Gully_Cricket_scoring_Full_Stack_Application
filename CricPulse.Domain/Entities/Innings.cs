@@ -1,56 +1,44 @@
-﻿namespace CricPulse.Domain.Entities
+﻿namespace CricPulse.Domain.Entities;
+
+public class Innings
 {
-    public class Innings
-    {
-        public int Id { get; set; }
+    public Guid Id { get; set; }
 
-        public int MatchId { get; set; }
+    public Guid MatchId { get; set; }
 
-        public int InningsNumber { get; set; }
+    public int InningsNumber { get; set; }
 
-        public string BattingTeam { get; set; } = string.Empty;
+    public string BattingTeam { get; set; } = string.Empty;
 
-        public string BowlingTeam { get; set; } = string.Empty;
+    public string BowlingTeam { get; set; } = string.Empty;
 
-        public int StrikerMatchPlayerId { get; set; }
+    public int TotalRuns { get; set; }
 
-        public int NonStrikerMatchPlayerId { get; set; }
+    public int Wickets { get; set; }
 
-        public int? CurrentBowlerMatchPlayerId { get; set; }
+    public int LegalBalls { get; set; }
 
-        public int TotalRuns { get; set; }
+    public int TotalOvers { get; set; }
 
-        public int Wickets { get; set; }
+    public int? TargetRuns { get; set; }
 
-        /// <summary>
-        /// Number of legal deliveries bowled in this innings.
-        /// Six legal deliveries = one completed over.
-        /// </summary>
-        public int LegalBalls { get; set; }
+    public string Status { get; set; } = "Setup";
 
-        public string Status { get; set; } = "NotStarted";
+    public Guid? CurrentStrikerMatchPlayerId { get; set; }
 
-        /// <summary>
-        /// True when the next delivery is a free hit.
-        /// A free hit is awarded after a no-ball and remains active
-        /// until a legal delivery is completed or another no-ball occurs.
-        /// </summary>
-        public bool IsFreeHit { get; set; }
+    public Guid? CurrentNonStrikerMatchPlayerId { get; set; }
 
-        public DateTime CreatedAt { get; set; }
+    public Guid? CurrentBowlerMatchPlayerId { get; set; }
 
-        public DateTime? UpdatedAt { get; set; }
+    public DateTime? StartedAt { get; set; }
 
-        // Navigation properties
+    public DateTime? CompletedAt { get; set; }
 
-        public Match Match { get; set; } = null!;
+    public Match Match { get; set; } = null!;
 
-        public MatchPlayer StrikerMatchPlayer { get; set; } = null!;
+    public ICollection<Ball> Balls { get; set; } = new List<Ball>();
+    public bool CompletionPending { get; set; }
 
-        public MatchPlayer NonStrikerMatchPlayer { get; set; } = null!;
-
-        public MatchPlayer? CurrentBowlerMatchPlayer { get; set; }
-
-        public ICollection<Ball> Balls { get; set; } = new List<Ball>();
-    }
+    public bool IsFreeHit { get; set; }
+    public bool UndoUsed { get; set; }
 }

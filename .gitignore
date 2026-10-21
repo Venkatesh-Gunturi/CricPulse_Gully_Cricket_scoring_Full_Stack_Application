@@ -1,3 +1,17 @@
+# Visual Studio
 .vs/
-bin/
-obj/
+*.user
+*.suo
+
+# .NET build files
+**/bin/
+**/obj/
+
+# React dependencies and build files
+node_modules/
+dist/
+
+# Environment secrets
+.env
+.env.*
+!.env.example

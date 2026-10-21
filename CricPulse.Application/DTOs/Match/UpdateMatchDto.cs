@@ -1,24 +1,29 @@
-﻿namespace CricPulse.Application.DTOs.Match
+﻿
+namespace CricPulse.Application.DTOs.Match;
+
+public class UpdateMatchDto
 {
-    public class UpdateMatchDto
-    {
-        public string Team1Name { get; set; } = string.Empty;
-        public string Team1Logo { get; set; } = string.Empty;
+    public string Name { get; set; } = string.Empty;
 
-        public string Team2Name { get; set; } = string.Empty;
-        public string Team2Logo { get; set; } = string.Empty;
+    public string TeamAName { get; set; } = string.Empty;
 
-        public int PlayersPerTeam { get; set; }
-        public int Overs { get; set; }
+    public string? TeamALogo { get; set; }
 
-        public DateTime MatchDate { get; set; }
-        public TimeSpan MatchTime { get; set; }
+    public string TeamBName { get; set; } = string.Empty;
 
-        public string VenueName { get; set; } = string.Empty;
-        public string Address { get; set; } = string.Empty;
+    public string? TeamBLogo { get; set; }
 
-        public string? LiveStreamUrl { get; set; }
+    public DateTime ScheduledAt { get; set; }
 
-        public List<MatchPlayerDto> Players { get; set; } = new();
-    }
+    public string Venue { get; set; } = string.Empty;
+
+    public double Latitude { get; set; }
+
+    public double Longitude { get; set; }
+
+    public int Overs { get; set; }
+
+    public int PlayersPerTeam { get; set; }
+
+    public List<MatchPlayerInputDto> Players { get; set; } = new();
 }

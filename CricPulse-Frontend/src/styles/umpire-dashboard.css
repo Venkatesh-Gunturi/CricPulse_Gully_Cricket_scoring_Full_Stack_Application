@@ -1,0 +1,3140 @@
+.umpire-dashboard {
+
+  --umpire-green: #2d8055;
+
+  --umpire-dark: #103b2b;
+
+  --umpire-muted: #66756b;
+
+  --umpire-border: #e3eae4;
+  min-height: 100vh;
+
+  padding: 28px clamp(18px, 5vw, 76px) 64px;
+
+  background: #f7f9f7;
+
+  color: #23352a;
+
+  font-family: inherit;
+
+  box-sizing: border-box;
+
+}
+
+
+
+.umpire-dashboard *,
+
+.umpire-dashboard *::before,
+
+.umpire-dashboard *::after {
+
+  box-sizing: border-box;
+
+}
+
+
+
+/* TOP BAR */
+
+
+
+.umpire-topbar {
+
+  display: grid;
+
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+
+  align-items: center;
+
+  gap: 16px;
+
+  margin-bottom: 24px;
+
+}
+
+
+
+.umpire-back-button {
+
+  display: inline-flex;
+
+  justify-self: start;
+
+  align-items: center;
+
+  gap: 10px;
+
+  padding: 10px 0;
+
+  border: 0;
+
+  background: transparent;
+
+  color: #35483b;
+
+  font: inherit;
+
+  font-weight: 600;
+
+  cursor: pointer;
+
+  transition: color 0.2s ease;
+
+}
+
+
+
+.umpire-back-button:hover {
+
+  color: var(--umpire-green);
+
+}
+
+
+
+.umpire-topbar-label {
+
+  justify-self: center;
+
+  color: var(--umpire-muted);
+
+  font-size: 0.76rem;
+
+  font-weight: 800;
+
+  letter-spacing: 0.12em;
+
+  text-align: center;
+
+  white-space: nowrap;
+
+}
+
+
+
+.umpire-top-create-button {
+
+  display: inline-flex;
+
+  justify-self: end;
+
+  align-items: center;
+
+  justify-content: center;
+
+  gap: 9px;
+
+  padding: 11px 17px;
+
+  border: 1px solid var(--umpire-green);
+
+  border-radius: 10px;
+
+  background: var(--umpire-green);
+
+  color: #fff;
+
+  font: inherit;
+
+  font-weight: 700;
+
+  white-space: nowrap;
+
+  cursor: pointer;
+
+  transition: background 0.2s ease, transform 0.2s ease;
+
+}
+
+
+
+.umpire-top-create-button:hover {
+
+  background: #246b46;
+
+  transform: translateY(-1px);
+
+}
+
+
+
+.umpire-back-button:focus-visible,
+
+.umpire-top-create-button:focus-visible,
+
+.umpire-create-button:focus-visible,
+
+.umpire-secondary-button:focus-visible,
+
+.umpire-match-tab:focus-visible {
+
+  outline: 3px solid #a5d6b5;
+
+  outline-offset: 3px;
+
+}
+
+
+
+/* HERO */
+
+
+
+.umpire-hero {
+
+  position: relative;
+
+  display: flex;
+
+  align-items: center;
+
+  justify-content: space-between;
+
+  gap: 36px;
+
+  min-height: 340px;
+
+  padding: clamp(28px, 5vw, 56px);
+
+  overflow: hidden;
+
+  isolation: isolate;
+
+  border: 1px solid rgb(255 255 255 / 8%);
+
+  border-radius: 24px;
+
+  background:
+
+    radial-gradient(
+
+      circle at 83% 35%,
+
+      rgb(77 143 96 / 35%) 0,
+
+      transparent 33%
+
+    ),
+
+    linear-gradient(120deg, #103b2b 0%, #17623d 100%);
+
+  color: #fff;
+
+  box-shadow: 0 12px 32px rgb(16 59 43 / 10%);
+
+}
+
+
+
+.umpire-hero::before,
+
+.umpire-hero::after {
+
+  position: absolute;
+
+  z-index: -1;
+
+  border: 1px solid rgb(255 255 255 / 8%);
+
+  border-radius: 50%;
+
+  content: "";
+
+  pointer-events: none;
+
+}
+
+
+
+.umpire-hero::before {
+
+  right: -90px;
+
+  bottom: -180px;
+
+  width: 400px;
+
+  height: 400px;
+
+}
+
+
+
+.umpire-hero::after {
+
+  right: -35px;
+
+  bottom: -125px;
+
+  width: 300px;
+
+  height: 300px;
+
+}
+
+
+
+.umpire-hero-content {
+
+  position: relative;
+
+  z-index: 2;
+
+  flex: 1 1 55%;
+
+  max-width: 610px;
+
+}
+
+
+
+.umpire-eyebrow {
+
+  color: var(--umpire-green);
+
+  font-size: 0.76rem;
+
+  font-weight: 800;
+
+  letter-spacing: 0.12em;
+
+}
+
+
+
+.umpire-hero .umpire-eyebrow {
+
+  color: #b8e4c5;
+
+}
+
+
+
+.umpire-hero h1 {
+
+  max-width: 580px;
+
+  margin: 14px 0;
+
+  color: #fff;
+
+  font-size: clamp(2rem, 4vw, 3.3rem);
+
+  font-weight: 800;
+
+  line-height: 1.12;
+
+  letter-spacing: -0.035em;
+
+}
+
+
+
+.umpire-hero p {
+
+  max-width: 520px;
+
+  margin: 0;
+
+  color: #e1eee5;
+
+  font-size: 1rem;
+
+  line-height: 1.8;
+
+}
+
+
+
+/* CARTOON UMPIRE */
+
+
+
+.umpire-hero-art {
+
+  position: relative;
+
+  display: flex;
+
+  flex: 0 0 250px;
+
+  align-items: flex-end;
+
+  justify-content: center;
+
+  width: 250px;
+
+  height: 260px;
+
+  overflow: hidden;
+
+  border: 1px solid rgb(255 255 255 / 15%);
+
+  border-radius: 45% 45% 22px 22px;
+
+  background: rgb(255 255 255 / 6%);
+
+  cursor: pointer;
+
+  outline: none;
+
+  -webkit-tap-highlight-color: transparent;
+
+}
+
+
+
+.umpire-hero-art:focus-visible {
+
+  outline: 3px solid #c6e7ce;
+
+  outline-offset: 3px;
+
+}
+
+
+
+.cartoon-person {
+
+  position: absolute;
+
+  bottom: 23px;
+
+  left: 50%;
+
+  width: 150px;
+
+  height: 205px;
+
+  transform: translateX(-50%);
+
+  animation: cartoon-bob 2.8s ease-in-out infinite;
+
+}
+
+
+
+.cartoon-head {
+
+  position: absolute;
+
+  z-index: 4;
+
+  top: 22px;
+
+  left: 50%;
+
+  width: 54px;
+
+  height: 57px;
+
+  border: 3px solid #794d37;
+
+  border-radius: 45% 45% 48% 48%;
+
+  background: #e9b58a;
+
+  transform: translateX(-50%);
+
+}
+
+
+
+.cartoon-hair {
+
+  position: absolute;
+
+  z-index: 5;
+
+  top: 18px;
+
+  left: 50%;
+
+  width: 57px;
+
+  height: 23px;
+
+  border-radius: 50% 50% 30% 25%;
+
+  background: #382e28;
+
+  transform: translateX(-50%) rotate(-4deg);
+
+}
+
+
+
+.cartoon-eye {
+
+  position: absolute;
+
+  top: 25px;
+
+  width: 5px;
+
+  height: 7px;
+
+  border-radius: 50%;
+
+  background: #382e28;
+
+}
+
+
+
+.cartoon-eye-left {
+
+  left: 13px;
+
+}
+
+
+
+.cartoon-eye-right {
+
+  right: 13px;
+
+}
+
+
+
+.cartoon-smile {
+
+  position: absolute;
+
+  bottom: 9px;
+
+  left: 50%;
+
+  width: 16px;
+
+  height: 8px;
+
+  border-bottom: 2px solid #794d37;
+
+  border-radius: 0 0 50% 50%;
+
+  transform: translateX(-50%);
+
+}
+
+
+
+.cartoon-body {
+
+  position: absolute;
+
+  z-index: 3;
+
+  top: 73px;
+
+  left: 50%;
+
+  width: 69px;
+
+  height: 75px;
+
+  border: 2px solid #c7d7ca;
+
+  border-radius: 15px 15px 8px 8px;
+
+  background: #f2f5ee;
+
+  transform: translateX(-50%);
+
+}
+
+
+
+.cartoon-shirt-badge {
+
+  position: absolute;
+
+  top: 12px;
+
+  left: 12px;
+
+  width: 10px;
+
+  height: 10px;
+
+  border-radius: 3px;
+
+  background: #6a9875;
+
+}
+
+
+
+.cartoon-arm {
+
+  position: absolute;
+
+  z-index: 2;
+
+  top: 78px;
+
+  width: 20px;
+
+  height: 60px;
+
+  border: 2px solid #c7d7ca;
+
+  border-radius: 14px;
+
+  background: #f2f5ee;
+
+  transform-origin: 50% 10px;
+
+  transition: transform 0.5s cubic-bezier(0.2, 0.8, 0.2, 1);
+
+}
+
+
+
+.cartoon-arm-resting {
+
+  left: 29px;
+
+  transform: rotate(18deg);
+
+}
+
+
+
+.cartoon-arm-raised {
+
+  right: 28px;
+
+  transform: rotate(-28deg);
+
+}
+
+
+
+.cartoon-hand {
+
+  position: absolute;
+
+  bottom: -10px;
+
+  left: 50%;
+
+  width: 22px;
+
+  height: 23px;
+
+  border: 2px solid #794d37;
+
+  border-radius: 45% 45% 40% 40%;
+
+  background: #e9b58a;
+
+  transform: translateX(-50%);
+
+}
+
+
+
+.cartoon-leg {
+
+  position: absolute;
+
+  z-index: 2;
+
+  top: 143px;
+
+  width: 24px;
+
+  height: 45px;
+
+  border-radius: 5px;
+
+  background: #3c4942;
+
+}
+
+
+
+.cartoon-leg-left {
+
+  left: 49px;
+
+  transform: rotate(3deg);
+
+}
+
+
+
+.cartoon-leg-right {
+
+  right: 49px;
+
+  transform: rotate(-3deg);
+
+}
+
+
+
+.cartoon-shoe {
+
+  position: absolute;
+
+  z-index: 3;
+
+  top: 181px;
+
+  width: 34px;
+
+  height: 13px;
+
+  border-radius: 5px 12px 5px 5px;
+
+  background: #26342b;
+
+}
+
+
+
+.cartoon-shoe-left {
+
+  left: 39px;
+
+}
+
+
+
+.cartoon-shoe-right {
+
+  right: 39px;
+
+  transform: scaleX(-1);
+
+}
+
+
+
+.cartoon-ground {
+
+  position: absolute;
+
+  bottom: 18px;
+
+  left: 50%;
+
+  width: 135px;
+
+  height: 10px;
+
+  border-radius: 50%;
+
+  background: rgb(0 0 0 / 20%);
+
+  filter: blur(5px);
+
+  transform: translateX(-50%);
+
+}
+
+
+
+.cartoon-out-label {
+
+  position: absolute;
+
+  z-index: 6;
+
+  top: 20px;
+
+  left: 50%;
+
+  padding: 8px 14px;
+
+  border: 1px solid rgb(255 255 255 / 45%);
+
+  border-radius: 999px;
+
+  background: #f0d6a4;
+
+  color: #263b2e;
+
+  font-size: 0.8rem;
+
+  font-weight: 900;
+
+  letter-spacing: 0.12em;
+
+  opacity: 0;
+
+  transform: translate(-50%, 8px) scale(0.9);
+
+  transition: opacity 0.25s ease, transform 0.25s ease;
+
+  pointer-events: none;
+
+}
+
+
+
+.umpire-hero-art:hover .cartoon-arm-raised,
+
+.umpire-hero-art:focus-visible .cartoon-arm-raised {
+
+  transform: rotate(-155deg);
+
+}
+
+
+
+.umpire-hero-art:hover .cartoon-out-label,
+
+.umpire-hero-art:focus-visible .cartoon-out-label {
+
+  opacity: 1;
+
+  transform: translate(-50%, 0) scale(1);
+
+}
+
+
+
+@keyframes cartoon-bob {
+
+  0%,
+
+  100% {
+
+    transform: translateX(-50%) translateY(0);
+
+  }
+
+
+
+  50% {
+
+    transform: translateX(-50%) translateY(-3px);
+
+  }
+
+}
+
+
+
+/* PROFILE */
+
+
+
+.umpire-profile-section {
+
+  display: flex;
+
+  align-items: center;
+
+  justify-content: space-between;
+
+  gap: 24px;
+
+  margin: 34px 0;
+
+  padding: 26px 28px;
+
+  border: 1px solid var(--umpire-border);
+
+  border-radius: 18px;
+
+  background: #fff;
+
+  box-shadow: 0 4px 16px rgb(25 55 35 / 3%);
+
+}
+
+
+
+.umpire-profile-info {
+
+  min-width: 0;
+
+}
+
+
+
+.umpire-profile-kicker {
+
+  color: var(--umpire-muted);
+
+  font-size: 0.72rem;
+
+  font-weight: 800;
+
+  letter-spacing: 0.1em;
+
+}
+
+
+
+.umpire-profile-info h2 {
+
+  margin: 7px 0;
+
+  color: #26382c;
+
+  font-size: 1.65rem;
+
+  font-weight: 800;
+
+  overflow-wrap: anywhere;
+
+}
+
+
+
+.umpire-profile-info p {
+
+  margin: 0;
+
+  color: var(--umpire-green);
+
+  font-weight: 600;
+
+}
+
+
+
+/* BUTTONS */
+
+
+
+.umpire-create-button,
+
+.umpire-secondary-button {
+
+  display: inline-flex;
+
+  align-items: center;
+
+  justify-content: center;
+
+  gap: 10px;
+
+  padding: 13px 20px;
+
+  border: 1px solid transparent;
+
+  border-radius: 10px;
+
+  background: var(--umpire-green);
+
+  color: #fff;
+
+  font: inherit;
+
+  font-weight: 700;
+
+  cursor: pointer;
+
+  transition: background 0.2s ease, transform 0.2s ease;
+
+}
+
+
+
+.umpire-create-button:hover,
+
+.umpire-secondary-button:hover {
+
+  background: #246b46;
+
+  transform: translateY(-2px);
+
+}
+
+
+
+/* MY MATCHES */
+
+
+
+.umpire-matches-section {
+
+  margin-top: 36px;
+
+}
+
+
+
+.umpire-section-heading {
+
+  display: flex;
+
+  align-items: center;
+
+  justify-content: space-between;
+
+  gap: 20px;
+
+  margin-bottom: 22px;
+
+}
+
+
+
+.umpire-section-heading h2 {
+
+  margin: 7px 0;
+
+  color: #26382c;
+
+  font-size: clamp(1.5rem, 3vw, 2rem);
+
+  font-weight: 800;
+
+}
+
+
+
+.umpire-section-heading p {
+
+  margin: 0;
+
+  color: var(--umpire-muted);
+
+  line-height: 1.6;
+
+}
+
+
+
+.umpire-match-tab {
+
+  display: inline-flex;
+
+  align-items: center;
+
+  justify-content: center;
+
+  gap: 10px;
+
+  white-space: nowrap;
+
+}
+
+
+
+.umpire-match-tab {
+
+  padding: 10px 18px;
+
+  border: 1px solid #e0e7e1;
+
+  border-radius: 999px;
+
+  background: #fff;
+
+  color: #4c5c51;
+
+  font: inherit;
+
+  font-weight: 700;
+
+  cursor: pointer;
+
+  transition: border-color 0.2s ease, background 0.2s ease, color 0.2s ease;
+
+}
+
+
+
+.umpire-match-tab:hover {
+
+  border-color: #a8d8b8;
+
+  color: var(--umpire-green);
+
+}
+
+
+
+.umpire-match-tab.active {
+
+  border-color: var(--umpire-green);
+
+  background: var(--umpire-green);
+
+  color: #fff;
+
+}
+
+
+
+.umpire-empty-state {
+
+  display: flex;
+
+  min-height: 250px;
+
+  flex-direction: column;
+
+  align-items: center;
+
+  justify-content: center;
+
+  padding: 32px;
+
+  border: 1px dashed #d2ddd4;
+
+  border-radius: 18px;
+
+  background: #fff;
+
+  text-align: center;
+
+}
+
+
+
+.umpire-empty-icon {
+
+  display: grid;
+
+  width: 60px;
+
+  height: 60px;
+
+  place-items: center;
+
+  border-radius: 50%;
+
+  background: #e9f5ed;
+
+  color: var(--umpire-green);
+
+  font-size: 1.4rem;
+
+}
+
+
+
+.umpire-empty-state h3 {
+
+  margin: 17px 0 7px;
+
+  color: #293c30;
+
+  font-weight: 800;
+
+}
+
+
+
+.umpire-empty-state p {
+
+  max-width: 420px;
+
+  margin-bottom: 12px;
+
+  color: var(--umpire-muted);
+
+  line-height: 1.6;
+
+}
+
+
+
+.umpire-secondary-button {
+
+  margin-top: 8px;
+
+}
+
+
+
+/* RESPONSIVE */
+
+
+
+@media (max-width: 760px) {
+
+  .umpire-dashboard {
+
+    padding: 18px 16px 40px;
+
+  }
+
+
+
+  .umpire-topbar {
+
+    grid-template-columns: 1fr auto;
+
+    row-gap: 12px;
+
+  }
+
+
+
+  .umpire-topbar-label {
+
+    grid-column: 1 / -1;
+
+    grid-row: 1;
+
+    justify-self: center;
+
+  }
+
+
+
+  .umpire-back-button {
+
+    grid-column: 1;
+
+    grid-row: 2;
+
+  }
+
+
+
+  .umpire-top-create-button {
+
+    grid-column: 2;
+
+    grid-row: 2;
+
+    padding: 10px 12px;
+
+    font-size: 0.85rem;
+
+  }
+
+
+
+  .umpire-hero {
+
+    flex-direction: column;
+
+    align-items: stretch;
+
+    gap: 24px;
+
+    padding: 28px 22px 20px;
+
+  }
+
+
+
+  .umpire-hero-content {
+
+    flex: auto;
+
+  }
+
+
+
+  .umpire-hero h1 {
+
+    font-size: clamp(2rem, 8vw, 2.7rem);
+
+  }
+
+
+
+  .umpire-hero-art {
+
+    align-self: center;
+
+    flex: 0 0 225px;
+
+    width: 225px;
+
+    height: 225px;
+
+  }
+
+
+
+  .cartoon-person {
+
+    transform: translateX(-50%) scale(0.9);
+
+    transform-origin: center bottom;
+
+  }
+
+
+
+  @keyframes cartoon-bob {
+
+    0%,
+
+    100% {
+
+      transform: translateX(-50%) scale(0.9) translateY(0);
+
+    }
+
+
+
+    50% {
+
+      transform: translateX(-50%) scale(0.9) translateY(-3px);
+
+    }
+
+  }
+
+
+
+  .umpire-profile-section {
+
+    margin: 24px 0;
+
+    padding: 20px;
+
+  }
+
+
+
+  .umpire-profile-info h2 {
+
+    font-size: 1.35rem;
+
+  }
+
+
+
+  .umpire-match-tabs {
+
+    gap: 8px;
+
+  }
+
+
+
+  .umpire-match-tab {
+
+    padding: 9px 14px;
+
+    font-size: 0.9rem;
+
+  }
+
+}
+
+
+
+@media (max-width: 460px) {
+
+  .umpire-topbar {
+
+    column-gap: 8px;
+
+  }
+
+
+
+  .umpire-back-button {
+
+    gap: 6px;
+
+    font-size: 0.85rem;
+
+  }
+
+
+
+  .umpire-top-create-button {
+
+    gap: 6px;
+
+    padding: 10px;
+
+    font-size: 0.8rem;
+
+  }
+
+
+
+  .umpire-profile-section {
+
+    padding: 18px;
+
+  }
+
+
+
+  .umpire-match-tabs {
+
+    display: grid;
+
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+
+  }
+
+
+
+  .umpire-match-tab {
+
+    padding: 10px 8px;
+
+  }
+
+
+
+  .umpire-empty-state {
+
+    padding: 24px 16px;
+
+  }
+
+}
+
+
+
+@media (prefers-reduced-motion: reduce) {
+
+  .cartoon-person {
+
+    animation: none;
+
+  }
+
+
+
+  .cartoon-arm,
+
+  .cartoon-out-label,
+
+  .umpire-top-create-button,
+
+  .umpire-match-tab {
+
+    transition: none;
+
+  }
+
+}
+
+
+
+/* ===== Compact hero spacing ===== */
+
+
+
+.umpire-hero {
+
+  min-height: 285px;
+
+  padding: 30px clamp(24px, 3.5vw, 42px);
+
+  gap: 24px;
+
+}
+
+
+
+.umpire-hero-art {
+
+  flex-basis: 225px;
+
+  width: 225px;
+
+  height: 230px;
+
+}
+
+
+
+/* ===== Umpire statistics ===== */
+
+
+
+.umpire-stats-section {
+
+  margin-top: 30px;
+
+}
+
+
+
+.umpire-stats-grid {
+
+  display: grid;
+
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+
+  gap: 16px;
+
+}
+
+
+
+.umpire-stat-card {
+
+  min-width: 0;
+
+  min-height: 150px;
+
+  padding: 20px;
+
+  border: 1px solid transparent;
+
+  border-radius: 15px;
+
+  background: #fff;
+
+}
+
+
+
+.umpire-stat-icon {
+
+  display: grid;
+
+  width: 40px;
+
+  height: 40px;
+
+  place-items: center;
+
+  border-radius: 11px;
+
+  font-size: 1.05rem;
+
+}
+
+
+
+.umpire-stat-value {
+
+  margin-top: 13px;
+
+  font-size: 2.2rem;
+
+  font-weight: 800;
+
+  line-height: 1;
+
+}
+
+
+
+.umpire-stat-card h3 {
+
+  margin: 9px 0 0;
+
+  font-size: 0.92rem;
+
+  font-weight: 700;
+
+  line-height: 1.4;
+
+}
+
+
+
+.stat-created {
+
+  border-color: #d8e5f5;
+
+  background: #f3f7fc;
+
+  color: #5279a8;
+
+}
+
+
+
+.stat-created .umpire-stat-icon {
+
+  background: #e1ebf8;
+
+}
+
+
+
+.stat-success {
+
+  border-color: #d5e8d9;
+
+  background: #f1f8f2;
+
+  color: #4c8960;
+
+}
+
+
+
+.stat-success .umpire-stat-icon {
+
+  background: #dcefe0;
+
+}
+
+
+
+.stat-cancelled {
+
+  border-color: #f0dada;
+
+  background: #fcf3f3;
+
+  color: #b86b6b;
+
+}
+
+
+
+.stat-cancelled .umpire-stat-icon {
+
+  background: #f8e3e3;
+
+}
+
+
+
+.umpire-data-note {
+
+  margin: 12px 0 0;
+
+  color: var(--umpire-muted);
+
+  font-size: 0.83rem;
+
+  line-height: 1.5;
+
+}
+
+
+
+/* Tablet and mobile */
+
+
+
+@media (max-width: 760px) {
+
+  .umpire-hero {
+
+    min-height: auto;
+
+    padding: 26px 22px;
+
+    gap: 18px;
+
+  }
+
+
+
+  .umpire-hero-art {
+
+    flex-basis: 200px;
+
+    width: 200px;
+
+    height: 210px;
+
+  }
+
+
+
+  .umpire-stats-grid {
+
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+
+    gap: 10px;
+
+  }
+
+
+
+  .umpire-stat-card {
+
+    padding: 14px;
+
+  }
+
+
+
+  .umpire-stat-card h3 {
+
+    font-size: 0.8rem;
+
+  }
+
+
+
+  .umpire-stat-value {
+
+    font-size: 1.8rem;
+
+  }
+
+}
+
+
+
+@media (max-width: 460px) {
+
+  .umpire-hero {
+
+    padding: 24px 18px;
+
+  }
+
+
+
+  .umpire-stats-grid {
+
+    gap: 8px;
+
+  }
+
+
+
+  .umpire-stat-card {
+
+    padding: 10px;
+
+  }
+
+
+
+  .umpire-stat-icon {
+
+    width: 32px;
+
+    height: 32px;
+
+    font-size: 0.9rem;
+
+  }
+
+
+
+  .umpire-stat-value {
+
+    font-size: 1.55rem;
+
+  }
+
+
+
+  .umpire-stat-card h3 {
+
+    font-size: 0.72rem;
+
+  }
+
+}
+
+
+
+/* ===== Full-width hero: remove horizontal outer margins ===== */
+
+
+
+.umpire-hero {
+
+  width: calc(100% + 2 * clamp(18px, 5vw, 76px));
+
+  margin-left: calc(-1 * clamp(18px, 5vw, 76px));
+
+  border-radius: 0;
+
+}
+
+
+
+/* ===== Unified profile + umpire statistics card ===== */
+
+
+
+.umpire-profile-stats-section {
+
+  margin-top: 30px;
+
+  padding: 26px;
+
+  border: 1px solid #e3eae4;
+
+  border-radius: 18px;
+
+  background: #fff;
+
+  box-shadow: 0 4px 18px rgb(25 55 35 / 4%);
+
+}
+
+
+
+.umpire-profile-stats-section .umpire-profile-section {
+
+  display: flex;
+
+  align-items: center;
+
+  justify-content: flex-start;
+
+  gap: 20px;
+
+  margin: 0;
+
+  padding: 0 0 24px;
+
+  border: 0;
+
+  border-bottom: 1px solid #e8eee9;
+
+  border-radius: 0;
+
+  background: transparent;
+
+  box-shadow: none;
+
+}
+
+
+
+.umpire-avatar {
+
+  display: grid;
+
+  flex: 0 0 76px;
+
+  width: 76px;
+
+  height: 76px;
+
+  overflow: hidden;
+
+  place-items: center;
+
+  border: 3px solid #dcefe2;
+
+  border-radius: 50%;
+
+  background: #e5f4e9;
+
+  color: var(--umpire-green);
+
+  font-size: 1.8rem;
+
+  font-weight: 800;
+
+}
+
+
+
+.umpire-avatar img {
+
+  display: block;
+
+  width: 100%;
+
+  height: 100%;
+
+  object-fit: cover;
+
+  border-radius: 50%;
+
+}
+
+
+
+.umpire-avatar-fallback {
+
+  width: 100%;
+
+  height: 100%;
+
+  place-items: center;
+
+  border-radius: 50%;
+
+  background: #e5f4e9;
+
+  color: var(--umpire-green);
+
+}
+
+
+
+.umpire-profile-info h2 {
+
+  margin: 7px 0;
+
+  font-size: 1.5rem;
+
+}
+
+
+
+.umpire-profile-info p {
+
+  margin: 0;
+
+  color: var(--umpire-green);
+
+  font-weight: 600;
+
+}
+
+
+
+/* Keep the stats inside the profile card */
+
+
+
+.umpire-profile-stats-section .umpire-stats-section {
+
+  margin-top: 22px;
+
+}
+
+
+
+.umpire-profile-stats-section .umpire-section-heading {
+
+  margin-bottom: 18px;
+
+}
+
+
+
+.umpire-profile-stats-section .umpire-section-heading h2 {
+
+  margin-top: 5px;
+
+}
+
+
+
+.umpire-stats-grid {
+
+  display: grid;
+
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+
+  gap: 14px;
+
+}
+
+
+
+.umpire-stat-card {
+
+  min-width: 0;
+
+  min-height: 145px;
+
+  padding: 18px;
+
+  border: 1px solid transparent;
+
+  border-radius: 14px;
+
+  background: #fff;
+
+}
+
+
+
+.umpire-stat-icon {
+
+  display: grid;
+
+  width: 38px;
+
+  height: 38px;
+
+  place-items: center;
+
+  border-radius: 10px;
+
+}
+
+
+
+.umpire-stat-value {
+
+  margin-top: 12px;
+
+  font-size: 2rem;
+
+  font-weight: 800;
+
+  line-height: 1;
+
+}
+
+
+
+.umpire-stat-card h3 {
+
+  margin: 9px 0 0;
+
+  font-size: 0.9rem;
+
+  font-weight: 700;
+
+  line-height: 1.4;
+
+}
+
+
+
+.stat-created {
+
+  border-color: #d8e5f5;
+
+  background: #f3f7fc;
+
+  color: #5279a8;
+
+}
+
+
+
+.stat-created .umpire-stat-icon {
+
+  background: #e1ebf8;
+
+}
+
+
+
+.stat-success {
+
+  border-color: #d5e8d9;
+
+  background: #f1f8f2;
+
+  color: #4c8960;
+
+}
+
+
+
+.stat-success .umpire-stat-icon {
+
+  background: #dcefe0;
+
+}
+
+
+
+.stat-cancelled {
+
+  border-color: #f0dada;
+
+  background: #fcf3f3;
+
+  color: #b86b6b;
+
+}
+
+
+
+.stat-cancelled .umpire-stat-icon {
+
+  background: #f8e3e3;
+
+}
+
+
+
+.umpire-data-note {
+
+  margin: 12px 0 0;
+
+  color: var(--umpire-muted);
+
+  font-size: 0.82rem;
+
+  line-height: 1.5;
+
+}
+
+/* ===== Cartoon fist: clear clenched-hand shape ===== */
+.cartoon-fist {
+  width: 22px;
+  height: 22px;
+  border: 2px solid #794d37;
+  border-radius: 8px 8px 7px 7px;
+  background: #e9b58a;
+}
+
+.cartoon-fist::before {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 12px;
+  height: 4px;
+  border-radius: 4px;
+  background: rgb(121 77 55 / 35%);
+  content: "";
+}
+
+.cartoon-fist::after {
+  position: absolute;
+  top: 7px;
+  left: -5px;
+  width: 7px;
+  height: 10px;
+  border: 1px solid #794d37;
+  border-radius: 5px 0 0 5px;
+  background: #e9b58a;
+  content: "";
+}
+
+/* Keep one arm raised; the other remains lowered. */
+.umpire-hero-art:hover .cartoon-arm-raised,
+
+.umpire-hero-art:focus-visible .cartoon-arm-raised {
+
+  transform: rotate(-155deg);
+
+}
+
+.umpire-hero-art:hover .cartoon-arm-resting,
+
+.umpire-hero-art:focus-visible .cartoon-arm-resting {
+
+  transform: rotate(18deg);
+
+}
+
+/* Responsive adjustments */
+@media (max-width: 760px) {
+
+  .umpire-hero {
+
+    width: calc(100% + 32px);
+
+    margin-left: -16px;
+
+    padding: 26px 22px;
+
+  }
+
+  .umpire-profile-stats-section {
+
+    padding: 20px;
+
+  }
+
+  .umpire-stats-grid {
+
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+
+    gap: 10px;
+
+  }
+
+  .umpire-stat-card {
+
+    padding: 12px;
+
+  }
+
+  .umpire-stat-card h3 {
+
+    font-size: 0.78rem;
+
+  }
+
+  .umpire-stat-value {
+
+    font-size: 1.65rem;
+
+  }
+
+}
+
+@media (max-width: 460px) {
+
+  .umpire-profile-stats-section {
+
+    padding: 16px;
+
+  }
+
+  .umpire-avatar {
+
+    flex-basis: 60px;
+
+    width: 60px;
+
+    height: 60px;
+
+  }
+
+  .umpire-profile-stats-section .umpire-profile-section {
+
+    gap: 13px;
+
+  }
+
+  .umpire-profile-info h2 {
+
+    font-size: 1.2rem;
+
+  }
+
+  .umpire-stats-grid {
+
+    gap: 7px;
+
+  }
+
+  .umpire-stat-card {
+
+    padding: 9px;
+
+  }
+
+  .umpire-stat-icon {
+
+    width: 30px;
+
+    height: 30px;
+
+    font-size: 0.85rem;
+
+  }
+
+  .umpire-stat-value {
+
+    font-size: 1.4rem;
+
+  }
+
+  .umpire-stat-card h3 {
+
+    font-size: 0.69rem;
+
+  }
+
+}
+
+/* ===== Match status tab spacing fix ===== */
+.umpire-match-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+}
+
+.umpire-match-tab {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 10px 18px;
+  white-space: nowrap;
+}
+
+.umpire-tab-count {
+  display: inline-flex;
+  align-items: center;
+  margin-left: 2px;
+  padding-left: 2px;
+  font-size: 0.9em;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+@media (max-width: 460px) {
+  .umpire-match-tabs {
+    gap: 8px;
+  }
+
+  .umpire-match-tab {
+    gap: 7px;
+    padding: 10px 8px;
+  }
+}
+
+
+.my-match-card {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  min-width: 0;
+  overflow: hidden;
+  padding: 20px;
+  border: 1px solid #e0e8e2;
+  border-radius: 18px;
+  background: #fff;
+  box-shadow: 0 6px 20px rgb(20 55 36 / 7%);
+}
+
+.my-match-card-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.my-match-date {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+  color: #657268;
+  font-size: 0.82rem;
+}
+
+.my-match-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  flex-shrink: 0;
+  padding: 6px 12px;
+  border-radius: 999px;
+  font-size: 0.76rem;
+  font-weight: 750;
+}
+
+.my-match-status.status-upcoming {
+  color: #80530b;
+  background: #fff0c8;
+}
+
+.my-match-status.status-live {
+  color: #146c3a;
+  background: #d9f8e5;
+}
+
+.my-match-status.status-finished {
+  color: #17633b;
+  background: #d8f3e2;
+}
+
+.my-match-status.status-cancelled {
+  color: #a42632;
+  background: #ffe1e4;
+}
+
+.live-pulse-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #19a957;
+  animation: my-match-pulse 1.25s infinite;
+}
+
+@keyframes my-match-pulse {
+  50% { opacity: 0.35; }
+}
+
+.my-match-live-score {
+  color: #17633b;
+  font-weight: 800;
+  overflow-wrap: anywhere;
+}
+
+.my-match-title {
+  min-width: 0;
+  overflow: hidden;
+  color: #173b2a;
+  font-size: 1.05rem;
+  font-weight: 800;
+}
+
+.my-match-title > span {
+  display: block;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.my-match-title.my-match-marquee > span {
+  width: max-content;
+  max-width: none;
+  padding-left: 100%;
+  animation: my-match-scroll 12s linear infinite;
+}
+
+.my-match-teams {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  overflow: hidden;
+  color: #263d30;
+  font-weight: 750;
+}
+
+.my-match-teams > span:not(.my-match-vs) {
+  flex: 1 1 0;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.my-match-teams > .team-marquee {
+  text-overflow: clip;
+  animation: team-name-scroll 10s linear infinite;
+}
+
+.my-match-vs {
+  flex: 0 0 auto;
+  color: #849087;
+  font-size: 0.7rem;
+}
+
+.my-match-location {
+  display: grid;
+  gap: 7px;
+  color: #59685e;
+  font-size: 0.86rem;
+}
+
+.my-match-location p {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.my-match-location strong {
+  color: #273d30;
+}
+
+.my-match-result,
+.my-match-cancellation {
+  display: grid;
+  gap: 5px;
+  padding: 11px 12px;
+  border-radius: 10px;
+  font-size: 0.85rem;
+  overflow-wrap: anywhere;
+}
+
+.my-match-result {
+  color: #17633b;
+  background: #eaf8ef;
+}
+
+.my-match-cancellation {
+  color: #922b35;
+  background: #fff0f1;
+}
+
+.my-match-footer {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: auto;
+}
+
+.my-match-meta-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 7px 12px;
+  border: 1px solid #dfe8e1;
+  border-radius: 999px;
+  background: #f5f8f5;
+  color: #334c3a;
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+@keyframes my-match-scroll {
+  to { transform: translateX(-100%); }
+}
+
+@keyframes team-name-scroll {
+  0%, 15% { text-indent: 0; }
+  85%, 100% { text-indent: -40%; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .live-pulse-dot,
+  .my-match-title.my-match-marquee > span,
+  .my-match-teams > .team-marquee {
+    animation: none;
+  }
+}
+
+
+/* Consistent design for every match status */
+.umpire-match-card.my-match-card {
+  box-sizing: border-box;
+  min-width: 0;
+  padding: 16px;
+  border: 1px solid #e3e8ef;
+  border-top: 4px solid #64748b;
+  border-radius: 16px;
+  background: #fff;
+  box-shadow: 0 5px 18px rgb(15 23 42 / 6%);
+  transition: transform 180ms ease, box-shadow 180ms ease;
+}
+
+.umpire-match-card.my-match-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 10px 25px rgb(15 23 42 / 10%);
+}
+
+/* Status accents */
+.umpire-match-card.status-card-upcoming {
+  border-top-color: #2563eb;
+}
+
+.umpire-match-card.status-card-live {
+  border-top-color: #16a34a;
+}
+
+.umpire-match-card.status-card-finished {
+  border-top-color: #64748b;
+}
+
+.umpire-match-card.status-card-cancelled {
+  border-top-color: #dc2626;
+}
+
+/* Highlight schedule on every card */
+.my-match-card .my-match-date {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+  padding: 10px 12px;
+  border: 1px solid #dbeafe;
+  border-radius: 12px;
+  background: #eff6ff;
+  color: #1d4ed8;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.my-match-card.status-card-live .my-match-date {
+  border-color: #bbf7d0;
+  background: #f0fdf4;
+  color: #166534;
+}
+
+.my-match-card.status-card-finished .my-match-date {
+  border-color: #e2e8f0;
+  background: #f8fafc;
+  color: #475569;
+}
+
+.my-match-card.status-card-cancelled .my-match-date {
+  border-color: #fecaca;
+  background: #fef2f2;
+  color: #b91c1c;
+}
+
+.my-match-card .my-match-title {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.my-match-card .my-match-title span {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  animation: none;
+}
+
+/* Scroll only if the title is actually wider than its card */
+.my-match-card .my-match-title.my-match-marquee span {
+  width: max-content;
+  max-width: none;
+  text-overflow: clip;
+  animation: match-title-scroll 7s ease-in-out infinite alternate;
+}
+
+@keyframes match-title-scroll {
+  from { transform: translateX(0); }
+  to { transform: translateX(calc(-1 * var(--title-overflow, 0px))); }
+}
+
+.my-match-card .my-match-title.my-match-marquee:hover span {
+  animation-play-state: paused;
+}
+
+.my-match-card .my-match-location p {
+  overflow-wrap: anywhere;
+  margin-bottom: 6px;
+}
+
+.my-match-card .my-match-footer {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.my-match-card .my-match-meta-pill {
+  padding: 5px 9px;
+  border-radius: 999px;
+  background: #f1f5f9;
+  color: #334155;
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+
+/* Status-aware action button colors */
+.my-match-action {
+  border: 0;
+  border-radius: 9px;
+  padding: 9px 13px;
+  color: #fff;
+  font-weight: 650;
+  cursor: pointer;
+}
+
+.my-match-action:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.my-match-action-start,
+.my-match-action-resume {
+  background: #15803d;
+}
+
+.my-match-action-update {
+  background: #2563eb;
+}
+
+.my-match-action-cancel {
+  background: #dc2626;
+}
+
+.my-match-action-start:hover,
+.my-match-action-resume:hover {
+  background: #166534;
+}
+
+.my-match-action-update:hover {
+  background: #1d4ed8;
+}
+
+.my-match-action-cancel:hover {
+  background: #b91c1c;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .umpire-match-card.my-match-card,
+  .my-match-card .my-match-title.my-match-marquee span {
+    animation: none;
+    transition: none;
+  }
+}
+
+/* =========================================
+   MY MATCHES — CONSISTENT CARD SIZING
+   ========================================= */
+
+.umpire-match-grid {
+  align-items: stretch;
+}
+
+.umpire-match-card.my-match-card {
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  padding: 16px;
+  border-radius: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  height: 100%;
+}
+
+/* Keep all statuses visually consistent */
+.umpire-match-card.my-match-card.status-card-upcoming,
+.umpire-match-card.my-match-card.status-card-live,
+.umpire-match-card.my-match-card.status-card-finished,
+.umpire-match-card.my-match-card.status-card-cancelled {
+  min-height: 0;
+}
+
+/* Match title: only scroll when actual content overflows */
+.my-match-title {
+  width: 100%;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.my-match-title > span {
+  display: inline-block;
+  white-space: nowrap;
+}
+
+.my-match-title.my-match-marquee > span {
+  animation: match-title-scroll 7s ease-in-out infinite alternate;
+}
+
+@keyframes match-title-scroll {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(calc(-1 * var(--title-overflow, 0px)));
+  }
+}
+
+/* =========================================
+   DATE / TIME — CLEAR AND CONSISTENT
+   ========================================= */
+
+.my-match-date {
+  box-sizing: border-box;
+  min-width: 0;
+  padding: 10px 12px;
+  border-radius: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  line-height: 1.35;
+}
+
+.my-match-date > span:first-child {
+  font-weight: 700;
+}
+
+.my-match-date > span:last-child {
+  font-size: 0.9rem;
+}
+
+/* =========================================
+   ACTION BUTTONS — SPACING & ALIGNMENT
+   ========================================= */
+
+.my-match-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 10px;
+  margin-top: auto;
+  padding-top: 8px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.my-match-actions button {
+  box-sizing: border-box;
+  min-height: 40px;
+  margin: 0;
+  padding: 9px 14px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border-radius: 9px;
+  line-height: 1.2;
+  white-space: nowrap;
+  flex: 0 1 auto;
+}
+
+/* Prevent inherited button widths from breaking alignment */
+.my-match-actions .my-match-action-update,
+.my-match-actions .my-match-action-cancel,
+.my-match-actions .my-match-action-start,
+.my-match-actions .my-match-action-resume {
+  width: auto;
+}
+
+/* Status-appropriate button colours */
+.my-match-actions .my-match-action-update {
+  background: #e8f0ff;
+  color: #2456a6;
+  border: 1px solid #c9d9fa;
+}
+
+.my-match-actions .my-match-action-cancel {
+  background: #fff0f0;
+  color: #b42318;
+  border: 1px solid #f3c4c0;
+}
+
+.my-match-actions .my-match-action-start {
+  background: #16794b;
+  color: #fff;
+  border: 1px solid #16794b;
+}
+
+.my-match-actions .my-match-action-resume {
+  background: #1769aa;
+  color: #fff;
+  border: 1px solid #1769aa;
+}
+
+/* Consistent hover feedback */
+.my-match-actions button:hover {
+  filter: brightness(0.96);
+}
+
+/* Small screens: let buttons wrap cleanly */
+@media (max-width: 480px) {
+  .umpire-match-card.my-match-card {
+    padding: 14px;
+  }
+
+  .my-match-actions {
+    gap: 8px;
+  }
+
+  .my-match-actions button {
+    padding: 9px 11px;
+    font-size: 0.875rem;
+  }
+}
+
+/* Make every My Matches card the same width */
+.umpire-match-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: stretch;
+  gap: 20px;
+}
+
+.umpire-match-grid > .umpire-match-card.my-match-card {
+  width: 100%;
+  min-width: 0;
+  max-width: none;
+  box-sizing: border-box;
+}
+
+/* One card per row on smaller screens */
+@media (max-width: 700px) {
+  .umpire-match-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* =========================================
+   DASHBOARD — CONSISTENT SPACING EVERYWHERE
+   ========================================= */
+
+/* Space between dashboard sections */
+.umpire-dashboard {
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+}
+
+/* Space between statistics cards */
+.umpire-stats-grid {
+  gap: 18px;
+}
+
+/* Space between match status tabs */
+.umpire-match-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+
+/* Space between every match card */
+.umpire-match-grid {
+  gap: 24px;
+}
+
+/* Space between content inside each match card */
+.umpire-match-card.my-match-card {
+  gap: 14px;
+}
+
+/* Space between match card action buttons */
+.my-match-actions {
+  gap: 12px;
+  margin-top: 8px;
+}
+
+/* Space between the heading and its Refresh button */
+.umpire-section-heading {
+  gap: 20px;
+}
+
+/* Space between profile and statistics content */
+.umpire-profile-stats-section {
+  gap: 28px;
+}
+
+/* Keep spacing comfortable on mobile */
+@media (max-width: 700px) {
+  .umpire-dashboard {
+    gap: 20px;
+  }
+
+  .umpire-match-grid {
+    gap: 18px;
+  }
+
+  .umpire-match-tabs {
+    gap: 8px;
+    margin-bottom: 16px;
+  }
+
+  .umpire-profile-stats-section {
+    gap: 20px;
+  }
+}
+
+
+/* Start match confirmation */
+.start-match-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.65);
+  padding: 20px;
+}
+
+.start-match-modal {
+  position: relative;
+  width: 100%;
+  max-width: 450px;
+  background: white;
+  border-radius: 16px;
+  padding: 24px 24px 20px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+}
+
+/* Start Match confirmation overlay */
+.start-match-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 99999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: rgba(8, 15, 28, 0.76);
+  backdrop-filter: blur(7px);
+  -webkit-backdrop-filter: blur(7px);
+  animation: startBackdropIn 0.22s ease-out;
+}
+
+.start-match-modal {
+  position: relative;
+  width: min(100%, 440px);
+  max-height: calc(100vh - 40px);
+  overflow-y: auto;
+  padding: 36px 30px 25px;
+  border: 1px solid rgba(255, 255, 255, 0.75);
+  border-radius: 24px;
+  background: linear-gradient(160deg, #ffffff 0%, #f4f8ff 100%);
+  box-shadow: 0 28px 90px rgba(0, 0, 0, 0.38);
+  text-align: center;
+  animation: startCardIn 0.28s ease-out;
+}
+
+.start-match-close {
+  position: absolute;
+  top: 14px;
+  right: 16px;
+  display: grid;
+  width: 34px;
+  height: 34px;
+  place-items: center;
+  border: none;
+  border-radius: 50%;
+  background: #edf1f7;
+  color: #526075;
+  font-size: 26px;
+  line-height: 1;
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s;
+}
+
+.start-match-close:hover {
+  background: #dfe7f2;
+  color: #172b4d;
+}
+
+.start-match-icon {
+  display: grid;
+  width: 76px;
+  height: 76px;
+  margin: 0 auto 20px;
+  place-items: center;
+  border: 1px solid #c8f1dc;
+  border-radius: 24px;
+  background: linear-gradient(145deg, #e4fff0, #c9f7dd);
+  box-shadow: 0 8px 24px rgba(22, 163, 74, 0.12);
+}
+
+.start-match-icon span {
+  font-size: 38px;
+}
+
+.start-match-eyebrow {
+  display: block;
+  margin-bottom: 6px;
+  color: #16834a;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 2px;
+}
+
+.start-match-modal h2 {
+  margin: 0;
+  color: #14213d;
+  font-size: clamp(25px, 5vw, 31px);
+  font-weight: 800;
+  letter-spacing: -0.8px;
+}
+
+.start-match-description {
+  margin: 6px 0 14px;
+  color: #65738a;
+  font-size: 14px;
+}
+
+.start-match-details {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 18px 16px;
+  border: 1px solid #e0e8f3;
+  border-radius: 16px;
+  background: #ffffff;
+}
+
+.start-match-details > strong {
+  color: #1b2b49;
+  font-size: 17px;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
+.start-match-details > span {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  color: #66758b;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.start-match-details > span svg {
+  flex-shrink: 0;
+  color: #16834a;
+}
+
+.start-match-error {
+  margin: 15px 0 0;
+  padding: 11px 13px;
+  border: 1px solid #fecaca;
+  border-radius: 10px;
+  background: #fff1f2;
+  color: #b42318;
+  font-size: 13px;
+  text-align: left;
+  overflow-wrap: anywhere;
+}
+
+.start-match-actions {
+  display: flex;
+  gap: 12px;
+  margin-top: 24px;
+}
+
+.start-match-actions button {
+  display: inline-flex;
+  flex: 1;
+  min-height: 48px;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  padding: 12px 15px;
+  border-radius: 12px;
+  font-size: 14px;
+  font-weight: 750;
+  cursor: pointer;
+  transition: transform 0.18s, box-shadow 0.18s, background 0.18s;
+}
+
+.start-match-actions button:hover:not(:disabled) {
+  transform: translateY(-2px);
+}
+
+.start-match-actions button:disabled,
+.start-match-close:disabled {
+  cursor: not-allowed;
+  opacity: 0.65;
+}
+
+.start-match-cancel {
+  border: 1px solid #dce4ef;
+  background: #ffffff;
+  color: #46546b;
+}
+
+.start-match-cancel:hover:not(:disabled) {
+  background: #edf2f8;
+}
+
+.start-match-confirm {
+  border: 1px solid #138447;
+  background: linear-gradient(135deg, #159447, #087443);
+  color: #ffffff;
+  box-shadow: 0 7px 18px rgba(15, 139, 69, 0.22);
+}
+
+.start-match-confirm:hover:not(:disabled) {
+  box-shadow: 0 10px 24px rgba(15, 139, 69, 0.32);
+}
+
+.start-match-footnote {
+  margin: 18px 0 0;
+  color: #8490a3;
+  font-size: 11px;
+  line-height: 1.6;
+}
+
+@keyframes startBackdropIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes startCardIn {
+  from {
+    opacity: 0;
+    transform: translateY(12px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@media (max-width: 480px) {
+  .start-match-modal {
+    padding: 32px 20px 22px;
+    border-radius: 20px;
+  }
+
+  .start-match-actions {
+    flex-direction: column-reverse;
+  }
+
+  .start-match-actions button {
+    width: 100%;
+    flex: auto;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .start-match-modal-backdrop,
+  .start-match-modal {
+    animation: none;
+  }
+}

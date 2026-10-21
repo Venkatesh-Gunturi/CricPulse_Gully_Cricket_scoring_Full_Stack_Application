@@ -1,35 +1,14 @@
-﻿using WicketEntity = CricPulse.Domain.Entities;
-namespace CricPulse.Domain.Entities
+﻿namespace CricPulse.Domain.Entities;
+
+/// <summary>A user's participation record in a specific match.</summary>
+public class MatchPlayer
 {
-    public class MatchPlayer
-    {
-        public int Id { get; set; }
-
-        public int MatchId { get; set; }
-
-        public int PlayerId { get; set; }
-
-        public string Team { get; set; } = string.Empty;
-
-        public DateTime CreatedAt { get; set; }
-
-        public Match Match { get; set; } = null!;
-
-        public Player Player { get; set; } = null!;
-
-        public ICollection<Ball> BallsAsStriker { get; set; }
-    = new List<Ball>();
-
-        public ICollection<Ball> BallsAsNonStriker { get; set; }
-            = new List<Ball>();
-
-        public ICollection<Ball> BallsAsBowler { get; set; }
-            = new List<Ball>();
-
-        public ICollection<Wicket> Dismissals { get; set; }
-    = new List<Wicket>();
-
-        public ICollection<Wicket> Catches { get; set; }
-            = new List<Wicket>();
-    }
+    public Guid Id { get; set; }
+    public Guid MatchId { get; set; }
+    public Guid UserId { get; set; }
+    public string Team { get; set; } = string.Empty;
+    public bool IsCaptain { get; set; }
+    public DateTime CreatedAt { get; set; }
+    public Match Match { get; set; } = null!;
+    public User User { get; set; } = null!;
 }
