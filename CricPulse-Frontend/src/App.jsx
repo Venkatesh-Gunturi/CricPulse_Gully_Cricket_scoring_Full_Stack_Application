@@ -11,6 +11,7 @@ import MatchReview from './pages/MatchReview';
 import TossPage from './pages/TossPage';
 import InningsSetup from './pages/InningsSetup';
 import LiveScoring from './pages/LiveScoring';
+import MatchResult from './pages/MatchResult';
 
 function App() {
   return (
@@ -52,6 +53,10 @@ function App() {
             element={<LiveScoring />}
           />
           
+          <Route
+            path="/umpire/matches/:matchId/result"
+            element={<MatchResult />}
+          />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </AuthProvider>

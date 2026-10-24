@@ -52,6 +52,8 @@ export default function InningsSetup() {
   );
 
   const [match, setMatch] = useState(null);
+  const [inningsState, setInningsState] = useState([]);
+  const [inningsNumber, setInningsNumber] = useState(1);
   const [strikerId, setStrikerId] = useState('');
   const [nonStrikerId, setNonStrikerId] = useState('');
   const [bowlerId, setBowlerId] = useState('');
@@ -79,7 +81,11 @@ export default function InningsSetup() {
 );
 
 const innings = stateResponse.data?.innings ?? [];
-const currentInnings = innings[innings.length - 1];
+const orderedInnings = [...innings].sort(
+  (a, b) => (a.inningsNumber ?? a.InningsNumber ?? 0) - (b.inningsNumber ?? b.InningsNumber ?? 0)
+);
+const currentInnings = orderedInnings[orderedInnings.length - 1];
+setInningsState(orderedInnings);
 
 if (
   currentInnings?.status === 'Live' &&
@@ -92,6 +98,24 @@ if (
   });
   return;
 }
+
+const firstInningsState = orderedInnings.find(
+  (inningsItem) =>
+    (inningsItem.inningsNumber ?? inningsItem.InningsNumber) === 1
+);
+const secondInningsExists = orderedInnings.some(
+  (inningsItem) =>
+    (inningsItem.inningsNumber ?? inningsItem.InningsNumber) === 2
+);
+const firstInningsCompleted =
+  String(getValue(firstInningsState, 'status', 'Status') || '').toLowerCase() ===
+  'completed';
+
+// A completed first innings means the next setup must be for the chase,
+// even when innings 2 has not been created yet.
+const nextInningsNumber =
+  secondInningsExists || firstInningsCompleted ? 2 : 1;
+setInningsNumber(nextInningsNumber);
 
         const tossAgreed = getValue(
           result, 'tossAgreed', 'TossAgreed'
@@ -140,7 +164,11 @@ if (
     getValue(match, 'tossDecision', 'TossDecision') || ''
   ).toUpperCase();
 
-  const battingTeam =
+  const firstInnings = inningsState.find(
+    (item) => (item.inningsNumber ?? item.InningsNumber) === 1
+  );
+
+  const firstBattingTeam =
     tossDecision === 'BAT'
       ? tossWinner
       : tossWinner === 'TeamA'
@@ -149,8 +177,13 @@ if (
           ? 'TeamA'
           : '';
 
-  const bowlingTeam =
-    battingTeam === 'TeamA'
+  const battingTeam = inningsNumber === 2
+    ? (firstInnings?.bowlingTeam ?? firstInnings?.BowlingTeam ?? '')
+    : firstBattingTeam;
+
+  const bowlingTeam = inningsNumber === 2
+    ? (firstInnings?.battingTeam ?? firstInnings?.BattingTeam ?? '')
+    : battingTeam === 'TeamA'
       ? 'TeamB'
       : battingTeam === 'TeamB'
         ? 'TeamA'
@@ -214,11 +247,9 @@ if (
         }
       );
 
-      // The innings is now saved. Connect this to the existing
-      // live-scoring route once that route is confirmed.
       navigate(`/umpire/matches/${matchId}/live-scoring`, {
-  replace: true,
-});
+        replace: true,
+      });
     } catch (requestError) {
       setError(getErrorMessage(requestError));
     } finally {
@@ -299,25 +330,27 @@ if (
           Back to Dashboard
         </button>
         <span className="innings-brand">CRICPULSE</span>
-        <span className="innings-header-label">INNINGS 1</span>
+        <span className="innings-header-label">INNINGS {inningsNumber}</span>
       </header>
 
       <section className="innings-setup-content">
         <p className="innings-eyebrow">READY, UMPIRE?</p>
-        <h1>Set the opening lineup.</h1>
+        <h1>{inningsNumber === 1 ? 'Set the opening lineup.' : 'Set the second innings lineup.'}</h1>
         <p className="innings-subtitle">
-          Choose the two batters and the bowler before the first ball.
+          {inningsNumber === 1
+            ? 'Choose the two batters and the bowler before the first ball.'
+            : 'Choose the two batters and the bowler for the chase.'}
         </p>
 
         <section className="innings-teams">
           <article className="innings-team-card innings-batting-card">
-            <span className="innings-team-label">BATTING FIRST</span>
+            <span className="innings-team-label">{inningsNumber === 1 ? 'BATTING FIRST' : 'CHASING'}</span>
             <h2>{battingTeamName || 'Not determined'}</h2>
             <span className="innings-role-pill">Batting</span>
           </article>
 
           <article className="innings-team-card innings-bowling-card">
-            <span className="innings-team-label">BOWLING FIRST</span>
+            <span className="innings-team-label">{inningsNumber === 1 ? 'BOWLING FIRST' : 'DEFENDING'}</span>
             <h2>{bowlingTeamName || 'Not determined'}</h2>
             <span className="innings-role-pill">Bowling</span>
           </article>
@@ -327,7 +360,7 @@ if (
           <div className="innings-section-heading">
             <span className="innings-step">01</span>
             <div>
-              <h2>Opening batters</h2>
+              <h2>{inningsNumber === 1 ? 'Opening batters' : 'Chasing batters'}</h2>
               <p>Select two different players from {battingTeamName}.</p>
             </div>
           </div>
@@ -359,7 +392,7 @@ if (
           <div className="innings-section-heading innings-bowler-heading">
             <span className="innings-step">02</span>
             <div>
-              <h2>Opening bowler</h2>
+              <h2>{inningsNumber === 1 ? 'Opening bowler' : 'Bowler'}</h2>
               <p>Select one player from {bowlingTeamName}.</p>
             </div>
           </div>
@@ -391,7 +424,7 @@ if (
             !bowlingTeam
           }
         >
-          {saving ? 'Setting up innings...' : 'Confirm lineup'}
+          {saving ? 'Setting up innings...' : inningsNumber === 1 ? 'Confirm lineup' : 'Start Second Innings'}
         </button>
       </section>
     </main>

@@ -1380,6 +1380,7 @@ public class MatchService : IMatchService
                 "Only upcoming or live matches can be cancelled.");
         }
 
+
         match.Status = "Cancelled";
         match.CancellationReasonType = dto.CancellationReasonType.Trim();
         match.CancellationReason = string.IsNullOrWhiteSpace(dto.CancellationReason)
@@ -1387,8 +1388,39 @@ public class MatchService : IMatchService
             : dto.CancellationReason.Trim();
         match.UpdatedAt = DateTime.UtcNow;
 
-        await _matchRepository.UpdateAsync(match);
-        await _unitOfWork.SaveChangesAsync();
+        // Update the organizer's lifetime cancellation statistics.
+        var organizerStatistics =
+            await _organizerStatisticsRepository.GetByUserIdAsync(createdByUserId);
+
+        var createOrganizerStatistics = organizerStatistics is null;
+
+        organizerStatistics ??= new OrganizerStatistics
+        {
+            UserId = createdByUserId
+        };
+
+        organizerStatistics.MatchesCancelled++;
+
+        await _transactionManager.BeginTransactionAsync();
+
+        try
+        {
+            await _matchRepository.UpdateAsync(match);
+
+            if (createOrganizerStatistics)
+                await _organizerStatisticsRepository.AddAsync(organizerStatistics);
+            else
+                await _organizerStatisticsRepository.UpdateAsync(organizerStatistics);
+
+            await _unitOfWork.SaveChangesAsync();
+            await _transactionManager.CommitTransactionAsync();
+        }
+        catch
+        {
+            await _transactionManager.RollbackTransactionAsync();
+            throw;
+        }
+
     }
 
 }

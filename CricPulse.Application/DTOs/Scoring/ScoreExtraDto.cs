@@ -11,7 +11,7 @@ public class ScoreExtraDto
     public int BatterRuns { get; set; }
 
     public int RunsCompleted { get; set; }
-
+    public bool BattersCrossed { get; set; }
     public Guid? DismissedMatchPlayerId { get; set; }
 
     public Guid? RunOutByMatchPlayerId { get; set; }

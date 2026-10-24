@@ -363,6 +363,7 @@ public class ScoringService : IScoringService
             dto.Runs;
 
         ball.IsLegalDelivery = true;
+        ball.Notation = dto.Runs == 0 ? "0" : dto.Runs.ToString();
 
         await RecordBallAsync(
             innings,
@@ -377,227 +378,99 @@ public class ScoringService : IScoringService
     // EXTRAS
     // ============================================================
 
+
     public async Task<MatchStateDto> ScoreExtraAsync(
         Guid inningsId,
         ScoreExtraDto dto)
     {
-        var innings =
-            await GetLiveInningsAsync(
-                inningsId);
+        var innings = await GetLiveInningsAsync(inningsId);
+        var match = await GetMatchAsync(innings.MatchId);
 
-        var match =
-            await GetMatchAsync(
-                innings.MatchId);
-
-        ValidateOrganizer(
-            match,
-            dto.CreatedByUserId);
-
+        ValidateOrganizer(match, dto.CreatedByUserId);
         EnsureScoringAllowed(innings);
 
-        var extraType =
-            dto.ExtraType
-                .Trim()
-                .ToUpperInvariant();
-
-        if (extraType is not
-            ("WIDE" or "NO BALL" or "BYE" or "LEG BYE"))
+        if (string.IsNullOrWhiteSpace(dto.ExtraType))
         {
-            throw new ArgumentException(
-                "Invalid extra type.");
+            throw new ArgumentException("Extra type is required.");
         }
 
-        if (dto.TotalRuns < 1)
+        var extraType = dto.ExtraType.Trim().ToUpperInvariant();
+
+        if (extraType is not ("WIDE" or "NO BALL" or "BYE" or "LEG BYE"))
         {
-            throw new ArgumentException(
-                "Extra total must be at least 1.");
+            throw new ArgumentException("Invalid extra type.");
         }
 
-        if (dto.BatterRuns < 0)
+        if (dto.TotalRuns < 0)
         {
             throw new ArgumentException(
-                "Batter runs cannot be negative.");
+                "Extra total cannot be negative.");
         }
 
-        if (dto.RunsCompleted < 0 ||
-            dto.RunsCompleted > 6)
+        if (extraType is "WIDE" or "NO BALL" &&
+            dto.TotalRuns < 1)
+        {
+            throw new ArgumentException(
+                "Wide and no-ball totals must be at least 1.");
+        }
+
+        if (dto.BatterRuns < 0 || dto.BatterRuns > 6)
+        {
+            throw new ArgumentException(
+                "Batter runs must be between 0 and 6.");
+        }
+
+        if (dto.RunsCompleted < 0 || dto.RunsCompleted > 6)
         {
             throw new ArgumentException(
                 "Completed runs must be between 0 and 6.");
         }
 
-        /*
-         * ----------------------------------------------------------
-         * WIDE
-         * ----------------------------------------------------------
-         *
-         * TotalRuns = penalty wide + completed runs.
-         *
-         * Example:
-         * 1 wide       => TotalRuns = 1, RunsCompleted = 0
-         * 2 wides      => TotalRuns = 2, RunsCompleted = 1
-         *
-         * Wide is NOT a legal delivery.
-         */
-        if (extraType == "WIDE")
+        switch (extraType)
         {
-            if (dto.BatterRuns != 0)
-            {
-                throw new ArgumentException(
-                    "Wide cannot contain batter runs.");
-            }
+            case "WIDE":
+                if (dto.BatterRuns != 0)
+                {
+                    throw new ArgumentException(
+                        "Wide cannot contain batter runs.");
+                }
 
-            if (dto.TotalRuns !=
-                dto.RunsCompleted + 1)
-            {
-                throw new ArgumentException(
-                    "Wide total must equal one penalty run plus completed runs.");
-            }
+                if (dto.RunsCompleted > 5 ||
+                    dto.TotalRuns != dto.RunsCompleted + 1)
+                {
+                    throw new ArgumentException(
+                        "Wide total must equal one penalty run plus 0–5 completed runs.");
+                }
+                break;
 
-            if (dto.DismissedMatchPlayerId.HasValue)
-            {
-                return await ScoreExtraRunOutAsync(
-                    innings,
-                    match,
-                    dto,
-                    extraType,
-                    isLegalDelivery: false);
-            }
+            case "NO BALL":
+                if (dto.TotalRuns != dto.RunsCompleted + 1)
+                {
+                    throw new ArgumentException(
+                        "No-ball total must equal one penalty run plus completed runs.");
+                }
 
-            var ball =
-                CreateBaseBall(innings);
+                if (dto.BatterRuns > dto.RunsCompleted)
+                {
+                    throw new ArgumentException(
+                        "Batter runs cannot exceed completed runs.");
+                }
+                break;
 
-            ball.Runs =
-                dto.TotalRuns;
+            case "BYE":
+            case "LEG BYE":
+                if (dto.BatterRuns != 0)
+                {
+                    throw new ArgumentException(
+                        "Bye and leg-bye cannot contain batter runs.");
+                }
 
-            ball.BatterRuns = 0;
-
-            ball.ExtraRuns =
-                dto.TotalRuns;
-
-            ball.ExtraType = "WIDE";
-
-            ball.IsLegalDelivery = false;
-
-            /*
-             * Wide does NOT consume free hit.
-             */
-            await RecordBallAsync(
-                innings,
-                ball,
-                preserveFreeHit: true);
-
-            return await GetCurrentMatchStateAsync(
-                match.Id);
-        }
-
-        /*
-         * ----------------------------------------------------------
-         * NO BALL
-         * ----------------------------------------------------------
-         *
-         * TotalRuns includes the mandatory no-ball penalty.
-         *
-         * Example:
-         *
-         * No ball + 0 batter runs
-         * TotalRuns = 1
-         *
-         * No ball + 4 batter runs
-         * TotalRuns = 5
-         *
-         * No ball is NOT a legal delivery.
-         *
-         * The following delivery becomes a free hit.
-         */
-        if (extraType == "NO BALL")
-        {
-            var minimumPenalty =
-                1;
-
-            if (dto.TotalRuns < minimumPenalty)
-            {
-                throw new ArgumentException(
-                    "No ball must contain the penalty run.");
-            }
-
-            var additionalRuns =
-                dto.TotalRuns - 1;
-
-            if (dto.BatterRuns > additionalRuns)
-            {
-                throw new ArgumentException(
-                    "Batter runs cannot exceed the runs completed on the no-ball.");
-            }
-
-            if (dto.RunsCompleted != additionalRuns)
-            {
-                throw new ArgumentException(
-                    "Completed runs must equal no-ball runs excluding the penalty.");
-            }
-
-            if (dto.DismissedMatchPlayerId.HasValue)
-            {
-                return await ScoreExtraRunOutAsync(
-                    innings,
-                    match,
-                    dto,
-                    extraType,
-                    isLegalDelivery: false);
-            }
-
-            var ball =
-                CreateBaseBall(innings);
-
-            ball.Runs =
-                dto.TotalRuns;
-
-            ball.BatterRuns =
-                dto.BatterRuns;
-
-            ball.ExtraRuns =
-                dto.TotalRuns -
-                dto.BatterRuns;
-
-            ball.ExtraType =
-                "NO BALL";
-
-            ball.IsLegalDelivery = false;
-
-            /*
-             * No ball creates free hit.
-             *
-             * RecordBallAsync captures the previous state
-             * BEFORE changing IsFreeHit.
-             */
-            await RecordBallAsync(
-                innings,
-                ball,
-                preserveFreeHit: false,
-                freeHitAfterBall: true);
-
-            return await GetCurrentMatchStateAsync(
-                match.Id);
-        }
-
-        /*
-         * ----------------------------------------------------------
-         * BYE / LEG BYE
-         * ----------------------------------------------------------
-         *
-         * These are legal deliveries.
-         * They do not count as batter runs.
-         */
-        if (dto.BatterRuns != 0)
-        {
-            throw new ArgumentException(
-                "Bye and leg-bye cannot contain batter runs.");
-        }
-
-        if (dto.TotalRuns != dto.RunsCompleted)
-        {
-            throw new ArgumentException(
-                "Bye and leg-bye total must equal completed runs.");
+                if (dto.TotalRuns != dto.RunsCompleted)
+                {
+                    throw new ArgumentException(
+                        "Bye and leg-bye totals must equal completed runs.");
+                }
+                break;
         }
 
         if (dto.DismissedMatchPlayerId.HasValue)
@@ -607,37 +480,54 @@ public class ScoringService : IScoringService
                 match,
                 dto,
                 extraType,
-                isLegalDelivery: true);
+                isLegalDelivery: extraType is "BYE" or "LEG BYE");
         }
 
-        var extraBall =
-            CreateBaseBall(innings);
+        var ball = CreateBaseBall(innings);
 
-        extraBall.Runs =
-            dto.TotalRuns;
+        ball.Runs = dto.TotalRuns;
+        ball.BatterRuns = dto.BatterRuns;
+        ball.ExtraType = extraType;
 
-        extraBall.BatterRuns = 0;
+        ball.ExtraRuns = extraType switch
+        {
+            "WIDE" => dto.TotalRuns,
+            "NO BALL" => dto.TotalRuns - dto.BatterRuns,
+            "BYE" or "LEG BYE" => dto.TotalRuns,
+            _ => 0
+        };
 
-        extraBall.ExtraRuns =
-            dto.TotalRuns;
+        ball.IsLegalDelivery = extraType is "BYE" or "LEG BYE";
+        ball.Notation = BuildExtraNotation(
+            extraType,
+            dto.TotalRuns);
 
-        extraBall.ExtraType =
-            extraType;
+        if (extraType == "NO BALL")
+        {
+            await RecordBallAsync(
+                innings,
+                ball,
+                preserveFreeHit: false,
+                freeHitAfterBall: true);
+        }
+        else
+        {
+            await RecordBallAsync(
+                innings,
+                ball,
+                preserveFreeHit: extraType == "WIDE");
+        }
 
-        extraBall.IsLegalDelivery = true;
-
-        await RecordBallAsync(
-            innings,
-            extraBall,
-            preserveFreeHit: false);
-
-        return await GetCurrentMatchStateAsync(
-            match.Id);
+        return await GetCurrentMatchStateAsync(match.Id);
     }
+
 
     // ============================================================
     // EXTRA + RUN OUT
     // ============================================================
+
+
+
 
     private async Task<MatchStateDto> ScoreExtraRunOutAsync(
         Innings innings,
@@ -666,15 +556,28 @@ public class ScoringService : IScoringService
                 "Dismissed player must be one of the current batters.");
         }
 
-        var dismissed =
-            GetMatchPlayer(
-                match,
-                dto.DismissedMatchPlayerId.Value);
+        var dismissed = GetMatchPlayer(
+            match,
+            dto.DismissedMatchPlayerId.Value);
 
         if (dismissed.Team != innings.BattingTeam)
         {
             throw new ArgumentException(
                 "Dismissed player must belong to the batting team.");
+        }
+
+        if (await HasPlayerBeenDismissedAsync(
+                new[] { innings },
+                dismissed.Id))
+        {
+            throw new ArgumentException(
+                "This player has already been dismissed in this innings.");
+        }
+
+        if (dto.RunsCompleted < 0 || dto.RunsCompleted > 5)
+        {
+            throw new ArgumentException(
+                "Completed runs for an extra run-out must be between 0 and 5.");
         }
 
         ValidateBowlingPlayer(
@@ -684,56 +587,83 @@ public class ScoringService : IScoringService
             "Invalid run-out player.");
 
         /*
-         * On a free hit, run out is the allowed dismissal.
+         * Project the state after this delivery to determine
+         * whether an incoming batter is required.
          */
-        if (innings.IsFreeHit &&
-            extraType == "NO BALL")
+        var previousTotalRuns = innings.TotalRuns;
+        var previousWickets = innings.Wickets;
+        var previousLegalBalls = innings.LegalBalls;
+
+        innings.TotalRuns += dto.TotalRuns;
+        innings.Wickets++;
+
+        if (isLegalDelivery)
         {
-            // Allowed.
+            innings.LegalBalls++;
         }
 
-        var ball =
-            CreateBaseBall(innings);
+        var inningsFinished = IsInningsFinished(innings, match);
 
-        ball.Runs =
-            dto.TotalRuns;
+        innings.TotalRuns = previousTotalRuns;
+        innings.Wickets = previousWickets;
+        innings.LegalBalls = previousLegalBalls;
 
-        ball.BatterRuns =
-            dto.BatterRuns;
+        Guid? newBatterId = null;
 
-        ball.ExtraType =
-            extraType;
-
-        ball.ExtraRuns =
-            extraType switch
+        if (!inningsFinished)
+        {
+            if (!dto.NewBatterMatchPlayerId.HasValue)
             {
-                "WIDE" =>
-                    dto.TotalRuns,
+                throw new ArgumentException(
+                    "A new batter is required after a wicket.");
+            }
 
-                "NO BALL" =>
-                    dto.TotalRuns -
-                    dto.BatterRuns,
+            var newBatter = GetMatchPlayer(
+                match,
+                dto.NewBatterMatchPlayerId.Value);
 
-                "BYE" or "LEG BYE" =>
-                    dto.TotalRuns,
+            ValidateNewBatter(
+                match,
+                innings,
+                dismissed.Id,
+                newBatter.Id);
 
-                _ => 0
-            };
+            if (await HasPlayerBeenDismissedAsync(
+                    new[] { innings },
+                    newBatter.Id))
+            {
+                throw new ArgumentException(
+                    "This player has already been dismissed in this innings.");
+            }
 
-        ball.IsLegalDelivery =
-            isLegalDelivery;
+            newBatterId = newBatter.Id;
+        }
 
-        /*
-         * Capture state BEFORE modifying innings.
-         */
-        CapturePreviousState(
-            innings,
-            ball);
+        var ball = CreateBaseBall(innings);
+
+        ball.Runs = dto.TotalRuns;
+        ball.BatterRuns = dto.BatterRuns;
+        ball.ExtraType = extraType;
+
+        ball.ExtraRuns = extraType switch
+        {
+            "WIDE" => dto.TotalRuns,
+            "NO BALL" => dto.TotalRuns - dto.BatterRuns,
+            "BYE" or "LEG BYE" => dto.TotalRuns,
+            _ => 0
+        };
+
+        ball.IsLegalDelivery = isLegalDelivery;
+        ball.Notation = BuildExtraNotation(
+            extraType,
+            dto.TotalRuns,
+            isWicket: true);
+
+        CapturePreviousState(innings, ball);
 
         await _ballRepository.AddAsync(ball);
 
-        innings.TotalRuns +=
-            ball.Runs;
+        innings.TotalRuns += ball.Runs;
 
         if (ball.IsLegalDelivery)
         {
@@ -742,48 +672,48 @@ public class ScoringService : IScoringService
 
         innings.Wickets++;
 
-        var wicket =
-            new Wicket
-            {
-                Id = Guid.NewGuid(),
-                BallId = ball.Id,
-                DismissedMatchPlayerId =
-                    dismissed.Id,
-                WicketType = "RUN OUT",
-                RunOutByMatchPlayerId =
-                    dto.RunOutByMatchPlayerId,
-                RunsCompleted =
-                    dto.RunsCompleted
-            };
+        var wicket = new Wicket
+        {
+            Id = Guid.NewGuid(),
+            BallId = ball.Id,
+            DismissedMatchPlayerId = dismissed.Id,
+            WicketType = "RUN OUT",
+            RunOutByMatchPlayerId = dto.RunOutByMatchPlayerId,
+            RunsCompleted = dto.RunsCompleted
+        };
 
-        await _wicketRepository.AddAsync(
-            wicket);
+        await _wicketRepository.AddAsync(wicket);
 
-        /*
-         * Apply completed-run strike rotation BEFORE replacing
-         * the dismissed batter.
-         */
-        if (dto.RunsCompleted % 2 == 1)
+        // Preserve the existing DTO and strike-rotation behavior.
+        var runsAreOdd = dto.RunsCompleted % 2 != 0;
+        var shouldSwapEnds = runsAreOdd != dto.BattersCrossed;
+
+        if (shouldSwapEnds)
+        {
+            RotateStrike(innings);
+        }
+
+        if (isLegalDelivery && innings.LegalBalls % 6 == 0)
         {
             RotateStrike(innings);
         }
 
         /*
-         * A completed over changes ends too.
+         * Free-hit behavior:
+         * - No-ball creates/retains a free hit.
+         * - Wide preserves the previous free-hit state.
+         * - Legal bye/leg-bye consumes a free hit.
          */
-        if (ball.IsLegalDelivery &&
-            innings.LegalBalls % 6 == 0)
+        if (extraType == "NO BALL")
         {
-            RotateStrike(innings);
+            innings.IsFreeHit = true;
+        }
+        else if (extraType is "BYE" or "LEG BYE")
+        {
+            innings.IsFreeHit = false;
         }
 
-        innings.IsFreeHit =
-            false;
-
-        var inningsFinished =
-            IsInningsFinished(
-                innings,
-                match);
+        inningsFinished = IsInningsFinished(innings, match);
 
         if (inningsFinished)
         {
@@ -791,109 +721,96 @@ public class ScoringService : IScoringService
         }
         else
         {
-            if (!dto.NewBatterMatchPlayerId.HasValue)
-            {
-                throw new ArgumentException(
-                    "A new batter is required after a wicket.");
-            }
-
-            var newBatter =
-                GetMatchPlayer(
-                    match,
-                    dto.NewBatterMatchPlayerId.Value);
-
-            ValidateNewBatter(
-                match,
-                innings,
-                dismissed.Id,
-                newBatter.Id);
-
             ReplaceDismissedBatter(
                 innings,
                 dismissed.Id,
-                newBatter.Id);
+                newBatterId!.Value);
+
+            innings.CompletionPending = false;
         }
 
         innings.UndoUsed = false;
 
-        await _inningsRepository.UpdateAsync(
-            innings);
-
+        await _inningsRepository.UpdateAsync(innings);
         await _unitOfWork.SaveChangesAsync();
 
-        return await GetCurrentMatchStateAsync(
-            match.Id);
+        return await GetCurrentMatchStateAsync(match.Id);
     }
+
+
+
 
     // ============================================================
     // WICKET
     // ============================================================
 
+
     public async Task<MatchStateDto> ScoreWicketAsync(
         Guid inningsId,
         ScoreWicketDto dto)
     {
-        var innings =
-            await GetLiveInningsAsync(
-                inningsId);
+        var innings = await GetLiveInningsAsync(inningsId);
+        var match = await GetMatchAsync(innings.MatchId);
 
-        var match =
-            await GetMatchAsync(
-                innings.MatchId);
-
-        ValidateOrganizer(
-            match,
-            dto.CreatedByUserId);
-
+        ValidateOrganizer(match, dto.CreatedByUserId);
         EnsureScoringAllowed(innings);
 
-        var wicketType =
-            dto.WicketType
-                .Trim()
-                .ToUpperInvariant();
+        if (string.IsNullOrWhiteSpace(dto.WicketType))
+        {
+            throw new ArgumentException("Wicket type is required.");
+        }
 
-        var validTypes =
-            new[]
-            {
-                "BOWLED",
-                "CAUGHT",
-                "RUN OUT",
-                "LBW",
-                "STUMPED",
-                "HIT WICKET"
-            };
+        var wicketType = dto.WicketType.Trim().ToUpperInvariant();
+
+        var validTypes = new[]
+        {
+        "BOWLED",
+        "CAUGHT",
+        "RUN OUT",
+        "LBW",
+        "STUMPED",
+        "HIT WICKET"
+    };
 
         if (!validTypes.Contains(wicketType))
         {
-            throw new ArgumentException(
-                "Invalid wicket type.");
+            throw new ArgumentException("Invalid wicket type.");
         }
 
-        /*
-         * Free hit:
-         * only RUN OUT is allowed.
-         */
-        if (innings.IsFreeHit &&
-            wicketType != "RUN OUT")
+        if (innings.IsFreeHit && wicketType != "RUN OUT")
         {
             throw new InvalidOperationException(
                 "Only run out is allowed on a free hit.");
         }
 
-        var dismissed =
-            GetMatchPlayer(
-                match,
-                dto.DismissedMatchPlayerId);
+        var completedRuns = wicketType == "RUN OUT"
+            ? dto.RunsCompleted
+            : 0;
+
+        if (wicketType == "RUN OUT" &&
+            (completedRuns < 0 || completedRuns > 3))
+        {
+            throw new ArgumentException(
+                "Completed runs for a run out must be between 0 and 3.");
+        }
+
+        if (wicketType != "RUN OUT" && dto.RunsCompleted != 0)
+        {
+            throw new ArgumentException(
+                "Completed runs can only be supplied for a run out.");
+        }
+
+        var dismissed = GetMatchPlayer(
+            match,
+            dto.DismissedMatchPlayerId);
 
         if (dismissed.Team != innings.BattingTeam)
         {
             throw new ArgumentException(
-                "Dismissed player must belong to batting team.");
+                "Dismissed player must belong to the batting team.");
         }
 
-        if (!IsCurrentBatter(
-                innings,
-                dismissed.Id))
+        if (!IsCurrentBatter(innings, dismissed.Id))
         {
             throw new ArgumentException(
                 "Dismissed player must be one of the current batters.");
@@ -907,110 +824,32 @@ public class ScoringService : IScoringService
                 "This player has already been dismissed.");
         }
 
-        if (dto.RunsCompleted < 0 ||
-            dto.RunsCompleted > 6)
-        {
-            throw new ArgumentException(
-                "Completed runs must be between 0 and 6.");
-        }
-
         ValidateWicketParticipants(
             match,
             innings,
             wicketType,
             dto);
 
-        var ball =
-            CreateBaseBall(innings);
+        // Project the state after this legal wicket delivery,
+        // then restore it before making any persistent changes.
+        var previousTotalRuns = innings.TotalRuns;
+        var previousWickets = innings.Wickets;
+        var previousLegalBalls = innings.LegalBalls;
 
-        /*
-         * Normal wicket scoring:
-         *
-         * BOWLED / CAUGHT / LBW / STUMPED /
-         * HIT WICKET:
-         *   completed runs belong to batter.
-         *
-         * RUN OUT:
-         *   completed runs are explicitly supplied by the
-         *   run-out modal.
-         */
-        ball.Runs =
-            dto.RunsCompleted;
-
-        ball.BatterRuns =
-            dto.RunsCompleted;
-
-        ball.IsLegalDelivery = true;
-
-        CapturePreviousState(
-            innings,
-            ball);
-
-        await _ballRepository.AddAsync(
-            ball);
-
-        innings.TotalRuns +=
-            ball.Runs;
-
-        innings.LegalBalls++;
+        innings.TotalRuns += completedRuns;
         innings.Wickets++;
+        innings.LegalBalls++;
 
-        var wicket =
-            new Wicket
-            {
-                Id = Guid.NewGuid(),
+        var inningsFinished = IsInningsFinished(innings, match);
 
-                BallId =
-                    ball.Id,
+        innings.TotalRuns = previousTotalRuns;
+        innings.Wickets = previousWickets;
+        innings.LegalBalls = previousLegalBalls;
 
-                DismissedMatchPlayerId =
-                    dismissed.Id,
+        // Validate the incoming batter before adding records.
+        Guid? newBatterId = null;
 
-                WicketType =
-                    wicketType,
-
-                CaughtByMatchPlayerId =
-                    dto.CaughtByMatchPlayerId,
-
-                RunOutByMatchPlayerId =
-                    dto.RunOutByMatchPlayerId,
-
-                StumpedByMatchPlayerId =
-                    dto.StumpedByMatchPlayerId,
-
-                RunsCompleted =
-                    dto.RunsCompleted
-            };
-
-        await _wicketRepository.AddAsync(
-            wicket);
-
-        /*
-         * Apply completed runs first.
-         */
-        ApplyStrikeAfterRuns(
-            innings,
-            dto.RunsCompleted);
-
-        /*
-         * Wicket delivery consumes free hit.
-         */
-        innings.IsFreeHit = false;
-
-        /*
-         * Check innings completion before requiring
-         * a replacement batter.
-         */
-        var inningsFinished =
-            IsInningsFinished(
-                innings,
-                match);
-
-        if (inningsFinished)
-        {
-            innings.CompletionPending = true;
-        }
-        else
+        if (!inningsFinished)
         {
             if (!dto.NewBatterMatchPlayerId.HasValue)
             {
@@ -1018,10 +857,9 @@ public class ScoringService : IScoringService
                     "A new batter is required after a wicket.");
             }
 
-            var newBatter =
-                GetMatchPlayer(
-                    match,
-                    dto.NewBatterMatchPlayerId.Value);
+            var newBatter = GetMatchPlayer(
+                match,
+                dto.NewBatterMatchPlayerId.Value);
 
             ValidateNewBatter(
                 match,
@@ -1029,105 +867,171 @@ public class ScoringService : IScoringService
                 dismissed.Id,
                 newBatter.Id);
 
+            if (await HasPlayerBeenDismissedAsync(
+                    new[] { innings },
+                    newBatter.Id))
+            {
+                throw new ArgumentException(
+                    "This player has already been dismissed in this innings.");
+            }
+
+            newBatterId = newBatter.Id;
+        }
+
+        // All validations have passed. Record the delivery.
+        var ball = CreateBaseBall(innings);
+
+        ball.Runs = completedRuns;
+        ball.BatterRuns = completedRuns;
+        ball.IsLegalDelivery = true;
+        ball.Notation = wicketType == "RUN OUT" && completedRuns > 0
+            ? $"W+{completedRuns}"
+            : "W";
+
+        CapturePreviousState(innings, ball);
+
+        await _ballRepository.AddAsync(ball);
+
+        innings.TotalRuns += ball.Runs;
+        innings.LegalBalls++;
+        innings.Wickets++;
+
+        var wicket = new Wicket
+        {
+            Id = Guid.NewGuid(),
+            BallId = ball.Id,
+            DismissedMatchPlayerId = dismissed.Id,
+            WicketType = wicketType,
+
+            CaughtByMatchPlayerId =
+                wicketType == "CAUGHT"
+                    ? dto.CaughtByMatchPlayerId
+                    : null,
+
+            RunOutByMatchPlayerId =
+                wicketType == "RUN OUT"
+                    ? dto.RunOutByMatchPlayerId
+                    : null,
+
+            StumpedByMatchPlayerId =
+                wicketType == "STUMPED"
+                    ? dto.StumpedByMatchPlayerId
+                    : null,
+
+            RunsCompleted = completedRuns
+        };
+
+        await _wicketRepository.AddAsync(wicket);
+
+        // Apply completed-run strike rotation before replacing the batter.
+        if (wicketType == "RUN OUT")
+        {
+            var runsAreOdd = completedRuns % 2 != 0;
+            var shouldSwapEnds = runsAreOdd != dto.BattersCrossed;
+
+            if (shouldSwapEnds)
+            {
+                RotateStrike(innings);
+            }
+        }
+        else
+        {
+            ApplyStrikeAfterRuns(innings, completedRuns);
+        }
+
+        innings.IsFreeHit = false;
+
+        // Keep the existing completion-pending flow.
+        if (inningsFinished)
+        {
+            innings.CompletionPending = true;
+        }
+        else
+        {
             ReplaceDismissedBatter(
                 innings,
                 dismissed.Id,
-                newBatter.Id);
+                newBatterId!.Value);
+
+            innings.CompletionPending = false;
         }
 
-        /*
-         * End-of-over rotation.
-         */
-        if (innings.LegalBalls % 6 == 0)
+        if (!inningsFinished && innings.LegalBalls % 6 == 0)
         {
             RotateStrike(innings);
         }
 
         innings.UndoUsed = false;
 
-        await _inningsRepository.UpdateAsync(
-            innings);
-
+        await _inningsRepository.UpdateAsync(innings);
         await _unitOfWork.SaveChangesAsync();
 
-        return await GetCurrentMatchStateAsync(
-            match.Id);
+        return await GetCurrentMatchStateAsync(match.Id);
     }
+
 
     // ============================================================
     // COMPLETE INNINGS
     // ============================================================
 
+
     public async Task<MatchStateDto> CompleteInningsAsync(
         Guid inningsId,
         CompleteInningsDto dto)
     {
-        var innings =
-            await _inningsRepository
-                .GetByIdAsync(inningsId);
+        var innings = await _inningsRepository.GetByIdAsync(inningsId);
 
         if (innings is null)
         {
-            throw new InvalidOperationException(
-                "Innings was not found.");
+            throw new InvalidOperationException("Innings was not found.");
         }
 
         if (innings.Status != "Live")
         {
-            throw new InvalidOperationException(
-                "Innings is not live.");
+            throw new InvalidOperationException("Innings is not live.");
         }
 
-        var match =
-            await GetMatchAsync(
-                innings.MatchId);
+        var match = await GetMatchAsync(innings.MatchId);
 
-        ValidateOrganizer(
-            match,
-            dto.CreatedByUserId);
+        ValidateOrganizer(match, dto.CreatedByUserId);
 
+        // Do not allow an innings to be completed prematurely.
+        if (!IsInningsFinished(innings, match))
+        {
+            throw new InvalidOperationException(
+                "The innings cannot be completed until the overs are exhausted, " +
+                "the batting team is all out, or the chasing team reaches its target.");
+        }
+
+        // Preserve the existing confirmation flow.
         innings.Status = "Completed";
         innings.CompletionPending = false;
         innings.CompletedAt = DateTime.UtcNow;
 
-        await _inningsRepository.UpdateAsync(
-            innings);
+        await _inningsRepository.UpdateAsync(innings);
 
-        var inningsList =
-            await _inningsRepository
-                .GetByMatchIdAsync(match.Id);
+        var inningsList = await _inningsRepository.GetByMatchIdAsync(match.Id);
 
         if (innings.InningsNumber == 2)
         {
-            CompleteMatchIfRequired(
-                match,
-                innings,
-                inningsList);
+            CompleteMatchIfRequired(match, innings, inningsList);
 
-            await _matchRepository.UpdateAsync(
-                match);
-
+            await _matchRepository.UpdateAsync(match);
             await _unitOfWork.SaveChangesAsync();
 
-            /*
-             * The completion service is idempotent.
-             *
-             * If statistics finalization fails, the match remains
-             * Finished with PlayerStatisticsFinalized = false.
-             * The lifecycle worker can retry it later.
-             */
-            await _matchCompletionService
-                .FinalizeCompletedMatchAsync(
-                    match.Id);
+            // Keep statistics finalization idempotent.
+            // The lifecycle worker can retry if finalization fails.
+            await _matchCompletionService.FinalizeCompletedMatchAsync(match.Id);
         }
         else
         {
+            // Completing the first innings must not finish the match.
             await _unitOfWork.SaveChangesAsync();
         }
 
-        return await GetCurrentMatchStateAsync(
-            match.Id);
+        return await GetCurrentMatchStateAsync(match.Id);
     }
+
 
     // ============================================================
     // CHANGE BOWLER
@@ -1218,6 +1122,14 @@ public class ScoringService : IScoringService
         {
             throw new InvalidOperationException(
                 "Innings was not found.");
+        }
+        if (string.Equals(
+         innings.Status?.ToString(),
+         "Completed",
+         StringComparison.OrdinalIgnoreCase))
+        {
+            throw new InvalidOperationException(
+                "Cannot undo a ball after the innings has been completed.");
         }
 
         var match =
@@ -1485,10 +1397,10 @@ public class ScoringService : IScoringService
     // ============================================================
 
     private static void ValidateNewBatter(
-        MatchEntity match,
-        Innings innings,
-        Guid dismissedPlayerId,
-        Guid newBatterId)
+     MatchEntity match,
+     Innings innings,
+     Guid dismissedPlayerId,
+     Guid newBatterId)
     {
         if (dismissedPlayerId == newBatterId)
         {
@@ -1496,22 +1408,18 @@ public class ScoringService : IScoringService
                 "Dismissed player cannot return as the new batter.");
         }
 
-        var newBatter =
-            GetMatchPlayer(
-                match,
-                newBatterId);
+        var newBatter = GetMatchPlayer(
+            match,
+            newBatterId);
 
-        if (newBatter.Team !=
-            innings.BattingTeam)
+        if (newBatter.Team != innings.BattingTeam)
         {
             throw new ArgumentException(
                 "New batter must belong to the batting team.");
         }
 
-        if (newBatter.Id ==
-            innings.CurrentStrikerMatchPlayerId ||
-            newBatter.Id ==
-            innings.CurrentNonStrikerMatchPlayerId)
+        if (newBatter.Id == innings.CurrentStrikerMatchPlayerId ||
+            newBatter.Id == innings.CurrentNonStrikerMatchPlayerId)
         {
             throw new ArgumentException(
                 "New batter is already on the field.");
@@ -1868,9 +1776,9 @@ public class ScoringService : IScoringService
     // ============================================================
 
     private static void CompleteMatchIfRequired(
-        MatchEntity match,
-        Innings secondInnings,
-        IReadOnlyList<Innings> inningsList)
+         MatchEntity match,
+         Innings secondInnings,
+         IReadOnlyList<Innings> inningsList)
     {
         var firstInnings =
             inningsList.FirstOrDefault(
@@ -1978,6 +1886,36 @@ public class ScoringService : IScoringService
             throw new InvalidOperationException(
                 "Innings completion is pending. Complete or undo the last ball first.");
         }
+    }
+
+    // ============================================================
+    // BALL NOTATION
+    // ============================================================
+
+    private static string BuildExtraNotation(
+        string extraType,
+        int totalRuns,
+        bool isWicket = false)
+    {
+        var prefix = extraType switch
+        {
+            "WIDE" => "WD",
+            "NO BALL" => "NB",
+            "BYE" => "B",
+            "LEG BYE" => "LB",
+            _ => totalRuns.ToString()
+        };
+
+        // Wide and no-ball totals include one mandatory penalty run.
+        var additionalRuns = extraType is "WIDE" or "NO BALL"
+            ? totalRuns - 1
+            : totalRuns;
+
+        var notation = additionalRuns > 0
+            ? $"{prefix}+{additionalRuns}"
+            : prefix;
+
+        return isWicket ? $"{notation} W" : notation;
     }
 
     // ============================================================
@@ -2170,6 +2108,41 @@ public class ScoringService : IScoringService
                         .Where(name => name != "—")
                         .ToList();
 
+
+                    var yetToBatPlayers = players
+                        .Where(p =>
+                            p.Team == x.BattingTeam &&
+                            p.Id != strikerId &&
+                            p.Id != nonStrikerId &&
+                            !IsDismissed(p.Id, x))
+                        .Select(p => new YetToBatPlayerDto
+                        {
+                            MatchPlayerId = p.Id,
+                            Name = GetPlayerName(p.Id)
+                        })
+                        .Where(p => p.Name != "—")
+                        .ToList();
+
+
+                    var battingPlayers = players
+                        .Where(p => p.Team == x.BattingTeam)
+                        .Select(p => new MatchPlayerOptionDto
+                        {
+                            MatchPlayerId = p.Id,
+                            Name = GetPlayerName(p.Id)
+                        })
+                        .Where(p => p.Name != "—")
+                        .ToList();
+
+                    var fieldingPlayers = players
+                        .Where(p => p.Team == x.BowlingTeam)
+                        .Select(p => new MatchPlayerOptionDto
+                        {
+                            MatchPlayerId = p.Id,
+                            Name = GetPlayerName(p.Id)
+                        })
+                        .Where(p => p.Name != "—")
+                        .ToList();
                     // Keep the last completed over visible until the
                     // first delivery of the next over is recorded.
                     var currentOverNumber = x.LegalBalls / 6 + 1;
@@ -2233,6 +2206,9 @@ public class ScoringService : IScoringService
                         StrikerName = GetPlayerName(strikerId),
                         NonStrikerName = GetPlayerName(nonStrikerId),
                         BowlerName = GetPlayerName(bowlerId),
+                        BattingPlayers = battingPlayers,
+                        FieldingPlayers = fieldingPlayers,
+                        YetToBatPlayers = yetToBatPlayers,
 
                         StrikerRuns = strikerBalls.Sum(b => b.BatterRuns),
                         StrikerBalls = strikerBalls.Count(b => b.IsLegalDelivery),
@@ -2244,8 +2220,9 @@ public class ScoringService : IScoringService
                         NonStrikerFours = nonStrikerBalls.Count(b => b.BatterRuns == 4),
                         NonStrikerSixes = nonStrikerBalls.Count(b => b.BatterRuns == 6),
 
-                        BowlerOvers = Math.Round(
-                            (decimal)bowlerBalls.Count(b => b.IsLegalDelivery) / 6, 1),
+                        BowlerOvers =
+                        Math.Floor((decimal)bowlerBalls.Count(b => b.IsLegalDelivery) / 6)
+                        + (bowlerBalls.Count(b => b.IsLegalDelivery) % 6) / 10m,
                         BowlerRunsConceded = bowlerRunsConceded,
                         BowlerWickets = bowlerWickets,
 

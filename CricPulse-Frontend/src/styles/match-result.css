@@ -1,0 +1,97 @@
+.match-result-page {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 32px 20px;
+  background: #f4f7fb;
+  color: #172033;
+  box-sizing: border-box;
+}
+
+.match-result-card {
+  width: 100%;
+  max-width: 760px;
+  padding: 36px;
+  border-radius: 20px;
+  background: #ffffff;
+  box-shadow: 0 12px 40px rgba(20, 35, 60, 0.09);
+  text-align: center;
+  box-sizing: border-box;
+}
+
+.match-result-card h1 {
+  margin: 0 0 12px;
+  font-size: clamp(26px, 4vw, 36px);
+}
+
+.match-result-summary {
+  margin: 0 0 28px;
+  color: #167447;
+  font-size: 20px;
+  font-weight: 700;
+  line-height: 1.5;
+}
+
+.match-result-innings {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+  margin-bottom: 28px;
+}
+
+.match-result-innings-card {
+  padding: 22px 16px;
+  border: 1px solid #e1e7ef;
+  border-radius: 14px;
+  background: #f9fbfd;
+}
+
+.match-result-innings-card h2 {
+  margin: 0 0 12px;
+  font-size: 17px;
+  overflow-wrap: anywhere;
+}
+
+.match-result-score {
+  margin: 0 0 8px;
+  font-size: 32px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+.match-result-innings-card p:last-child {
+  margin-bottom: 0;
+  color: #5d6879;
+  font-size: 14px;
+}
+
+.match-result-dashboard-button {
+  min-height: 46px;
+  padding: 12px 24px;
+  border: none;
+  border-radius: 10px;
+  background: #176b45;
+  color: #ffffff;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.match-result-dashboard-button:hover {
+  background: #105537;
+}
+
+.match-result-dashboard-button:focus-visible {
+  outline: 3px solid #8cc9a9;
+  outline-offset: 3px;
+}
+
+@media (max-width: 560px) {
+  .match-result-card {
+    padding: 26px 18px;
+  }
+
+  .match-result-innings {
+    grid-template-columns: 1fr;
+  }
+}

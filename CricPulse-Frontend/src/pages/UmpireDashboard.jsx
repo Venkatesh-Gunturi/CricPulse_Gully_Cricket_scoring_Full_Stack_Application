@@ -826,7 +826,19 @@ const handleConfirmCancellation = async (cancellationData) => {
 
                 </div>
 
-                <div className="umpire-stat-value">—</div>
+                <div className="umpire-stat-value">
+                  {matchesLoading ? (
+                    <FaSpinner className="umpire-spin" aria-label="Loading statistics" />
+                  ) : matchesError ? (
+                    '—'
+                  ) : label === 'Created Matches' ? (
+                    matches.length
+                  ) : label === 'Organized Successfully' ? (
+                    counts.Finished ?? 0
+                  ) : (
+                    counts.Cancelled ?? 0
+                  )}
+                </div>
 
                 <h3>{label}</h3>
 
@@ -835,22 +847,14 @@ const handleConfirmCancellation = async (cancellationData) => {
             ))}
 
           </div>
-
-
-
           <p className="umpire-data-note">
-
-            Statistics are waiting for a dedicated statistics API. Match
-
-            counts below reflect currently retained matches only.
-
+            Statistics are calculated from the matches currently available
+            in your dashboard.
           </p>
 
         </div>
 
       </section>
-
-
 
       <section className="umpire-matches-section">
 

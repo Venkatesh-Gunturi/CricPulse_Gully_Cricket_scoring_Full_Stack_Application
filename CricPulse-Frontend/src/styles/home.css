@@ -1,0 +1,355 @@
+
+.home-page {
+  width: 100%;
+  overflow: hidden;
+  background: #fff;
+  color: #183b2e;
+}
+
+/* Hero image — no text, with white fading edges */
+.home-hero {
+  position: relative;
+  width: 100%;
+  min-height: clamp(300px, 36vw, 500px);
+  background-color: #e9e7d8;
+  background-position: center;
+  background-size: cover;
+  background-repeat: no-repeat;
+}
+
+.home-hero::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(
+    to right,
+    #fff 0%,
+    rgba(255, 255, 255, 0.88) 5%,
+    rgba(255, 255, 255, 0.3) 16%,
+    transparent 28%,
+    transparent 72%,
+    rgba(255, 255, 255, 0.3) 84%,
+    rgba(255, 255, 255, 0.88) 95%,
+    #fff 100%
+  );
+}
+
+/* Feature section */
+.home-features {
+  width: min(100% - 3rem, 1440px);
+  margin: 0 auto;
+  padding: 3.5rem 0 4.5rem;
+}
+
+.home-section-heading,
+.home-community-heading {
+  max-width: 760px;
+  margin: 0 auto 2.5rem;
+  text-align: center;
+}
+
+.home-section-eyebrow {
+  display: inline-block;
+  margin-bottom: 0.8rem;
+  color: #8b702c;
+  font-size: 0.75rem;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+  line-height: 1.5;
+}
+
+.home-section-heading h2,
+.home-community-heading h2 {
+  margin: 0 0 1rem;
+  color: #123d30;
+  font-size: clamp(1.8rem, 3vw, 2.7rem);
+  font-weight: 800;
+  line-height: 1.2;
+}
+
+.home-section-heading h2 span,
+.home-community-heading h2 span {
+  color: #b18a2d;
+}
+
+.home-section-heading > p,
+.home-community-heading > p {
+  margin: 0;
+  color: #68766e;
+  font-size: 1rem;
+  line-height: 1.7;
+}
+
+/* Three cards stay in one row on desktop and tablet */
+.home-feature-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: clamp(1rem, 2vw, 1.6rem);
+  width: 100%;
+  margin: 2.8rem auto 0;
+}
+
+.home-feature-card {
+  position: relative;
+  display: flex;
+  min-width: 0;
+  min-height: 410px;
+  flex-direction: column;
+  justify-content: flex-end;
+  overflow: hidden;
+  border-radius: 18px;
+  background: #173b2e;
+  color: #fff;
+  text-decoration: none;
+  isolation: isolate;
+  box-shadow: 0 12px 30px rgba(18, 61, 48, 0.12);
+  transition:
+    transform 0.3s ease,
+    box-shadow 0.3s ease;
+}
+
+.home-feature-card:hover {
+  transform: translateY(-7px);
+  box-shadow: 0 20px 38px rgba(18, 61, 48, 0.2);
+}
+
+.home-feature-image {
+  position: absolute;
+  z-index: -2;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+  transition: transform 0.5s ease;
+}
+
+.home-feature-card:hover .home-feature-image {
+  transform: scale(1.06);
+}
+
+.home-feature-overlay {
+  position: absolute;
+  z-index: -1;
+  inset: 0;
+  background: linear-gradient(
+    to top,
+    rgba(5, 23, 17, 0.96) 0%,
+    rgba(5, 23, 17, 0.75) 38%,
+    rgba(5, 23, 17, 0.18) 72%,
+    rgba(5, 23, 17, 0.05) 100%
+  );
+}
+
+.home-feature-content {
+  padding: 1.6rem;
+}
+
+.home-feature-eyebrow {
+  display: block;
+  margin-bottom: 0.75rem;
+  color: #f1d17c;
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  line-height: 1.5;
+}
+
+.home-feature-content h3 {
+  margin: 0 0 0.8rem;
+  color: #fff;
+  font-size: clamp(1.35rem, 1.8vw, 1.8rem);
+  font-weight: 800;
+  line-height: 1.2;
+}
+
+.home-feature-content p {
+  margin: 0 0 1.25rem;
+  color: rgba(255, 255, 255, 0.88);
+  font-size: 0.92rem;
+  line-height: 1.65;
+}
+
+.home-feature-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  color: #f1d17c;
+  font-size: 0.9rem;
+  font-weight: 800;
+}
+
+.home-feature-number {
+  position: absolute;
+  top: 1rem;
+  right: 1.2rem;
+  color: rgba(255, 255, 255, 0.85);
+  font-size: 1.1rem;
+  font-weight: 800;
+}
+
+/* Community section */
+.home-community {
+  padding: 4rem max(1.5rem, calc((100% - 1440px) / 2)) 5rem;
+  background: #f5f7f3;
+}
+
+.home-community-heading {
+  margin-bottom: 3rem;
+}
+
+.home-benefits-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 1.5rem;
+  max-width: 1440px;
+  margin: 0 auto;
+}
+
+.home-benefit {
+  padding: 1.7rem 1.25rem;
+  border: 1px solid rgba(18, 61, 48, 0.08);
+  border-radius: 14px;
+  background: #fff;
+  text-align: center;
+  transition:
+    transform 0.25s ease,
+    box-shadow 0.25s ease;
+}
+
+.home-benefit:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 10px 24px rgba(18, 61, 48, 0.08);
+}
+
+.home-benefit-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 54px;
+  height: 54px;
+  margin-bottom: 1rem;
+  border-radius: 50%;
+  background: #e8efe9;
+  font-size: 1.6rem;
+}
+
+.home-benefit h3 {
+  margin: 0 0 0.65rem;
+  color: #123d30;
+  font-size: 1.05rem;
+  font-weight: 800;
+}
+
+.home-benefit p {
+  margin: 0;
+  color: #68766e;
+  font-size: 0.9rem;
+  line-height: 1.6;
+}
+
+/* Keep three cards in one row on medium screens */
+@media (max-width: 1050px) {
+  .home-features {
+    width: min(100% - 2rem, 1440px);
+  }
+
+  .home-feature-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.8rem;
+  }
+
+  .home-feature-card {
+    min-height: 350px;
+  }
+
+  .home-feature-content {
+    padding: 1rem;
+  }
+
+  .home-feature-content h3 {
+    font-size: 1.25rem;
+  }
+
+  .home-feature-content p {
+    font-size: 0.85rem;
+  }
+
+  .home-feature-eyebrow {
+    font-size: 0.62rem;
+  }
+
+  .home-benefits-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+/* Stack cards only on narrow mobile screens */
+@media (max-width: 650px) {
+  .home-hero {
+    min-height: 280px;
+    background-position: center;
+  }
+
+  .home-hero::before {
+    background: linear-gradient(
+      to right,
+      #fff 0%,
+      rgba(255, 255, 255, 0.55) 8%,
+      transparent 25%,
+      transparent 75%,
+      rgba(255, 255, 255, 0.55) 92%,
+      #fff 100%
+    );
+  }
+
+  .home-features {
+    width: calc(100% - 2rem);
+    padding: 2.8rem 0 3.5rem;
+  }
+
+  .home-section-heading,
+  .home-community-heading {
+    margin-bottom: 2rem;
+  }
+
+  .home-feature-grid {
+    grid-template-columns: 1fr;
+    gap: 1.2rem;
+    margin-top: 2rem;
+  }
+
+  .home-feature-card {
+    min-height: 390px;
+  }
+
+  .home-feature-content {
+    padding: 1.5rem;
+  }
+
+  .home-feature-content h3 {
+    font-size: 1.65rem;
+  }
+
+  .home-feature-content p {
+    font-size: 0.92rem;
+  }
+
+  .home-community {
+    padding: 3rem 1rem;
+  }
+
+  .home-benefits-grid {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .home-feature-card,
+  .home-feature-image,
+  .home-benefit {
+    transition: none;
+  }
+}

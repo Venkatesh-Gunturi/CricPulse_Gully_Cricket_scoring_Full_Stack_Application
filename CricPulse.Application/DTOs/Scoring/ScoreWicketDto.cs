@@ -15,6 +15,7 @@ public class ScoreWicketDto
     public Guid? RunOutByMatchPlayerId { get; set; }
 
     public Guid? StumpedByMatchPlayerId { get; set; }
+    public bool BattersCrossed { get; set; }
 
     public int RunsCompleted { get; set; }
 }

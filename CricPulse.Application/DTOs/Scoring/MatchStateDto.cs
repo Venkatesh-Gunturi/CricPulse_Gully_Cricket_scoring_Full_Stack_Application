@@ -62,6 +62,10 @@ public class InningsStateDto
     public bool IsFreeHit { get; set; }
 
     public bool UndoUsed { get; set; }
+    public List<MatchPlayerOptionDto> BattingPlayers { get; set; } = new();
+
+    public List<MatchPlayerOptionDto> FieldingPlayers { get; set; } = new();
+    public List<YetToBatPlayerDto> YetToBatPlayers { get; set; } = new();
 
     public Guid? StrikerMatchPlayerId { get; set; }
 

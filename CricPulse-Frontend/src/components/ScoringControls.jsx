@@ -1,8 +1,5 @@
 
-const runGroups = [
-  [1, 2, 3],
-  [4, 5, 6],
-];
+import RunScoringControls from './RunScoringControls';
 
 const extraGroups = [
   ['BYE', 'Bye'],
@@ -16,32 +13,25 @@ export default function ScoringControls({
   onScoreExtra,
   onWicket,
   onUndo,
+  runsDisabled = false,
+  extrasDisabled = false,
+  wicketDisabled = false,
   undoDisabled = true,
   disabled = false,
 }) {
-  return (
-    <section className="scoring-controls" aria-label="Live scoring controls">
-      <div className="scoring-controls-grid">
-        <div className="scoring-runs">
-          <h2 className="scoring-control-heading">RUNS</h2>
+  const isRunsDisabled = disabled || runsDisabled;
+  const isExtrasDisabled = disabled || extrasDisabled;
 
-          {runGroups.map((group, index) => (
-            <div className="scoring-run-row" key={index}>
-              {group.map((run) => (
-                <button
-                  key={run}
-                  type="button"
-                  className="scoring-run-button"
-                  onClick={() => onScoreRun?.(run)}
-                  disabled={disabled}
-                  aria-label={`Score ${run} run${run === 1 ? '' : 's'}`}
-                >
-                  {run}
-                </button>
-              ))}
-            </div>
-          ))}
-        </div>
+  return (
+    <section
+      className="scoring-controls"
+      aria-label="Live scoring controls"
+    >
+      <div className="scoring-controls-grid">
+        <RunScoringControls
+          onScoreRun={onScoreRun}
+          disabled={isRunsDisabled}
+        />
 
         <div className="scoring-extras">
           <h2 className="scoring-control-heading">EXTRAS</h2>
@@ -53,7 +43,7 @@ export default function ScoringControls({
                 type="button"
                 className="scoring-extra-button"
                 onClick={() => onScoreExtra?.(type)}
-                disabled={disabled}
+                disabled={isExtrasDisabled}
               >
                 {label}
               </button>
@@ -63,24 +53,25 @@ export default function ScoringControls({
       </div>
 
       <div className="scoring-bottom-actions">
-  <button
-    type="button"
-    className="scoring-zero-button"
-    onClick={() => onScoreRun?.(0)}
-    disabled={disabled}
-  >
-    0
-  </button>
+        <button
+          type="button"
+          className="scoring-zero-button"
+          onClick={() => onScoreRun?.(0)}
+          disabled={isRunsDisabled}
+          aria-label="Score 0 runs"
+        >
+          0
+        </button>
 
-  <button
-    type="button"
-    className="scoring-wicket-button"
-    onClick={onWicket}
-    disabled={disabled}
-  >
-    WICKET
-  </button>
-</div>
+        <button
+          type="button"
+          className="scoring-wicket-button"
+          onClick={onWicket}
+          disabled={disabled || wicketDisabled}
+        >
+          WICKET
+        </button>
+      </div>
 
       <button
         type="button"

@@ -1,0 +1,242 @@
+.extra-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1001;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 12px;
+  overflow-y: auto;
+  background: rgba(2, 10, 7, 0.78);
+  backdrop-filter: blur(3px);
+}
+
+.extra-modal {
+  box-sizing: border-box;
+  width: min(100%, 430px);
+  max-height: calc(100dvh - 24px);
+  overflow-y: auto;
+  padding: 18px;
+  border: 1px solid rgba(233, 196, 91, 0.28);
+  border-radius: 16px;
+  background: linear-gradient(145deg, #10291f, #091a13);
+  color: #f8fafc;
+  box-shadow: 0 20px 55px rgba(0, 0, 0, 0.42);
+}
+
+.extra-modal-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.extra-modal-eyebrow {
+  margin: 0 0 5px;
+  color: #a8c4b7;
+  font-size: 10px;
+  font-weight: 850;
+  letter-spacing: 0.16em;
+}
+
+.extra-modal-header h2 {
+  margin: 0;
+  color: #f8fafc;
+  font-size: 20px;
+  line-height: 1.25;
+  font-weight: 850;
+}
+
+.extra-modal-close {
+  display: grid;
+  flex: 0 0 32px;
+  width: 32px;
+  height: 32px;
+  place-items: center;
+  padding: 0;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 9px;
+  background: rgba(255, 255, 255, 0.05);
+  color: #c4d5cc;
+  font-size: 24px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.extra-modal-description {
+  margin: 0 0 13px;
+  color: #b7cec2;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.extra-modal-choice-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 9px;
+}
+
+.extra-choice-button,
+.extra-run-button {
+  min-width: 0;
+  min-height: 42px;
+  padding: 9px 10px;
+  border: 1px solid rgba(255, 255, 255, 0.13);
+  border-radius: 10px;
+  background: #123629;
+  color: #f8fafc;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 800;
+  cursor: pointer;
+  transition: border-color 140ms ease, background 140ms ease, transform 140ms ease;
+}
+
+.extra-choice-button:hover:not(:disabled),
+.extra-run-button:hover:not(:disabled) {
+  border-color: rgba(233, 196, 91, 0.6);
+  background: #176443;
+  transform: translateY(-1px);
+}
+
+.extra-choice-run-out {
+  width: 100%;
+  margin-top: 10px;
+  border-color: rgba(255, 120, 120, 0.4);
+  background: #492126;
+  color: #ffd6d6;
+}
+
+.extra-choice-run-out:hover:not(:disabled) {
+  border-color: rgba(255, 150, 150, 0.7);
+  background: #63252c;
+}
+
+.extra-modal-runs-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.extra-run-button {
+  min-height: 48px;
+  font-size: 18px;
+}
+
+.extra-modal-form {
+  display: grid;
+  gap: 12px;
+}
+
+.extra-modal-field {
+  display: grid;
+  gap: 6px;
+  color: #dce9e2;
+  font-size: 12px;
+  font-weight: 750;
+}
+
+.extra-modal-field select {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 40px;
+  padding: 8px 10px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 9px;
+  outline: none;
+  background: #0a1c14;
+  color: #f8fafc;
+  font: inherit;
+  font-size: 13px;
+}
+
+.extra-modal-field select:focus {
+  border-color: #e9c45b;
+  box-shadow: 0 0 0 2px rgba(233, 196, 91, 0.12);
+}
+
+.extra-modal-checkbox {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  color: #dce9e2;
+  font-size: 12px;
+  line-height: 1.45;
+  cursor: pointer;
+}
+
+.extra-modal-checkbox input {
+  width: 16px;
+  height: 16px;
+  margin: 1px 0 0;
+  accent-color: #e9c45b;
+}
+
+.extra-modal-error {
+  margin: 12px 0 0;
+  color: #ffaaaa;
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.extra-modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 16px;
+}
+
+.extra-modal-actions button {
+  min-height: 38px;
+  padding: 8px 13px;
+  border-radius: 9px;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.extra-modal-cancel {
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: rgba(255, 255, 255, 0.05);
+  color: #dce9e2;
+}
+
+.extra-modal-submit {
+  border: 1px solid #c6a447;
+  background: #e9c45b;
+  color: #142319;
+}
+
+.extra-modal button:disabled,
+.extra-modal select:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+@media (max-width: 480px) {
+  .extra-modal {
+    padding: 15px;
+    border-radius: 13px;
+  }
+
+  .extra-modal-header h2 {
+    font-size: 18px;
+  }
+
+  .extra-modal-actions {
+    flex-direction: row;
+  }
+
+  .extra-modal-actions button {
+    flex: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .extra-choice-button,
+  .extra-run-button {
+    transition: none;
+  }
+}
