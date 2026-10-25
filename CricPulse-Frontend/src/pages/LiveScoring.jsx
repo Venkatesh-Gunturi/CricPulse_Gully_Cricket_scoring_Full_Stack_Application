@@ -24,7 +24,7 @@ export default function LiveScoring() {
   const navigate = useNavigate();
   const { user } = useAuth();
 
-  const [activeTab, setActiveTab] = useState('batting');
+  const [activeTab, setActiveTab] = useState('yetToPlay');
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef(null);
   const [selectedExtraType, setSelectedExtraType] = useState(null);
@@ -122,6 +122,34 @@ const [completionError, setCompletionError] = useState('');
 
   const firstInnings =
     inningsList.find((innings) => innings.inningsNumber === 1) ?? null;
+    const secondInnings =
+  inningsList.find((innings) => innings.inningsNumber === 2) ?? null;
+
+
+const battingHistoryByTeam = [
+  {
+    teamName: displayTeam(secondInnings?.battingTeam),
+    records: secondInnings?.battingRecords ?? [],
+  },
+  {
+    teamName: displayTeam(firstInnings?.battingTeam),
+    records: firstInnings?.battingRecords ?? [],
+  },
+].filter((team) => team.records.length > 0);
+
+const bowlingHistoryByTeam = [
+  {
+    teamName: displayTeam(secondInnings?.bowlingTeam),
+    records: secondInnings?.bowlingRecords ?? [],
+  },
+  {
+    teamName: displayTeam(firstInnings?.bowlingTeam),
+    records: firstInnings?.bowlingRecords ?? [],
+  },
+].filter((team) => team.records.length > 0);
+
+
+
   const firstInningsTarget = (firstInnings?.totalRuns ?? 0) + 1;
   const inningsOversLimit =
     firstInnings?.totalOvers ?? matchState?.overs ?? 0;
@@ -211,6 +239,8 @@ overs: String(activeInnings?.bowlerOvers ?? 0),
 
 currentOver: activeInnings?.currentOver ?? [],
 yetToBat: activeInnings?.yetToBat ?? [],
+battingRecords: activeInnings?.battingRecords ?? [],
+bowlingRecords: activeInnings?.bowlingRecords ?? [],
   };
 
   const isSecondInnings = match.innings === 2;
@@ -749,25 +779,141 @@ async function handleConfirmCancellation(cancellationData) {
         
         
 
-        <section className="live-section-card">
-          <h2 className="live-section-heading">Yet to Bat</h2>
+<section className="live-section-card live-player-history">
+  <div className="live-history-tabs" role="tablist" aria-label="Player history">
+    <button
+      type="button"
+      role="tab"
+      aria-selected={activeTab === 'yetToPlay'}
+      className={`live-history-tab ${activeTab === 'yetToPlay' ? 'active' : ''}`}
+      onClick={() => setActiveTab('yetToPlay')}
+    >
+      Yet to Play
+    </button>
 
-          <div className="live-yet-to-bat">
-            {match.yetToBat.length === 0 ? (
-              <span>No players remaining to bat.</span>
-            ) : (
-              match.yetToBat.map((player, index) => (
-                <div
-                  key={`${player}-${index}`}
-                  className="live-yet-to-bat-player"
-                >
-                  {player}
-                </div>
-              ))
-            )}
+    <button
+      type="button"
+      role="tab"
+      aria-selected={activeTab === 'batting'}
+      className={`live-history-tab ${activeTab === 'batting' ? 'active' : ''}`}
+      onClick={() => setActiveTab('batting')}
+    >
+      Batting History
+    </button>
+
+    <button
+      type="button"
+      role="tab"
+      aria-selected={activeTab === 'bowling'}
+      className={`live-history-tab ${activeTab === 'bowling' ? 'active' : ''}`}
+      onClick={() => setActiveTab('bowling')}
+    >
+      Bowling History
+    </button>
+  </div>
+
+  {activeTab === 'yetToPlay' && (
+    <div role="tabpanel" className="live-history-panel">
+
+      <div className="live-yet-to-bat">
+        {match.yetToBat.length === 0 ? (
+          <span>No players remaining to bat.</span>
+        ) : (
+          match.yetToBat.map((player, index) => (
+            <div
+              key={`${player}-${index}`}
+              className="live-yet-to-bat-player"
+            >
+              {player}
+            </div>
+          ))
+        )}
+      </div>
+    </div>
+  )}
+
+  {activeTab === 'batting' && (
+    <div role="tabpanel" className="live-history-panel">
+      {battingHistoryByTeam.length === 0 ? (
+        <p>No batting history yet.</p>
+      ) : (
+        battingHistoryByTeam.map((team) => (
+          <div className="live-history-section" key={team.teamName}>
+            <h3 className="live-history-team-heading">{team.teamName}</h3>
+
+            <div className="live-history-table-wrap">
+              <table className="live-history-table">
+                <thead>
+                  <tr>
+                    <th>Batter</th>
+                    <th>R</th>
+                    <th>B</th>
+                    <th>4s</th>
+                    <th>6s</th>
+                    <th>SR</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {team.records.map((player) => (
+                    <tr key={player.matchPlayerId}>
+                      <td>{player.playerName}</td>
+                      <td>{player.runs}</td>
+                      <td>{player.balls}</td>
+                      <td>{player.fours}</td>
+                      <td>{player.sixes}</td>
+                      <td>{Number(player.strikeRate ?? 0).toFixed(2)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
-        </section>
+        ))
+      )}
+    </div>
+  )}
 
+  {activeTab === 'bowling' && (
+    <div role="tabpanel" className="live-history-panel">
+      {bowlingHistoryByTeam.length === 0 ? (
+        <p>No bowling history yet.</p>
+      ) : (
+        bowlingHistoryByTeam.map((team) => (
+          <div className="live-history-section" key={team.teamName}>
+            <h3 className="live-history-team-heading">{team.teamName}</h3>
+
+            <div className="live-history-table-wrap">
+              <table className="live-history-table">
+                <thead>
+                  <tr>
+                    <th>Bowler</th>
+                    <th>O</th>
+                    <th>M</th>
+                    <th>R</th>
+                    <th>W</th>
+                    <th>Econ</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {team.records.map((player) => (
+                    <tr key={player.matchPlayerId}>
+                      <td>{player.playerName}</td>
+                      <td>{Number(player.overs ?? 0).toFixed(1)}</td>
+                      <td>{player.maidens}</td>
+                      <td>{player.runsConceded}</td>
+                      <td>{player.wickets}</td>
+                      <td>{Number(player.economy ?? 0).toFixed(2)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        ))
+      )}
+    </div>
+  )}
+</section>
 
 
       </div>

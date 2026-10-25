@@ -1426,3 +1426,120 @@
   }
 }
 
+.live-history-section {
+  margin-top: 24px;
+}
+
+.live-history-table-wrap {
+  width: 100%;
+  overflow-x: auto;
+}
+
+.live-history-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: center;
+}
+
+.live-history-table th,
+.live-history-table td {
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--border-color, #ddd);
+  white-space: nowrap;
+}
+
+.live-history-table th:first-child,
+.live-history-table td:first-child {
+  text-align: left;
+}
+
+
+.live-history-tabs {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 20px;
+  padding: 6px;
+  border: 1px solid var(--cp-gold);
+  border-radius: 12px;
+  background: var(--cp-green);
+  overflow-x: auto;
+}
+
+.live-history-tab {
+  flex: 1;
+  min-width: max-content;
+  padding: 12px 16px;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--cp-gold);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s ease, color 0.2s ease;
+}
+
+.live-history-tab:hover {
+  background: var(--cp-green-light);
+  color: #ffffff;
+}
+
+.live-history-tab.active {
+  background: var(--cp-gold);
+  color: var(--cp-green);
+  border-color: var(--cp-gold);
+  box-shadow: 0 2px 6px rgb(0 0 0 / 18%);
+}
+
+.live-history-panel {
+  min-width: 0;
+}
+
+.live-history-team-heading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  margin: 22px 0 16px;
+  color: var(--cp-gold);
+  font-size: 16px;
+  font-weight: 700;
+  text-align: center;
+}
+
+.live-history-team-heading::before,
+.live-history-team-heading::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  min-width: 20px;
+  background: linear-gradient(
+    to right,
+    transparent,
+    var(--cp-gold)
+  );
+}
+
+.live-history-team-heading::after {
+  background: linear-gradient(
+    to left,
+    transparent,
+    var(--cp-gold)
+  );
+}
+
+.live-history-section + .live-history-section {
+  margin-top: 20px;
+}
+
+@media (max-width: 600px) {
+  .live-history-tabs {
+    gap: 4px;
+    padding: 4px;
+  }
+
+  .live-history-tab {
+    padding: 10px 12px;
+    font-size: 12px;
+  }
+}

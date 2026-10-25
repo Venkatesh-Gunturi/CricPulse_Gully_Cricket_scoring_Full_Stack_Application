@@ -1108,7 +1108,8 @@ public class ScoringService : IScoringService
 
     // ============================================================
     // UNDO
-    // ============================================================
+    // ========================================
+    // ====================
 
     public async Task<MatchStateDto> UndoLastBallAsync(
         Guid inningsId,
@@ -2210,7 +2211,9 @@ public class ScoringService : IScoringService
 
                     // Bowling scorecard: calculate each bowler independently.
                     var bowlingRecords = players
-                        .Where(p => p.Team == x.BowlingTeam)
+                       .Where(p =>
+                        p.Team == x.BowlingTeam &&
+                        balls.Any(b => b.BowlerMatchPlayerId == p.Id))
                         .Select(p =>
                         {
                             var playerBalls = balls
