@@ -67,6 +67,11 @@ public class InningsStateDto
     public List<MatchPlayerOptionDto> FieldingPlayers { get; set; } = new();
     public List<YetToBatPlayerDto> YetToBatPlayers { get; set; } = new();
 
+    public List<BatterRecordDto> BattingRecords { get; set; } = new();
+
+    public List<BowlerRecordDto> BowlingRecords { get; set; } = new();
+
+
     public Guid? StrikerMatchPlayerId { get; set; }
 
     public Guid? NonStrikerMatchPlayerId { get; set; }

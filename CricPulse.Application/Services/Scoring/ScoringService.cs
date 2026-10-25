@@ -2018,19 +2018,13 @@ public class ScoringService : IScoringService
             if (!matchPlayerId.HasValue)
                 return "—";
 
-            var matchPlayer = players.FirstOrDefault(
+            var player = players.FirstOrDefault(
                 p => p.Id == matchPlayerId.Value);
 
-            if (matchPlayer?.User == null)
+            if (player?.User == null)
                 return "—";
 
-            return $"{matchPlayer.User.FirstName} {matchPlayer.User.LastName}".Trim();
-        }
-
-        bool IsDismissed(Guid matchPlayerId, Innings innings)
-        {
-            return innings.Balls.Any(
-                b => b.Wicket?.DismissedMatchPlayerId == matchPlayerId);
+            return $"{player.User.FirstName} {player.User.LastName}".Trim();
         }
 
         return new MatchStateDto
@@ -2051,6 +2045,7 @@ public class ScoringService : IScoringService
                 .OrderBy(x => x.InningsNumber)
                 .Select(x =>
                 {
+                    // Every calculation below uses this innings' balls only.
                     var balls = x.Balls
                         .OrderBy(b => b.OverNumber)
                         .ThenBy(b => b.BallNumber)
@@ -2066,7 +2061,8 @@ public class ScoringService : IScoringService
                         : null;
 
                     decimal? currentRunRate = x.LegalBalls > 0
-                        ? Math.Round((decimal)x.TotalRuns / x.LegalBalls * 6, 2)
+                        ? Math.Round(
+                            (decimal)x.TotalRuns / x.LegalBalls * 6, 2)
                         : null;
 
                     decimal? requiredRunRate =
@@ -2082,39 +2078,48 @@ public class ScoringService : IScoringService
                     var nonStrikerId = x.CurrentNonStrikerMatchPlayerId;
                     var bowlerId = x.CurrentBowlerMatchPlayerId;
 
-                    var strikerBalls = balls
-                        .Where(b =>
-                            b.StrikerMatchPlayerId == strikerId &&
-                            b.ExtraType != "WIDE")
-                        .ToList();
+                    // Current batter statistics.
+                    var strikerBalls = strikerId.HasValue
+                        ? balls.Where(b =>
+                            b.StrikerMatchPlayerId == strikerId.Value &&
+                            b.ExtraType != "WIDE").ToList()
+                        : new List<Ball>();
 
-                    var nonStrikerBalls = balls
-                        .Where(b =>
-                            b.StrikerMatchPlayerId == nonStrikerId &&
-                            b.ExtraType != "WIDE")
-                        .ToList();
+                    var nonStrikerBalls = nonStrikerId.HasValue
+                        ? balls.Where(b =>
+                            b.StrikerMatchPlayerId == nonStrikerId.Value &&
+                            b.ExtraType != "WIDE").ToList()
+                        : new List<Ball>();
 
-                    var bowlerBalls = balls
-                        .Where(b => b.BowlerMatchPlayerId == bowlerId)
-                        .ToList();
+                    var bowlerBalls = bowlerId.HasValue
+                        ? balls.Where(b =>
+                            b.BowlerMatchPlayerId == bowlerId.Value).ToList()
+                        : new List<Ball>();
 
-                    var yetToBat = players
-                        .Where(p =>
-                            p.Team == x.BattingTeam &&
-                            p.Id != strikerId &&
-                            p.Id != nonStrikerId &&
-                            !IsDismissed(p.Id, x))
-                        .Select(p => GetPlayerName(p.Id))
-                        .Where(name => name != "—")
-                        .ToList();
+                    // Players who have participated in a delivery as a batter.
+                    var playersWhoHaveBatted = balls
+                        .SelectMany(b => new[]
+                        {
+                        b.StrikerMatchPlayerId,
+                        b.NonStrikerMatchPlayerId
+                        })
+                        .ToHashSet();
 
+                    // Players dismissed during this innings.
+                    var dismissedPlayerIds = balls
+                        .Where(b => b.Wicket != null)
+                        .Select(b => b.Wicket!.DismissedMatchPlayerId)
+                        .ToHashSet();
 
+                    // Yet-to-bat players must not include either current batter,
+                    // a player who has already batted, or a dismissed player.
                     var yetToBatPlayers = players
                         .Where(p =>
                             p.Team == x.BattingTeam &&
                             p.Id != strikerId &&
                             p.Id != nonStrikerId &&
-                            !IsDismissed(p.Id, x))
+                            !playersWhoHaveBatted.Contains(p.Id) &&
+                            !dismissedPlayerIds.Contains(p.Id))
                         .Select(p => new YetToBatPlayerDto
                         {
                             MatchPlayerId = p.Id,
@@ -2123,7 +2128,11 @@ public class ScoringService : IScoringService
                         .Where(p => p.Name != "—")
                         .ToList();
 
+                    var yetToBat = yetToBatPlayers
+                        .Select(p => p.Name)
+                        .ToList();
 
+                    // Player options used by the scoring controls.
                     var battingPlayers = players
                         .Where(p => p.Team == x.BattingTeam)
                         .Select(p => new MatchPlayerOptionDto
@@ -2143,8 +2152,129 @@ public class ScoringService : IScoringService
                         })
                         .Where(p => p.Name != "—")
                         .ToList();
-                    // Keep the last completed over visible until the
-                    // first delivery of the next over is recorded.
+
+                    // Batting scorecard:
+                    // include players who faced a delivery or were dismissed.
+                    // Players who have not batted remain in YetToBat.
+                    var battingRecords = players
+                        .Where(p =>
+                            p.Team == x.BattingTeam &&
+                            (playersWhoHaveBatted.Contains(p.Id) ||
+                             dismissedPlayerIds.Contains(p.Id)))
+                        .Select(p =>
+                        {
+                            var playerBalls = balls
+                                .Where(b => b.StrikerMatchPlayerId == p.Id)
+                                .ToList();
+
+                            var playerWicket = balls
+                                .Where(b => b.Wicket != null)
+                                .Select(b => b.Wicket!)
+                                .FirstOrDefault(w =>
+                                    w.DismissedMatchPlayerId == p.Id);
+
+                            var runs = playerBalls.Sum(b => b.BatterRuns);
+
+                            // A wide is not a ball faced.
+                            // A no-ball is counted as faced under this rule.
+                            var facedBalls = playerBalls.Count(b =>
+                                b.ExtraType != "WIDE" &&
+                                (b.IsLegalDelivery ||
+                                 b.ExtraType == "NO BALL"));
+
+                            var fours = playerBalls.Count(
+                                b => b.BatterRuns == 4);
+
+                            var sixes = playerBalls.Count(
+                                b => b.BatterRuns == 6);
+
+                            return new BatterRecordDto
+                            {
+                                MatchPlayerId = p.Id,
+                                PlayerName = GetPlayerName(p.Id),
+                                Runs = runs,
+                                Balls = facedBalls,
+                                Fours = fours,
+                                Sixes = sixes,
+                                StrikeRate = facedBalls > 0
+                                    ? Math.Round(
+                                        (decimal)runs / facedBalls * 100, 2)
+                                    : 0,
+                                Dismissal = playerWicket == null
+                                    ? "Not out"
+                                    : playerWicket.WicketType
+                            };
+                        })
+                        .Where(p => p.PlayerName != "—")
+                        .ToList();
+
+                    // Bowling scorecard: calculate each bowler independently.
+                    var bowlingRecords = players
+                        .Where(p => p.Team == x.BowlingTeam)
+                        .Select(p =>
+                        {
+                            var playerBalls = balls
+                                .Where(b => b.BowlerMatchPlayerId == p.Id)
+                                .ToList();
+
+                            var legalBallsBowled = playerBalls.Count(
+                                b => b.IsLegalDelivery);
+
+                            // Byes and leg byes are not charged to the bowler.
+                            var runsConceded = playerBalls
+                                .Where(b =>
+                                    b.ExtraType != "BYE" &&
+                                    b.ExtraType != "LEG BYE")
+                                .Sum(b => b.Runs);
+
+                            var wickets = playerBalls.Count(b =>
+                                b.Wicket != null &&
+                                b.Wicket.WicketType != "RUN OUT" &&
+                                b.Wicket.WicketType != "RETIRED HURT" &&
+                                b.Wicket.WicketType != "OBSTRUCTING THE FIELD");
+
+                            // Cricket overs display as completed overs and
+                            // remaining balls: 2.4 means 2 overs and 4 balls.
+                            var completedOvers = legalBallsBowled / 6;
+                            var remainingBalls = legalBallsBowled % 6;
+
+                            // Economy uses actual legal balls bowled.
+                            var economy = legalBallsBowled > 0
+                                ? Math.Round(
+                                    (decimal)runsConceded * 6 /
+                                    legalBallsBowled, 2)
+                                : 0;
+
+                            // A maiden is a completed over with zero runs
+                            // charged to the bowler. This assumes OverNumber
+                            // starts at 1 and increments each over.
+                            var maidens = playerBalls
+                                .GroupBy(b => b.OverNumber)
+                                .Count(over =>
+                                    over.Count(b => b.IsLegalDelivery) == 6 &&
+                                    over
+                                        .Where(b =>
+                                            b.ExtraType != "BYE" &&
+                                            b.ExtraType != "LEG BYE")
+                                        .Sum(b => b.Runs) == 0);
+
+                            return new BowlerRecordDto
+                            {
+                                MatchPlayerId = p.Id,
+                                PlayerName = GetPlayerName(p.Id),
+                                Overs = completedOvers +
+                                        remainingBalls / 10m,
+                                Maidens = maidens,
+                                RunsConceded = runsConceded,
+                                Wickets = wickets,
+                                Economy = economy
+                            };
+                        })
+                        .Where(p => p.PlayerName != "—")
+                        .ToList();
+
+                    // Keep the last completed over visible until the first
+                    // delivery of the next over is recorded.
                     var currentOverNumber = x.LegalBalls / 6 + 1;
 
                     var currentOverBalls = balls
@@ -2167,6 +2297,7 @@ public class ScoringService : IScoringService
                                 : b.Notation)
                         .ToList();
 
+                    // Current bowler figures, independent of other bowlers.
                     var bowlerRunsConceded = bowlerBalls
                         .Where(b =>
                             b.ExtraType != "BYE" &&
@@ -2178,6 +2309,9 @@ public class ScoringService : IScoringService
                         b.Wicket.WicketType != "RUN OUT" &&
                         b.Wicket.WicketType != "RETIRED HURT" &&
                         b.Wicket.WicketType != "OBSTRUCTING THE FIELD");
+
+                    var currentBowlerLegalBalls = bowlerBalls.Count(
+                        b => b.IsLegalDelivery);
 
                     return new InningsStateDto
                     {
@@ -2206,9 +2340,14 @@ public class ScoringService : IScoringService
                         StrikerName = GetPlayerName(strikerId),
                         NonStrikerName = GetPlayerName(nonStrikerId),
                         BowlerName = GetPlayerName(bowlerId),
+
                         BattingPlayers = battingPlayers,
                         FieldingPlayers = fieldingPlayers,
                         YetToBatPlayers = yetToBatPlayers,
+                        YetToBat = yetToBat,
+
+                        BattingRecords = battingRecords,
+                        BowlingRecords = bowlingRecords,
 
                         StrikerRuns = strikerBalls.Sum(b => b.BatterRuns),
                         StrikerBalls = strikerBalls.Count(b => b.IsLegalDelivery),
@@ -2220,13 +2359,13 @@ public class ScoringService : IScoringService
                         NonStrikerFours = nonStrikerBalls.Count(b => b.BatterRuns == 4),
                         NonStrikerSixes = nonStrikerBalls.Count(b => b.BatterRuns == 6),
 
-                        BowlerOvers =
-                        Math.Floor((decimal)bowlerBalls.Count(b => b.IsLegalDelivery) / 6)
-                        + (bowlerBalls.Count(b => b.IsLegalDelivery) % 6) / 10m,
+                        BowlerOvers = Math.Floor(
+                            (decimal)currentBowlerLegalBalls / 6) +
+                            (currentBowlerLegalBalls % 6) / 10m,
+
                         BowlerRunsConceded = bowlerRunsConceded,
                         BowlerWickets = bowlerWickets,
 
-                        YetToBat = yetToBat,
                         CurrentOver = currentOver
                     };
                 })

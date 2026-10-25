@@ -747,30 +747,28 @@ async function handleConfirmCancellation(cancellationData) {
           onUndo={handleUndo}
         />
         
+        
+
         <section className="live-section-card">
+          <h2 className="live-section-heading">Yet to Bat</h2>
 
-          <div className="live-current-over">
-            {match.currentOver.length === 0 ? (
-              <span>—</span>
+          <div className="live-yet-to-bat">
+            {match.yetToBat.length === 0 ? (
+              <span>No players remaining to bat.</span>
             ) : (
-              match.currentOver.map((ball, index) => {
-                const label = String(ball).trim().toUpperCase();
-
-                const ballClass = getBallClassName(label);
-
-                return (
-                  <span
-                    key={`${label}-${index}`}
-                    className={`live-ball ${ballClass}`}
-                    title={`Ball ${index + 1}: ${label}`}
-                  >
-                    {label}
-                  </span>
-                );
-              })
+              match.yetToBat.map((player, index) => (
+                <div
+                  key={`${player}-${index}`}
+                  className="live-yet-to-bat-player"
+                >
+                  {player}
+                </div>
+              ))
             )}
           </div>
         </section>
+
+
 
       </div>
       
