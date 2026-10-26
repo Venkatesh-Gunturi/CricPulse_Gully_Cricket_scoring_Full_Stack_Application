@@ -71,6 +71,26 @@ public class MatchCompletionService : IMatchCompletionService
             var playerMatchStatistics =
                 BuildPlayerStatistics(match);
 
+            var mvpWinner = playerMatchStatistics
+    .Select(player => new
+    {
+        Player = player,
+        Score =
+            player.Runs +
+            (player.Fours * 1) +
+            (player.Sixes * 2) +
+            (player.Wickets * 20) +
+            (player.Maidens * 10) +
+            (player.Catches * 10) +
+            (player.RunOuts * 10) +
+            (player.Stumpings * 10)
+    })
+    .OrderByDescending(x => x.Score)
+    .ThenByDescending(x => x.Player.Wickets)
+    .ThenByDescending(x => x.Player.Runs)
+    .ThenBy(x => x.Player.UserId)
+    .FirstOrDefault();
+
             foreach (var item in playerMatchStatistics)
             {
                 var statistics =
@@ -104,6 +124,33 @@ public class MatchCompletionService : IMatchCompletionService
                 await _organizerStatisticsRepository.AddAsync(organizerStatistics);
             else
                 await _organizerStatisticsRepository.UpdateAsync(organizerStatistics);
+
+            if (mvpWinner is not null)
+            {
+                var mvpUser = await _playerStatisticsRepository
+                    .GetByUserIdAsync(mvpWinner.Player.UserId);
+
+                if (mvpUser is not null)
+                {
+                    mvpUser.MVPCount++;
+
+                    await _playerStatisticsRepository.UpdateAsync(mvpUser);
+
+                    var winningMatchPlayer = match.MatchPlayers
+                        .FirstOrDefault(x => x.UserId == mvpWinner.Player.UserId);
+
+                    match.MVPUserId = mvpWinner.Player.UserId;
+                    match.MVPPlayerName = winningMatchPlayer is null
+                        ? null
+                        : string.Join(" ", new[]
+                            {
+                    winningMatchPlayer.User.FirstName,
+                    winningMatchPlayer.User.LastName
+                            }.Where(name => !string.IsNullOrWhiteSpace(name)));
+
+                    match.MVPScore = mvpWinner.Score;
+                }
+            }
 
             match.PlayerStatisticsFinalized = true;
             match.UpdatedAt = DateTime.UtcNow;

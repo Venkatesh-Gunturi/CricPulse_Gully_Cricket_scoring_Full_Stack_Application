@@ -1,5 +1,7 @@
-﻿using CricPulse.Application.Interfaces.Repositories;
+﻿
+using CricPulse.Application.Interfaces.Repositories;
 using CricPulse.Application.Interfaces.Services;
+using CricPulse.Domain.Entities;
 using Microsoft.Extensions.Logging;
 
 namespace CricPulse.Application.Services.Match;
@@ -10,32 +12,32 @@ public class MatchLifecycleService : IMatchLifecycleService
     private readonly IOrganizerStatisticsRepository _organizerStatisticsRepository;
     private readonly IMatchCompletionService _matchCompletionService;
     private readonly IUnitOfWork _unitOfWork;
+    private readonly ITransactionManager _transactionManager;
     private readonly ILogger<MatchLifecycleService> _logger;
 
     public MatchLifecycleService(
         IMatchRepository matchRepository,
         IOrganizerStatisticsRepository organizerStatisticsRepository,
         IMatchCompletionService matchCompletionService,
-        IUnitOfWork unitOfWork, ILogger<MatchLifecycleService> logger
-        )
+        IUnitOfWork unitOfWork,
+        ITransactionManager transactionManager,
+        ILogger<MatchLifecycleService> logger)
     {
         _matchRepository = matchRepository;
         _organizerStatisticsRepository = organizerStatisticsRepository;
         _matchCompletionService = matchCompletionService;
         _unitOfWork = unitOfWork;
+        _transactionManager = transactionManager;
         _logger = logger;
     }
 
     public async Task ProcessLifecycleAsync()
     {
-        await CancelExpiredUpcomingMatchesAsync();
-
+        await CancelUnstartedUpcomingMatchesAsync();
         await FinalizeUnfinalizedFinishedMatchesAsync();
-
-        await DeleteExpiredMatchesAsync();
     }
 
-    private async Task CancelExpiredUpcomingMatchesAsync()
+    private async Task CancelUnstartedUpcomingMatchesAsync()
     {
         var matches =
             await _matchRepository.GetByStatusAsync("Upcoming");
@@ -49,27 +51,88 @@ public class MatchLifecycleService : IMatchLifecycleService
 
         foreach (var match in matches)
         {
+            // Only cancel matches that are still Upcoming
+            // and have not started.
+            if (!string.Equals(
+                    match.Status,
+                    "Upcoming",
+                    StringComparison.OrdinalIgnoreCase) ||
+                match.ActualStartedAt.HasValue)
+            {
+                continue;
+            }
+
+            // Allow the umpire 24 hours after the scheduled time.
             var cancellationDeadline = match.ScheduledAt.AddHours(24);
 
             if (cancellationDeadline > now)
                 continue;
 
-            _logger.LogInformation(
-                "Auto-cancelling match {MatchId}. ScheduledAt: {ScheduledAt}, deadline: {Deadline}.",
-                match.Id,
-                match.ScheduledAt,
-                cancellationDeadline);
+            var organizerStatistics =
+                await _organizerStatisticsRepository
+                    .GetByUserIdAsync(match.CreatedByUserId);
 
-            // Keep your existing cancellation and statistics logic here.
+            var createOrganizerStatistics =
+                organizerStatistics is null;
+
+            organizerStatistics ??= new OrganizerStatistics
+            {
+                UserId = match.CreatedByUserId
+            };
+
+            organizerStatistics.MatchesCancelled++;
+
+            match.Status = "Cancelled";
+            match.CancellationReasonType = "Automatic";
+            match.CancellationReason = "Umpire unavailable";
+            match.CancelledAt = now;
+            match.UpdatedAt = now;
+
+            await _transactionManager.BeginTransactionAsync();
+
+            try
+            {
+                await _matchRepository.UpdateAsync(match);
+
+                if (createOrganizerStatistics)
+                {
+                    await _organizerStatisticsRepository
+                        .AddAsync(organizerStatistics);
+                }
+                else
+                {
+                    await _organizerStatisticsRepository
+                        .UpdateAsync(organizerStatistics);
+                }
+
+                await _unitOfWork.SaveChangesAsync();
+
+                await _transactionManager.CommitTransactionAsync();
+
+                _logger.LogInformation(
+                    "Match {MatchId} automatically cancelled. " +
+                    "Reason: Umpire unavailable. Organizer: {OrganizerId}.",
+                    match.Id,
+                    match.CreatedByUserId);
+            }
+            catch (Exception ex)
+            {
+                await _transactionManager.RollbackTransactionAsync();
+
+                _logger.LogError(
+                    ex,
+                    "Failed to automatically cancel match {MatchId}.",
+                    match.Id);
+
+                throw;
+            }
         }
-
-        await _unitOfWork.SaveChangesAsync();
     }
 
     private async Task FinalizeUnfinalizedFinishedMatchesAsync()
     {
         var matches =
-           await _matchRepository.GetByStatusAsync("Finished");
+            await _matchRepository.GetByStatusAsync("Finished");
 
         foreach (var match in matches)
         {
@@ -86,7 +149,8 @@ public class MatchLifecycleService : IMatchLifecycleService
         var now = DateTime.UtcNow;
         var expiry = now.AddDays(-7);
 
-        var finishedMatches = await _matchRepository.GetByStatusAsync("Finished");
+        var finishedMatches =
+            await _matchRepository.GetByStatusAsync("Finished");
 
         foreach (var match in finishedMatches)
         {

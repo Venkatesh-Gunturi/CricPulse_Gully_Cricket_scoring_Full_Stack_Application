@@ -12,23 +12,63 @@ public sealed class UserAccountProfileService : IUserAccountProfileService
 {
     private readonly IUserRepository _userRepository;
     private readonly IUnitOfWork _unitOfWork;
+    private readonly IPlayerStatisticsRepository _playerStatisticsRepository;
 
     public UserAccountProfileService(
-        IUserRepository userRepository,
-        IUnitOfWork unitOfWork)
+     IUserRepository userRepository,
+     IUnitOfWork unitOfWork,
+     IPlayerStatisticsRepository playerStatisticsRepository)
     {
         _userRepository = userRepository;
         _unitOfWork = unitOfWork;
+        _playerStatisticsRepository = playerStatisticsRepository;
     }
 
     public async Task<UserProfileResponseDto> GetProfileAsync(Guid userId)
     {
         if (userId == Guid.Empty)
             throw new ArgumentException("User ID is required.");
+
         var user = await _userRepository.GetByIdAsync(userId);
+
         if (user is null || !user.IsActive)
             throw new KeyNotFoundException("Active user account was not found.");
-        return MapProfile(user);
+
+        var profile = MapProfile(user);
+
+        var stats = await _playerStatisticsRepository
+            .GetByUserIdAsync(userId);
+
+        if (stats is not null)
+        {
+            profile.Statistics = new PlayerStatisticsResponseDto
+            {
+                Matches = stats.Matches,
+                Innings = stats.Innings,
+                Runs = stats.Runs,
+                BallsFaced = stats.BallsFaced,
+                HighestScore = stats.HighestScore,
+                NotOuts = stats.NotOuts,
+                Fours = stats.Fours,
+                Sixes = stats.Sixes,
+                Fifties = stats.Fifties,
+                Hundreds = stats.Hundreds,
+                BowlingInnings = stats.BowlingInnings,
+                BallsBowled = stats.BallsBowled,
+                RunsConceded = stats.RunsConceded,
+                Wickets = stats.Wickets,
+                Maidens = stats.Maidens,
+                ThreeWicketHauls = stats.ThreeWicketHauls,
+                FiveWicketHauls = stats.FiveWicketHauls,
+                BestBowling = stats.BestBowling,
+                Catches = stats.Catches,
+                RunOuts = stats.RunOuts,
+                Stumpings = stats.Stumpings,
+                MVPCount = stats.MVPCount
+            };
+        }
+
+        return profile;
     }
 
     public async Task<UserProfileResponseDto> UpdateProfileAsync(

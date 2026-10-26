@@ -79,13 +79,11 @@ const handleLoginSuccess = (
     navigate(nextRole === 'Umpire' ? '/umpire' : '/');
   };
 
+  
   const handleViewProfile = () => {
-    closeMenu();
-
-    if (role === 'Player') {
-      // Player profile navigation will be connected when that page is implemented.
-    }
-  };
+  closeMenu();
+  navigate(role === 'Umpire' ? '/umpire' : '/player/profile');
+};
 
   const handleCreateMatch = () => {
     closeMenu();

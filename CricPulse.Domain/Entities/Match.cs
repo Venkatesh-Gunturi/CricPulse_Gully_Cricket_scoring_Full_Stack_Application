@@ -58,6 +58,11 @@ public class Match
 
     public string? WinnerTeam { get; set; }
     public string? ResultText { get; set; }
+    public Guid? MVPUserId { get; set; }
+
+    public string? MVPPlayerName { get; set; }
+
+    public int? MVPScore { get; set; }
     public bool PlayerStatisticsFinalized { get; set; }
     public DateTime CreatedAt { get; set; }
 

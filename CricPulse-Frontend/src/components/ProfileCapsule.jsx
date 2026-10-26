@@ -27,7 +27,13 @@ function ProfileCapsule({
   const capsuleRef = useRef(null);
 
   const isLoggedIn = Boolean(user);
-  const currentRole = isLoggedIn ? role : 'User';
+  const normalizedRole = String(role || 'User').trim().toLowerCase();
+
+const currentRole = !isLoggedIn
+  ? 'User'
+  : normalizedRole === 'umpire'
+    ? 'Umpire'
+    : 'Player';
 
   const displayName = isLoggedIn
     ? `${user.firstName || ''} ${user.lastName || ''}`.trim() || 'Player'

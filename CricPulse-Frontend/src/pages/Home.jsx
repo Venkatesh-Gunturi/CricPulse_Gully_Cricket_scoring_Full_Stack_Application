@@ -1,7 +1,6 @@
 
 import { Link } from 'react-router-dom';
 import '../styles/home.css';
-
 import heroImage from '../assets/hero-bg.jpg';
 import matchesImage from '../assets/matches-card.jpg';
 import statsImage from '../assets/stats-card.jpg';
@@ -23,7 +22,7 @@ const features = [
     title: 'Check Your Records',
     description:
       'Keep your performances and achievements close as your cricket story grows.',
-    link: '/profile',
+    link: '/player/profile',
     linkText: 'View Player Stats',
     image: statsImage,
     imageAlt: 'Cricket player with a player statistics panel',
