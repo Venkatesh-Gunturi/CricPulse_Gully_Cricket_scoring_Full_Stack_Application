@@ -24,6 +24,13 @@ public class MatchStateDto
 
     public string? ResultText { get; set; }
 
+    public Guid? MVPUserId { get; set; }
+
+    public string? MVPPlayerName { get; set; }
+
+    public int? MVPScore { get; set; }
+
+
     public List<InningsStateDto> Innings { get; set; } = new();
 }
 

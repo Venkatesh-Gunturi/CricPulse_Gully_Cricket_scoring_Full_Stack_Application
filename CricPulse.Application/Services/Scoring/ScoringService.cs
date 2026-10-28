@@ -2041,6 +2041,9 @@ public class ScoringService : IScoringService
             TossAgreed = match.TossAgreed,
             WinnerTeam = match.WinnerTeam,
             ResultText = match.ResultText,
+            MVPUserId = match.MVPUserId,
+            MVPPlayerName = match.MVPPlayerName,
+            MVPScore = match.MVPScore,
 
             Innings = match.Innings
                 .OrderBy(x => x.InningsNumber)

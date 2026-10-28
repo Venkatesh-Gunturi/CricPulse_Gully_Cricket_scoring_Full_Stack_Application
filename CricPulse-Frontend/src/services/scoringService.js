@@ -82,7 +82,6 @@ export const changeBowler = async (
   return response.data;
 };
 
-
 export const completeInnings = async (
   inningsId,
   createdByUserId
