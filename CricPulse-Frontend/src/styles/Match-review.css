@@ -1,37 +1,2062 @@
-.match-review-page { min-height: 100vh; padding: 28px clamp(16px, 4vw, 56px) 48px; color: #172033; background: #f5f7fb; }
-.match-review-topbar { max-width: 1120px; margin: 0 auto 32px; display: flex; justify-content: space-between; align-items: center; gap: 16px; font-size: .8rem; letter-spacing: .12em; font-weight: 800; color: #58647a; }
-.match-review-saved { padding: 7px 11px; border-radius: 999px; background: #e1f6e9; color: #147347; letter-spacing: 0; }
-.match-review-heading, .match-review-summary, .match-review-details, .match-review-rosters, .match-review-actions { max-width: 1120px; margin-left: auto; margin-right: auto; }
-.match-review-eyebrow { color: #4263eb; font-size: .75rem; font-weight: 800; letter-spacing: .14em; }
-.match-review-heading h1 { margin: 8px 0; font-size: clamp(2rem, 4vw, 3rem); line-height: 1.1; }
-.match-review-heading p { margin: 0 0 24px; color: #68748a; }
-.match-review-summary { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 16px; padding: 24px; border-radius: 20px; background: #fff; box-shadow: 0 8px 28px rgba(30, 45, 75, .06); }
-.match-review-team-name { min-width: 0; text-align: center; padding: 12px; }
-.match-review-team-name span { color: #7b879a; font-size: .72rem; font-weight: 800; letter-spacing: .12em; }
-.match-review-team-name h2 { margin: 8px 0 0; overflow-wrap: anywhere; }
-.match-review-vs { color: #7c8799; font-weight: 900; }
-.match-review-details, .match-review-rosters { margin-top: 24px; padding: 24px; background: #fff; border-radius: 20px; box-shadow: 0 8px 28px rgba(30, 45, 75, .05); }
-.match-review-details h2, .match-review-rosters h2 { margin: 0 0 20px; font-size: 1.25rem; }
-.match-review-detail-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px; }
-.match-review-detail-grid > div { display: flex; align-items: flex-start; gap: 12px; min-width: 0; }
-.match-review-detail-grid > div > svg { flex: 0 0 auto; margin-top: 4px; color: #4263eb; }
-.match-review-detail-grid span { display: grid; gap: 5px; min-width: 0; overflow-wrap: anywhere; }
-.match-review-detail-grid small { color: #7b879a; }
-.match-review-detail-grid strong { font-size: .95rem; }
-.match-review-roster-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px; }
-.match-review-team { min-width: 0; border: 1px solid #e6eaf1; border-radius: 14px; padding: 16px; }
-.match-review-team h3 { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin: 0 0 12px; font-size: 1rem; }
-.match-review-team h3 span { color: #7b879a; font-size: .75rem; font-weight: 500; white-space: nowrap; }
-.match-review-team ol { list-style: none; margin: 0; padding: 0; }
-.match-review-team li { display: flex; align-items: center; gap: 10px; padding: 11px 0; border-top: 1px solid #eef1f6; }
-.match-review-player-number { display: grid; place-items: center; width: 30px; height: 30px; flex: 0 0 30px; border-radius: 50%; background: #eef2ff; color: #425bd6; font-size: .8rem; font-weight: 800; }
-.match-review-player-info { display: grid; gap: 3px; min-width: 0; overflow-wrap: anywhere; }
-.match-review-player-info small { color: #7b879a; font-size: .75rem; }
-.match-review-captain { margin-left: auto; color: #946200; background: #fff3cd; border-radius: 999px; padding: 4px 8px; font-size: .68rem; font-weight: 800; }
-.match-review-actions { display: flex; justify-content: flex-end; gap: 12px; margin-top: 24px; }
-.match-review-primary, .match-review-secondary { display: inline-flex; align-items: center; justify-content: center; gap: 9px; border: 0; border-radius: 10px; padding: 12px 18px; cursor: pointer; font: inherit; font-weight: 800; }
-.match-review-primary { color: #fff; background: #3155df; }
-.match-review-secondary { color: #344054; background: #e8ecf3; }
-.match-review-status { max-width: 1120px; margin: 10vh auto; }
-.match-review-alert { max-width: 900px; margin: 10vh auto 20px; padding: 16px; border-radius: 12px; color: #8a2020; background: #ffe8e8; }
-@media (max-width: 700px) { .match-review-detail-grid, .match-review-roster-grid { grid-template-columns: 1fr; } .match-review-summary { padding: 14px; gap: 4px; } .match-review-team-name { padding: 8px 4px; } .match-review-team-name h2 { font-size: 1.05rem; } .match-review-actions { position: sticky; bottom: 12px; padding: 10px; background: rgba(245,247,251,.94); } .match-review-primary, .match-review-secondary { flex: 1; padding: 12px 10px; } }
+/* =========================================================
+
+   CricPulse — Match Review
+
+   Complete stylesheet for the current MatchReview\.jsx
+
+   Theme: deep cricket green + warm gold
+
+   ========================================================= */
+
+
+
+.match-review-page {
+
+  --mr-green: #0b3d2e;
+
+  --mr-green-light: #15523e;
+
+  --mr-green-mid: #1d6049;
+
+  --mr-gold: #e5be58;
+
+  --mr-gold-dark: #946200;
+
+  --mr-text: #172033;
+
+  --mr-muted: #68748a;
+
+  --mr-border: #e3e9e4;
+
+  --mr-surface: #ffffff;
+
+  --mr-soft: #f5f7f5;
+
+
+
+  box-sizing: border-box;
+
+  min-height: 100vh;
+
+  width: 100%;
+
+  padding: 28px clamp(16px, 4vw, 56px) 48px;
+
+  color: var(--mr-text);
+
+  background:
+
+    radial-gradient(ellipse at top left, rgb(229 190 88 / 8%), transparent 34rem),
+
+    #f5f7f5;
+
+  font-family: inherit;
+
+  line-height: 1.5;
+
+}
+
+
+
+.match-review-page *,
+
+.match-review-page *::before,
+
+.match-review-page *::after {
+
+  box-sizing: border-box;
+
+}
+
+
+
+.match-review-page button {
+
+  font-family: inherit;
+
+}
+
+
+
+.match-review-topbar,
+
+.match-review-heading,
+
+.match-review-summary,
+
+.match-review-tabs,
+
+.match-review-details,
+
+.match-review-rosters,
+
+.match-review-first-innings,
+
+.match-review-actions {
+
+  width: 100%;
+
+  max-width: 1120px;
+
+  margin-right: auto;
+
+  margin-left: auto;
+
+}
+
+
+
+/* Top bar and page heading */
+
+.match-review-topbar {
+
+  display: flex;
+
+  align-items: center;
+
+  gap: 22px;
+
+  margin-bottom: 26px;
+
+}
+
+
+
+.match-review-back {
+
+  display: inline-flex;
+
+  flex: 0 0 auto;
+
+  align-items: center;
+
+  justify-content: center;
+
+  gap: 9px;
+
+  min-height: 44px;
+
+  padding: 11px 16px;
+
+  border: 1px solid #d5e0d7;
+
+  border-radius: 12px;
+
+  color: var(--mr-green);
+
+  background: #fff;
+
+  box-shadow: 0 4px 12px rgb(11 61 46 / 6%);
+
+  font-size: 0.9rem;
+
+  font-weight: 800;
+
+  line-height: 1.2;
+
+  cursor: pointer;
+
+  transition: background 160ms ease, border-color 160ms ease, color 160ms ease, transform 160ms ease, box-shadow 160ms ease;
+
+}
+
+
+
+.match-review-back svg {
+
+  flex: 0 0 auto;
+
+  font-size: 0.95rem;
+
+}
+
+
+
+.match-review-back:hover {
+
+  border-color: var(--mr-gold);
+
+  color: #fff;
+
+  background: var(--mr-green);
+
+  box-shadow: 0 7px 18px rgb(11 61 46 / 15%);
+
+}
+
+
+
+.match-review-back:active {
+
+  transform: translateY(1px);
+
+}
+
+
+
+.match-review-heading {
+
+  min-width: 0;
+
+  margin-bottom: 0;
+
+}
+
+
+
+.match-review-eyebrow,
+
+.match-review-label {
+
+  margin: 0;
+
+  color: var(--mr-gold-dark);
+
+  font-size: 0.72rem;
+
+  font-weight: 900;
+
+  letter-spacing: 0.14em;
+
+  text-transform: uppercase;
+
+}
+
+
+
+.match-review-heading h1 {
+
+  margin: 7px 0 0;
+
+  color: var(--mr-green);
+
+  font-size: clamp(1.8rem, 4vw, 2.7rem);
+
+  font-weight: 900;
+
+  line-height: 1.08;
+
+  letter-spacing: -0.035em;
+
+  overflow-wrap: anywhere;
+
+}
+
+
+
+/* Match title / status summary */
+
+.match-review-summary {
+
+  display: flex;
+
+  align-items: center;
+
+  justify-content: space-between;
+
+  gap: 22px;
+
+  margin-top: 24px;
+
+  padding: clamp(20px, 3vw, 30px);
+
+  border: 1px solid #e8dfbd;
+
+  border-radius: 22px;
+
+  background:
+
+    linear-gradient(115deg, rgb(255 255 255 / 98%) 0%, rgb(255 253 245 / 98%) 100%);
+
+  box-shadow: 0 12px 32px rgb(11 61 46 / 7%);
+
+  position: relative;
+
+  overflow: hidden;
+
+}
+
+
+
+.match-review-summary::before {
+
+  content: "";
+
+  position: absolute;
+
+  inset: 0 auto 0 0;
+
+  width: 5px;
+
+  background: linear-gradient(180deg, var(--mr-green), var(--mr-gold));
+
+}
+
+
+
+.match-review-summary > div {
+
+  min-width: 0;
+
+  padding-left: 4px;
+
+}
+
+
+
+.match-review-summary h2 {
+
+  margin: 8px 0 5px;
+
+  color: var(--mr-green);
+
+  font-size: clamp(1.25rem, 3vw, 1.9rem);
+
+  font-weight: 900;
+
+  line-height: 1.2;
+
+  letter-spacing: -0.025em;
+
+  overflow-wrap: anywhere;
+
+}
+
+
+
+.match-review-summary p:last-child {
+
+  margin: 0;
+
+  color: var(--mr-muted);
+
+  font-size: 0.95rem;
+
+  overflow-wrap: anywhere;
+
+}
+
+
+
+.match-review-status {
+
+  display: inline-flex;
+
+  flex: 0 0 auto;
+
+  align-items: center;
+
+  justify-content: center;
+
+  max-width: 100%;
+
+  padding: 8px 14px;
+
+  border: 1px solid #eadba2;
+
+  border-radius: 999px;
+
+  color: #725a1a;
+
+  background: #fff4c9;
+
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 80%);
+
+  font-size: 0.78rem;
+
+  font-weight: 900;
+
+  letter-spacing: 0.035em;
+
+  text-transform: capitalize;
+
+}
+
+
+
+/* Shared content cards */
+
+.match-review-details,
+
+.match-review-rosters,
+
+.match-review-first-innings {
+
+  margin-top: 20px;
+
+  padding: clamp(18px, 3vw, 28px);
+
+  border: 1px solid #e1e8e0;
+
+  border-radius: 20px;
+
+  background: var(--mr-surface);
+
+  box-shadow: 0 9px 28px rgb(20 45 32 / 5%);
+
+}
+
+
+
+.match-review-toss {
+
+  border-color: #e7d8a5;
+
+  background: linear-gradient(135deg, #fff 0%, #fffdf5 100%);
+
+  box-shadow: 0 9px 28px rgb(148 98 0 / 6%);
+
+}
+
+
+
+.match-review-section-heading {
+
+  display: flex;
+
+  align-items: center;
+
+  gap: 13px;
+
+  margin-bottom: 22px;
+
+  color: var(--mr-green);
+
+}
+
+
+
+.match-review-section-heading > svg {
+
+  display: block;
+
+  flex: 0 0 44px;
+
+  width: 44px;
+
+  height: 44px;
+
+  padding: 12px;
+
+  border: 1px solid #dce9dd;
+
+  border-radius: 13px;
+
+  color: var(--mr-green);
+
+  background: #e8f1e9;
+
+}
+
+
+
+.match-review-toss .match-review-section-heading > svg {
+
+  border-color: #efe2b7;
+
+  color: var(--mr-gold-dark);
+
+  background: #fff4d1;
+
+}
+
+
+
+.match-review-section-heading > div {
+
+  min-width: 0;
+
+}
+
+
+
+.match-review-section-heading h2 {
+
+  margin: 0 0 4px;
+
+  color: var(--mr-green);
+
+  font-size: clamp(1.08rem, 2vw, 1.28rem);
+
+  font-weight: 900;
+
+  line-height: 1.25;
+
+}
+
+
+
+.match-review-section-heading p {
+
+  margin: 0;
+
+  color: var(--mr-muted);
+
+  font-size: 0.9rem;
+
+  line-height: 1.5;
+
+}
+
+
+
+/* Detail tiles — used by Match Details and Toss Details */
+
+.match-review-detail-grid {
+
+  display: grid;
+
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+
+  gap: 14px;
+
+}
+
+
+
+.match-review-detail {
+
+  display: flex;
+
+  flex-direction: column;
+
+  justify-content: center;
+
+  gap: 7px;
+
+  min-width: 0;
+
+  min-height: 84px;
+
+  padding: 16px 18px;
+
+  border: 1px solid #e8eee7;
+
+  border-radius: 13px;
+
+  background: linear-gradient(145deg, #fff 0%, #f8faf7 100%);
+
+  transition: border-color 160ms ease, transform 160ms ease, box-shadow 160ms ease;
+
+}
+
+
+
+.match-review-detail:hover {
+
+  border-color: #d8c98e;
+
+  box-shadow: 0 5px 14px rgb(11 61 46 / 5%);
+
+  transform: translateY(-1px);
+
+}
+
+
+
+.match-review-detail span {
+
+  color: var(--mr-muted);
+
+  font-size: 0.78rem;
+
+  font-weight: 750;
+
+  letter-spacing: 0.025em;
+
+}
+
+
+
+.match-review-detail strong {
+
+  color: var(--mr-green);
+
+  font-size: 0.98rem;
+
+  font-weight: 850;
+
+  line-height: 1.45;
+
+  overflow-wrap: anywhere;
+
+}
+
+
+
+/* Match Info / First Innings tabs */
+
+.match-review-tabs {
+
+  display: flex;
+
+  gap: 8px;
+
+  margin-top: 24px;
+
+  padding: 7px;
+
+  border: 1px solid #dce5dc;
+
+  border-radius: 15px;
+
+  background: #e9eee9;
+
+}
+
+
+
+.match-review-tabs button {
+
+  display: inline-flex;
+
+  flex: 1 1 0;
+
+  align-items: center;
+
+  justify-content: center;
+
+  gap: 9px;
+
+  min-width: 0;
+
+  min-height: 48px;
+
+  padding: 12px 16px;
+
+  border: 1px solid transparent;
+
+  border-radius: 11px;
+
+  color: #526257;
+
+  background: transparent;
+
+  font-size: 0.92rem;
+
+  font-weight: 850;
+
+  line-height: 1.25;
+
+  cursor: pointer;
+
+  transition: background 160ms ease, color 160ms ease, border-color 160ms ease, box-shadow 160ms ease;
+
+}
+
+
+
+.match-review-tabs button svg {
+
+  flex: 0 0 auto;
+
+  font-size: 0.95rem;
+
+}
+
+
+
+.match-review-tabs button:hover:not(.active) {
+
+  color: var(--mr-green);
+
+  background: rgb(255 255 255 / 70%);
+
+}
+
+
+
+.match-review-tabs button.active {
+
+  border-color: #d8c98e;
+
+  color: #fff;
+
+  background: var(--mr-green);
+
+  box-shadow: 0 4px 12px rgb(11 61 46 / 16%);
+
+}
+
+
+
+/* Team roster switcher */
+
+.match-review-team-switcher {
+
+  display: flex;
+
+  gap: 8px;
+
+  margin-bottom: 20px;
+
+  padding: 5px;
+
+  border: 1px solid #e3eae2;
+
+  border-radius: 13px;
+
+  background: #edf1ed;
+
+}
+
+
+
+.match-review-team-switcher button {
+
+  display: flex;
+
+  flex: 1 1 0;
+
+  align-items: center;
+
+  justify-content: center;
+
+  min-width: 0;
+
+  min-height: 44px;
+
+  padding: 11px 14px;
+
+  border: 1px solid transparent;
+
+  border-radius: 9px;
+
+  color: #46564a;
+
+  background: transparent;
+
+  font-size: 0.9rem;
+
+  font-weight: 850;
+
+  line-height: 1.3;
+
+  overflow-wrap: anywhere;
+
+  cursor: pointer;
+
+  transition: background 160ms ease, color 160ms ease, border-color 160ms ease, box-shadow 160ms ease;
+
+}
+
+
+
+.match-review-team-switcher button:hover:not(.active) {
+
+  color: var(--mr-green);
+
+  background: #fff;
+
+}
+
+
+
+.match-review-team-switcher button.active {
+
+  border-color: #d9c989;
+
+  color: #fff;
+
+  background: var(--mr-green);
+
+  box-shadow: 0 3px 9px rgb(11 61 46 / 12%);
+
+}
+
+
+
+.match-review-team h3 {
+
+  margin: 0 0 12px;
+
+  color: var(--mr-green);
+
+  font-size: 1.08rem;
+
+  font-weight: 900;
+
+  overflow-wrap: anywhere;
+
+}
+
+
+
+.match-review-player-list {
+
+  margin: 0;
+
+  padding: 0;
+
+  overflow: hidden;
+
+  border: 1px solid var(--mr-border);
+
+  border-radius: 13px;
+
+  background: #fff;
+
+  list-style: none;
+
+}
+
+
+
+.match-review-player-list li {
+
+  display: flex;
+
+  align-items: center;
+
+  gap: 12px;
+
+  min-height: 50px;
+
+  padding: 12px 16px;
+
+  border-bottom: 1px solid #edf0eb;
+
+  transition: background 140ms ease;
+
+}
+
+
+
+.match-review-player-list li:hover {
+
+  background: #fbfcf8;
+
+}
+
+
+
+.match-review-player-list li:last-child {
+
+  border-bottom: 0;
+
+}
+
+
+
+.match-review-player-list li > span:first-child {
+
+  min-width: 0;
+
+  color: #25372d;
+
+  font-weight: 650;
+
+  overflow-wrap: anywhere;
+
+}
+
+
+
+.match-review-captain {
+
+  flex: 0 0 auto;
+
+  margin-left: auto;
+
+  padding: 5px 9px;
+
+  border: 1px solid #eadba2;
+
+  border-radius: 999px;
+
+  color: var(--mr-gold-dark);
+
+  background: #fff7d9;
+
+  font-size: 0.7rem;
+
+  font-weight: 900;
+
+  line-height: 1.2;
+
+}
+
+
+
+.match-review-empty {
+
+  margin: 12px 0 0;
+
+  padding: 15px 16px;
+
+  border: 1px dashed #d6e1d5;
+
+  border-radius: 12px;
+
+  color: var(--mr-muted);
+
+  background: #fafcf9;
+
+  font-size: 0.9rem;
+
+  line-height: 1.6;
+
+}
+
+
+
+/* First innings summary and history */
+
+.match-review-first-innings {
+
+  display: grid;
+
+  gap: 18px;
+
+}
+
+
+
+.match-review-history-placeholder {
+
+  display: grid;
+
+  justify-items: center;
+
+  gap: 10px;
+
+  padding: 42px 22px;
+
+  border: 1px dashed #cbd9ca;
+
+  border-radius: 16px;
+
+  background: linear-gradient(135deg, #fff 0%, #f7faf6 100%);
+
+  text-align: center;
+
+}
+
+
+
+.match-review-history-placeholder > svg {
+
+  color: var(--mr-gold-dark);
+
+  font-size: 1.7rem;
+
+}
+
+
+
+.match-review-history-placeholder h3 {
+
+  margin: 0;
+
+  color: var(--mr-green);
+
+  font-size: 1.12rem;
+
+  font-weight: 900;
+
+}
+
+
+
+.match-review-history-placeholder p {
+
+  max-width: 560px;
+
+  margin: 0;
+
+  color: var(--mr-muted);
+
+  line-height: 1.65;
+
+}
+
+
+
+.match-review-history-placeholder [role="alert"] {
+
+  color: #8a2020;
+
+}
+
+
+
+.match-review-innings-score {
+
+  display: grid;
+
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+
+  gap: 12px;
+
+}
+
+
+
+.match-review-innings-score > div {
+
+  display: flex;
+
+  flex-direction: column;
+
+  gap: 7px;
+
+  min-width: 0;
+
+  padding: 17px;
+
+  border: 1px solid #dce7dc;
+
+  border-radius: 14px;
+
+  background: linear-gradient(145deg, #fff 0%, #edf5ed 100%);
+
+}
+
+
+
+.match-review-innings-score span {
+
+  color: var(--mr-muted);
+
+  font-size: 0.78rem;
+
+  font-weight: 750;
+
+}
+
+
+
+.match-review-innings-score strong {
+
+  color: var(--mr-green);
+
+  font-size: 1.08rem;
+
+  font-weight: 900;
+
+  overflow-wrap: anywhere;
+
+}
+
+
+
+.match-review-history-grid {
+
+  display: grid;
+
+  grid-template-columns: 1fr;
+
+  gap: 18px;
+
+}
+
+
+
+.match-review-history-card {
+
+  min-width: 0;
+
+  overflow: hidden;
+
+  border: 1px solid #e1e8e0;
+
+  border-radius: 16px;
+
+  background: #fff;
+
+  box-shadow: 0 6px 22px rgb(30 45 35 / 4%);
+
+}
+
+
+
+.match-review-history-card h3 {
+
+  margin: 0;
+
+  padding: 18px 20px;
+
+  border-bottom: 1px solid #e7ede6;
+
+  color: var(--mr-green);
+
+  background: linear-gradient(100deg, #f2f7f1, #fffdf5);
+
+  font-size: 1.05rem;
+
+  font-weight: 900;
+
+  overflow-wrap: anywhere;
+
+}
+
+
+
+.match-review-table-wrap {
+
+  width: 100%;
+
+  overflow-x: auto;
+
+  -webkit-overflow-scrolling: touch;
+
+}
+
+
+
+.match-review-table {
+
+  width: 100%;
+
+  min-width: 540px;
+
+  border-collapse: collapse;
+
+  background: #fff;
+
+  text-align: left;
+
+}
+
+
+
+.match-review-table th,
+
+.match-review-table td {
+
+  padding: 13px 15px;
+
+  border-bottom: 1px solid #edf0eb;
+
+  color: #26372d;
+
+  white-space: nowrap;
+
+  font-size: 0.84rem;
+
+  font-variant-numeric: tabular-nums;
+
+}
+
+
+
+.match-review-table th {
+
+  color: #67766a;
+
+  background: #f8faf7;
+
+  font-size: 0.72rem;
+
+  font-weight: 900;
+
+  letter-spacing: 0.045em;
+
+  text-transform: uppercase;
+
+}
+
+
+
+.match-review-table td:first-child,
+
+.match-review-table th:first-child {
+
+  padding-left: 20px;
+
+  white-space: normal;
+
+}
+
+
+
+.match-review-table tbody tr:last-child td {
+
+  border-bottom: 0;
+
+}
+
+
+
+.match-review-table tbody tr:hover {
+
+  background: #fbfcf8;
+
+}
+
+
+
+/* Bottom actions — explicit selectors so global button CSS cannot flatten them */
+
+.match-review-actions {
+
+  display: flex;
+
+  align-items: center;
+
+  justify-content: flex-end;
+
+  flex-wrap: wrap;
+
+  gap: 12px;
+
+  margin-top: 26px;
+
+}
+
+
+
+.match-review-actions button,
+
+.match-review-error button {
+
+  display: inline-flex;
+
+  align-items: center;
+
+  justify-content: center;
+
+  gap: 9px;
+
+  min-height: 46px;
+
+  padding: 12px 20px;
+
+  border: 1px solid transparent;
+
+  border-radius: 11px;
+
+  font-size: 0.9rem;
+
+  font-weight: 850;
+
+  line-height: 1.25;
+
+  cursor: pointer;
+
+  box-shadow: 0 4px 12px rgb(11 61 46 / 7%);
+
+  transition: background 160ms ease, border-color 160ms ease, color 160ms ease, transform 160ms ease, box-shadow 160ms ease;
+
+}
+
+
+
+.match-review-actions .match-review-update {
+
+  border-color: var(--mr-green);
+
+  color: #fff;
+
+  background: var(--mr-green);
+
+}
+
+
+
+.match-review-actions .match-review-update:hover {
+
+  border-color: var(--mr-green-light);
+
+  background: var(--mr-green-light);
+
+  box-shadow: 0 7px 16px rgb(11 61 46 / 18%);
+
+  transform: translateY(-1px);
+
+}
+
+
+
+.match-review-actions .match-review-dashboard {
+
+  border-color: #d5e0d7;
+
+  color: var(--mr-green);
+
+  background: #fff;
+
+}
+
+
+
+.match-review-actions .match-review-dashboard:hover {
+
+  border-color: var(--mr-gold);
+
+  color: #fff;
+
+  background: var(--mr-green);
+
+  box-shadow: 0 7px 16px rgb(11 61 46 / 14%);
+
+  transform: translateY(-1px);
+
+}
+
+
+
+.match-review-actions button:active,
+
+.match-review-error button:active {
+
+  transform: translateY(1px);
+
+}
+
+
+
+.match-review-error {
+
+  width: min(100%, 700px);
+
+  margin: 10vh auto;
+
+  padding: clamp(22px, 4vw, 32px);
+
+  border: 1px solid #f1cccc;
+
+  border-radius: 18px;
+
+  background: #fff;
+
+  box-shadow: 0 10px 32px rgb(30 45 35 / 6%);
+
+}
+
+
+
+.match-review-error h1 {
+
+  margin-top: 0;
+
+  color: var(--mr-green);
+
+  font-size: clamp(1.45rem, 3vw, 2rem);
+
+}
+
+
+
+.match-review-error p {
+
+  color: #8a2020;
+
+  line-height: 1.6;
+
+}
+
+
+
+.match-review-error button {
+
+  margin: 8px 8px 0 0;
+
+  color: #fff;
+
+  background: var(--mr-green);
+
+}
+
+
+
+.match-review-error button:hover {
+
+  background: var(--mr-green-light);
+
+}
+
+
+
+.match-review-page [role="status"] {
+
+  width: 100%;
+
+  max-width: 1120px;
+
+  margin: 10vh auto;
+
+  color: var(--mr-muted);
+
+  font-weight: 700;
+
+}
+
+
+
+/* Keyboard focus */
+
+.match-review-page button:focus-visible {
+
+  outline: 3px solid #d7b74c;
+
+  outline-offset: 3px;
+
+}
+
+
+
+/* Responsive layout */
+
+@media (max-width: 700px) {
+
+  .match-review-page {
+
+    padding: 20px 14px 32px;
+
+  }
+
+
+
+  .match-review-topbar {
+
+    align-items: flex-start;
+
+    flex-direction: column;
+
+    gap: 16px;
+
+    margin-bottom: 22px;
+
+  }
+
+
+
+  .match-review-back {
+
+    min-height: 42px;
+
+    padding: 10px 13px;
+
+  }
+
+
+
+  .match-review-summary {
+
+    align-items: flex-start;
+
+    flex-direction: column;
+
+    gap: 14px;
+
+    margin-top: 18px;
+
+    padding: 20px;
+
+  }
+
+
+
+  .match-review-status {
+
+    align-self: flex-start;
+
+  }
+
+
+
+  .match-review-details,
+
+  .match-review-rosters,
+
+  .match-review-first-innings {
+
+    margin-top: 16px;
+
+    padding: 18px;
+
+    border-radius: 16px;
+
+  }
+
+
+
+  .match-review-section-heading {
+
+    align-items: flex-start;
+
+    gap: 11px;
+
+    margin-bottom: 18px;
+
+  }
+
+
+
+  .match-review-section-heading > svg {
+
+    flex-basis: 40px;
+
+    width: 40px;
+
+    height: 40px;
+
+    padding: 10px;
+
+  }
+
+
+
+  .match-review-detail-grid {
+
+    grid-template-columns: 1fr;
+
+    gap: 10px;
+
+  }
+
+
+
+  .match-review-detail {
+
+    min-height: 74px;
+
+    padding: 14px 15px;
+
+  }
+
+
+
+  .match-review-tabs {
+
+    margin-top: 18px;
+
+  }
+
+
+
+  .match-review-tabs button {
+
+    gap: 7px;
+
+    min-height: 44px;
+
+    padding: 11px 8px;
+
+    font-size: 0.86rem;
+
+  }
+
+
+
+  .match-review-innings-score {
+
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+
+  }
+
+
+
+  .match-review-actions {
+
+    position: sticky;
+
+    bottom: 8px;
+
+    z-index: 5;
+
+    justify-content: stretch;
+
+    flex-wrap: nowrap;
+
+    gap: 8px;
+
+    margin-top: 22px;
+
+    padding: 9px;
+
+    border: 1px solid #dce5dc;
+
+    border-radius: 14px;
+
+    background: rgb(245 247 245 / 96%);
+
+    box-shadow: 0 8px 24px rgb(11 61 46 / 10%);
+
+    backdrop-filter: blur(8px);
+
+  }
+
+
+
+  .match-review-actions button {
+
+    flex: 1 1 0;
+
+    min-width: 0;
+
+    min-height: 43px;
+
+    padding: 10px 8px;
+
+    font-size: 0.82rem;
+
+  }
+
+}
+
+
+
+@media (max-width: 420px) {
+
+  .match-review-page {
+
+    padding-right: 11px;
+
+    padding-left: 11px;
+
+  }
+
+
+
+  .match-review-summary h2 {
+
+    font-size: 1.2rem;
+
+  }
+
+
+
+  .match-review-tabs button {
+
+    gap: 6px;
+
+    font-size: 0.78rem;
+
+  }
+
+
+
+  .match-review-innings-score {
+
+    gap: 8px;
+
+  }
+
+
+
+  .match-review-innings-score > div {
+
+    padding: 13px;
+
+  }
+
+
+
+  .match-review-actions button {
+
+    font-size: 0.76rem;
+
+  }
+
+
+
+  .match-review-error {
+
+    padding: 20px;
+
+  }
+
+}
+
+
+
+@media (prefers-reduced-motion: reduce) {
+
+  .match-review-page *,
+
+  .match-review-page *::before,
+
+  .match-review-page *::after {
+
+    scroll-behavior: auto !important;
+
+    transition: none !important;
+
+  }
+
+}
+
+
+
+/* Finished-match result summary and player highlights */
+
+.match-review-result {
+
+  width: 100%;
+
+  max-width: 1120px;
+
+  margin: 22px auto 0;
+
+  padding: 22px;
+
+  border: 1px solid #d8e5d6;
+
+  border-radius: 18px;
+
+  background: linear-gradient(135deg, #ffffff 0%, #f2f8ef 100%);
+
+  box-shadow: 0 8px 24px rgb(11 61 46 / 7%);
+
+}
+
+
+
+.match-review-result .match-review-section-heading {
+
+  margin-bottom: 16px;
+
+}
+
+
+
+.match-review-scoreline {
+
+  display: grid;
+
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+
+  align-items: center;
+
+  gap: 16px;
+
+  padding: 18px;
+
+  border: 1px solid #e0e9dc;
+
+  border-radius: 14px;
+
+  background: #ffffff;
+
+}
+
+
+
+.match-review-score-team {
+
+  display: flex;
+
+  flex-direction: column;
+
+  gap: 5px;
+
+  min-width: 0;
+
+  text-align: center;
+
+}
+
+
+
+.match-review-score-team span {
+
+  color: #617064;
+
+  font-size: 0.85rem;
+
+  font-weight: 800;
+
+  overflow-wrap: anywhere;
+
+}
+
+
+
+.match-review-score-team strong {
+
+  color: #0b3d2e;
+
+  font-size: clamp(1.6rem, 3vw, 2.3rem);
+
+  font-weight: 900;
+
+  font-variant-numeric: tabular-nums;
+
+}
+
+
+
+.match-review-versus {
+
+  color: #946200;
+
+  font-size: 0.8rem;
+
+  font-weight: 900;
+
+}
+
+
+
+.match-review-result-text {
+
+  margin: 14px 0 18px;
+
+  color: #0b3d2e;
+
+  text-align: center;
+
+  font-size: 1.05rem;
+
+  font-weight: 800;
+
+  overflow-wrap: anywhere;
+
+}
+
+
+
+.match-review-awards {
+
+  display: grid;
+
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+
+  gap: 12px;
+
+}
+
+
+
+.match-review-award-card {
+
+  display: flex;
+
+  flex-direction: column;
+
+  align-items: flex-start;
+
+  gap: 7px;
+
+  min-width: 0;
+
+  padding: 15px;
+
+  border: 1px solid #e3e9dd;
+
+  border-radius: 12px;
+
+  background: #ffffff;
+
+}
+
+
+
+.match-review-award-card > svg {
+
+  color: #946200;
+
+  font-size: 1.15rem;
+
+}
+
+
+
+.match-review-award-card > span {
+
+  color: #68748a;
+
+  font-size: 0.76rem;
+
+  font-weight: 800;
+
+}
+
+
+
+.match-review-award-card strong {
+
+  color: #0b3d2e;
+
+  font-size: 0.98rem;
+
+  overflow-wrap: anywhere;
+
+}
+
+
+
+.match-review-award-card small {
+
+  color: #68748a;
+
+  font-size: 0.78rem;
+
+  overflow-wrap: anywhere;
+
+}
+
+
+
+@media (max-width: 620px) {
+
+  .match-review-result {
+
+    padding: 15px;
+
+  }
+
+
+
+  .match-review-scoreline {
+
+    gap: 8px;
+
+    padding: 13px 8px;
+
+  }
+
+
+
+  .match-review-awards {
+
+    grid-template-columns: 1fr;
+
+  }
+
+}
+
+/* Match Result: explicit overrides against app-wide styles */
+.match-review-page > .match-review-result {
+  display: block;
+  width: 100%;
+  max-width: 1120px;
+  margin: 22px auto 0;
+  padding: 22px;
+  box-sizing: border-box;
+  border: 1px solid #d8e5d6;
+  border-radius: 18px;
+  color: #172033;
+  background: linear-gradient(135deg, #ffffff 0%, #f2f8ef 100%);
+  box-shadow: 0 8px 24px rgb(11 61 46 / 7%);
+}
+
+.match-review-page > .match-review-result .match-review-section-heading {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  margin: 0 0 16px;
+  color: #0b3d2e;
+}
+
+.match-review-page > .match-review-result .match-review-section-heading h2 {
+  margin: 0 0 4px;
+  color: #0b3d2e;
+  font-size: clamp(1.08rem, 2vw, 1.28rem);
+  font-weight: 900;
+  line-height: 1.25;
+}
+
+.match-review-page > .match-review-result .match-review-section-heading p {
+  margin: 0;
+  color: #68748a;
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+
+.match-review-page > .match-review-result .match-review-scoreline {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: center;
+  gap: 16px;
+  padding: 18px;
+  border: 1px solid #e0e9dc;
+  border-radius: 14px;
+  background: #fff;
+}
+
+.match-review-page > .match-review-result .match-review-score-team {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+  min-width: 0;
+  text-align: center;
+}
+
+.match-review-page > .match-review-result .match-review-score-team span {
+  color: #617064;
+  font-size: 0.85rem;
+  font-weight: 800;
+  overflow-wrap: anywhere;
+}
+
+.match-review-page > .match-review-result .match-review-score-team strong {
+  color: #0b3d2e;
+  font-size: clamp(1.6rem, 3vw, 2.3rem);
+  font-weight: 900;
+  font-variant-numeric: tabular-nums;
+}
+
+.match-review-page > .match-review-result .match-review-versus {
+  color: #946200;
+  font-size: 0.8rem;
+  font-weight: 900;
+}
+
+.match-review-page > .match-review-result .match-review-result-text {
+  margin: 14px 0 18px;
+  color: #0b3d2e;
+  text-align: center;
+  font-size: 1.05rem;
+  font-weight: 800;
+  overflow-wrap: anywhere;
+}
+
+.match-review-page > .match-review-result .match-review-awards {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.match-review-page > .match-review-result .match-review-award-card {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 7px;
+  min-width: 0;
+  padding: 15px;
+  border: 1px solid #e3e9dd;
+  border-radius: 12px;
+  background: #fff;
+}
+
+.match-review-page > .match-review-result .match-review-award-card > svg {
+  color: #946200;
+  font-size: 1.15rem;
+}
+
+.match-review-page > .match-review-result .match-review-award-card > span {
+  color: #68748a;
+  font-size: 0.76rem;
+  font-weight: 800;
+}
+
+.match-review-page > .match-review-result .match-review-award-card strong {
+  color: #0b3d2e;
+  font-size: 0.98rem;
+  overflow-wrap: anywhere;
+}
+
+.match-review-page > .match-review-result .match-review-award-card small {
+  color: #68748a;
+  font-size: 0.78rem;
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 620px) {
+  .match-review-page > .match-review-result {
+    padding: 15px;
+  }
+
+  .match-review-page > .match-review-result .match-review-scoreline {
+    gap: 8px;
+    padding: 13px 8px;
+  }
+
+  .match-review-page > .match-review-result .match-review-awards {
+    grid-template-columns: 1fr;
+  }
+}

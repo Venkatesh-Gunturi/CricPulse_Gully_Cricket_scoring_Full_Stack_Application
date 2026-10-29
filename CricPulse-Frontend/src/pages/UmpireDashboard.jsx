@@ -663,65 +663,22 @@ const handleConfirmCancellation = async (cancellationData) => {
 
 
         <div
-
-          className="umpire-hero-art"
-
+          className="umpire-hero-art cricket-wicket-scene"
           role="img"
-
-          aria-label="Cartoon cricket official raises a fist to signal out"
-
+          aria-label="Cricket ball hits the wickets when hovered; out signal"
+          tabIndex={0}
         >
-
-          <div className="cartoon-out-label" aria-hidden="true">
-
-            OUT!
-
+          <div className="cartoon-out-label" aria-hidden="true">OUT!</div>
+          <div className="wicket-ball" aria-hidden="true" />
+          <div className="wicket-set" aria-hidden="true">
+            <span className="wicket-bail wicket-bail-left" />
+            <span className="wicket-bail wicket-bail-right" />
+            <span className="wicket-stump wicket-stump-left" />
+            <span className="wicket-stump wicket-stump-middle" />
+            <span className="wicket-stump wicket-stump-right" />
           </div>
-
-          <div className="cartoon-person">
-
-            <div className="cartoon-hair" />
-
-            <div className="cartoon-head">
-
-              <span className="cartoon-eye cartoon-eye-left" />
-
-              <span className="cartoon-eye cartoon-eye-right" />
-
-              <span className="cartoon-smile" />
-
-            </div>
-
-            <div className="cartoon-body">
-
-              <span className="cartoon-shirt-badge" />
-
-            </div>
-
-            <div className="cartoon-arm cartoon-arm-resting">
-
-              <span className="cartoon-hand cartoon-fist" />
-
-            </div>
-
-            <div className="cartoon-arm cartoon-arm-raised">
-
-              <span className="cartoon-hand cartoon-fist" />
-
-            </div>
-
-            <div className="cartoon-leg cartoon-leg-left" />
-
-            <div className="cartoon-leg cartoon-leg-right" />
-
-            <div className="cartoon-shoe cartoon-shoe-left" />
-
-            <div className="cartoon-shoe cartoon-shoe-right" />
-
-          </div>
-
           <div className="cartoon-ground" />
-
+          <span className="wicket-hint">Hover to bowl</span>
         </div>
 
       </section>
@@ -731,63 +688,31 @@ const handleConfirmCancellation = async (cancellationData) => {
       <section className="umpire-profile-stats-section">
 
         <div className="umpire-profile-section">
-
           <div className="umpire-avatar">
-
             {user?.profileImageUrl ? (
-
               <img
-
                 src={user.profileImageUrl}
-
                 alt={`${displayName || 'Umpire'} profile`}
-
                 onError={(event) => {
-
                   event.currentTarget.style.display = 'none';
-
                   event.currentTarget.nextElementSibling.style.display = 'grid';
-
                 }}
-
               />
-
             ) : null}
-
-
-
             <span
-
               className="umpire-avatar-fallback"
-
-              style={{
-
-                display: user?.profileImageUrl ? 'none' : 'grid',
-
-              }}
-
+              style={{ display: user?.profileImageUrl ? 'none' : 'grid' }}
             >
-
               {(user?.firstName || 'U').charAt(0).toUpperCase()}
-
             </span>
-
           </div>
-
-
 
           <div className="umpire-profile-info">
-
             <span className="umpire-profile-kicker">YOUR UMPIRE PROFILE</span>
-
             <h2>{displayName || 'Umpire'}</h2>
-
-            <p>{user?.email || 'Umpire account'}</p>
-
-            {user?.mobileNumber && <p>{user.mobileNumber}</p>}
-
+            <p className="umpire-profile-phone">{user?.mobileNumber || 'Phone not added'}</p>
+            <p className="umpire-profile-email">{user?.email || 'Umpire account'}</p>
           </div>
-
         </div>
 
 

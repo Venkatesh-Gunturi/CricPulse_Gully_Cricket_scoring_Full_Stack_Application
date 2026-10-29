@@ -534,3 +534,292 @@
     text-align: left;
   }
 }
+
+/* CricPulse match creation — visual polish scoped to match details.
+   The player roster layout is intentionally left untouched. */
+.match-creation-page {
+  --cp-green: #14532d;
+  --cp-green-deep: #0b3520;
+  --cp-green-soft: #eaf5ed;
+  --cp-gold: #d9a441;
+  --cp-ink: #18251d;
+  --cp-muted: #66736a;
+  --cp-danger: #c62828;
+  background: radial-gradient(circle at 90% 0%, rgba(217, 164, 65, .09), transparent 28rem), #f5f8f4;
+  color: var(--cp-ink);
+}
+.match-creation-topbar,
+.match-creation-heading,
+.match-creation-form {
+  width: min(calc(100% - 32px), 1120px);
+  margin-left: auto;
+  margin-right: auto;
+}
+.match-creation-heading { margin-bottom: 22px; }
+.match-creation-heading h1 { color: var(--cp-green-deep); letter-spacing: -.035em; }
+.match-creation-heading p { color: var(--cp-muted); }
+
+/* Detail sections only — do not restyle the roster section. */
+.match-form-section-details {
+  min-width: 0;
+  padding: clamp(18px, 2.4vw, 28px);
+  border: 1px solid #dce7dc;
+  border-top: 3px solid var(--cp-gold);
+  border-radius: 16px;
+  background: rgba(255,255,255,.97);
+  box-shadow: 0 8px 24px rgba(18,55,31,.055);
+}
+.match-form-section-details .match-form-section-title { margin-bottom: 20px; }
+.match-form-section-details .match-form-icon {
+  background: var(--cp-green-soft);
+  color: var(--cp-green);
+  border: 1px solid #cfe3d2;
+}
+.match-form-section-details .match-form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px 20px;
+  align-items: start;
+}
+.match-form-section-details .match-field {
+  min-width: 0;
+  color: #34463a;
+  font-weight: 650;
+}
+.match-form-section-details .match-field input,
+.match-form-section-details .match-field select,
+.match-form-section-details .match-field textarea {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  min-height: 43px;
+  padding: 9px 12px;
+  margin-top: 7px;
+  border: 1px solid #ccd9ce;
+  border-radius: 9px;
+  background: #fff;
+  color: var(--cp-ink);
+  box-shadow: none;
+  transition: border-color .16s ease, box-shadow .16s ease;
+}
+.match-form-section-details .match-field input:focus,
+.match-form-section-details .match-field select:focus,
+.match-form-section-details .match-field textarea:focus {
+  outline: none;
+  border-color: var(--cp-green);
+  box-shadow: 0 0 0 3px rgba(20,83,45,.12);
+}
+.match-form-section-details .match-field.full-width { grid-column: 1 / -1; }
+.match-form-section-details .match-schedule-fields { grid-column: 1 / -1; display: grid; grid-template-columns: repeat(2, minmax(220px, 320px)); gap: 18px 20px; align-items: start; }
+.match-form-section-details .match-field small {
+  display: block;
+  margin-top: 6px;
+  color: var(--cp-muted);
+  font-size: .82rem;
+  line-height: 1.45;
+  font-weight: 450;
+}
+.match-form-section-details .schedule-field-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.match-form-section-details .schedule-field-label svg { color: var(--cp-green); }
+.match-form-section-details .match-field-error {
+  margin: 6px 0 0;
+  color: var(--cp-danger) !important;
+  font-size: .84rem;
+  line-height: 1.4;
+  font-weight: 700;
+}
+.match-form-section-details .match-form-alert.error,
+.match-creation-form > .match-form-alert.error {
+  color: #a51f1f;
+  background: #fff0f0;
+  border: 1px solid #efb6b6;
+  border-left: 4px solid var(--cp-danger);
+  border-radius: 10px;
+}
+
+/* Team name and logo: one compact row per team, with a 3 × 3 symbol menu. */
+.match-form-section-details .team-name-logo-row {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px 22px;
+  align-items: end;
+}
+.match-form-section-details .team-name-logo-field {
+  min-width: 0;
+  display: flex;
+  align-items: end;
+  gap: 10px;
+}
+.match-form-section-details .team-name-field { flex: 1; min-width: 0; }
+.match-form-section-details .team-logo-dropdown {
+  position: relative;
+  flex: 0 0 48px;
+  margin-bottom: 1px;
+}
+.match-form-section-details .team-logo-trigger {
+  width: 48px;
+  height: 43px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  border: 1px solid #cbdccc;
+  border-radius: 10px;
+  background: #f7faf7;
+  color: var(--cp-green-deep);
+  cursor: pointer;
+}
+.match-form-section-details .team-logo-trigger > span:first-child { font-size: 1.35rem; line-height: 1; }
+.match-form-section-details .team-logo-chevron { font-size: .7rem; color: #526457; }
+.match-form-section-details .team-logo-trigger:hover,
+.match-form-section-details .team-logo-trigger[aria-expanded="true"] {
+  border-color: var(--cp-green);
+  background: var(--cp-green-soft);
+}
+.match-form-section-details .team-logo-menu {
+  position: absolute;
+  z-index: 30;
+  top: calc(100% + 7px);
+  left: 0;
+  width: 150px;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+  padding: 9px;
+  border: 1px solid #d4e1d5;
+  border-radius: 12px;
+  background: #fff;
+  box-shadow: 0 12px 28px rgba(12,45,25,.16);
+}
+.match-form-section-details .team-logo-menu-option {
+  width: 40px;
+  height: 40px;
+  display: grid;
+  place-items: center;
+  border: 1px solid #e0e8e0;
+  border-radius: 9px;
+  background: #f8faf8;
+  font-size: 1.25rem;
+  cursor: pointer;
+}
+.match-form-section-details .team-logo-menu-option:hover,
+.match-form-section-details .team-logo-menu-option.selected {
+  border: 2px solid var(--cp-green);
+  background: #eaf5ed;
+  box-shadow: 0 0 0 2px rgba(20,83,45,.08);
+}
+.match-form-section-details .team-logo-trigger:focus-visible,
+.match-form-section-details .team-logo-menu-option:focus-visible {
+  outline: 3px solid rgba(217,164,65,.7);
+  outline-offset: 2px;
+}
+
+/* Venue and captured coordinates sit on the same line. */
+.match-form-section-details .venue-location-row {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: minmax(220px, 1fr) auto;
+  gap: 14px;
+  align-items: end;
+}
+.match-form-section-details .venue-field { min-width: 0; }
+.match-form-section-details .match-location-panel {
+  min-width: 0;
+  min-height: 43px;
+  display: flex;
+  align-items: stretch;
+}
+.match-form-section-details .match-location-button {
+  min-height: 43px;
+  padding: 9px 14px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border: 1px solid var(--cp-green);
+  border-radius: 9px;
+  background: var(--cp-green);
+  color: #fff;
+  font-weight: 700;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.match-form-section-details .match-location-button:hover:not(:disabled) { background: var(--cp-green-deep); }
+.match-form-section-details .match-location-button:disabled { opacity: .75; cursor: wait; }
+.match-form-section-details .captured-coordinates-inline {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 7px;
+  min-height: 43px;
+  padding: 4px 7px;
+  border: 1px solid #b7dfc0;
+  border-radius: 10px;
+  background: #eff9f1;
+}
+.match-form-section-details .captured-coordinates-inline > div {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  padding: 0 6px;
+}
+.match-form-section-details .captured-coordinates-inline > div + div { border-left: 1px solid #c9e5ce; }
+.match-form-section-details .captured-coordinates-inline > div span {
+  color: #477454;
+  font-size: .64rem;
+  font-weight: 800;
+  letter-spacing: .07em;
+}
+.match-form-section-details .captured-coordinates-inline > div strong {
+  color: #174c2a;
+  font-size: .8rem;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.match-form-section-details .location-captured-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: #16803d;
+  font-size: .76rem;
+  font-weight: 800;
+  white-space: nowrap;
+}
+.match-form-section-details .match-info-note {
+  padding: 10px 12px;
+  border-radius: 9px;
+  background: #f3f7f2;
+  color: #526457;
+  line-height: 1.5;
+}
+.match-form-section-details .match-submit-button {
+  background: var(--cp-green);
+  border-color: var(--cp-green);
+}
+.match-form-section-details .match-submit-button:hover:not(:disabled) { background: var(--cp-green-deep); }
+
+/* Keep roster geometry unchanged; only make roster validation errors red. */
+.roster-message-error { color: #c62828 !important; }
+.roster-slot input[aria-invalid="true"] {
+  border-color: #c62828 !important;
+  box-shadow: 0 0 0 1px rgba(198,40,40,.08);
+}
+@media (max-width: 760px) {
+  .match-creation-topbar,
+  .match-creation-heading,
+  .match-creation-form { width: min(calc(100% - 22px), 1120px); }
+  .match-form-section-details { padding: 17px 14px; }
+  .match-form-section-details .match-form-grid { grid-template-columns: minmax(0, 1fr); }
+  .match-form-section-details .team-name-logo-row { grid-template-columns: minmax(0, 1fr); gap: 14px; }
+  .match-form-section-details .match-schedule-fields { grid-template-columns: minmax(0, 1fr); }
+  .match-form-section-details .venue-location-row { grid-template-columns: minmax(0, 1fr); }
+  .match-form-section-details .match-location-panel { width: 100%; }
+  .match-form-section-details .match-location-button { width: 100%; }
+  .match-form-section-details .captured-coordinates-inline { width: 100%; justify-content: space-between; box-sizing: border-box; }
+}
