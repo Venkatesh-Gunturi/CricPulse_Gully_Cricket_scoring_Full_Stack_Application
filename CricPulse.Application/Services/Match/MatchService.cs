@@ -913,10 +913,10 @@ public class MatchService : IMatchService
                     ScheduledAt = match.ScheduledAt,
                     Status = match.Status,
                     Overs = match.Overs,
-                    Venue = showLocation ? match.Venue : null,
-                    LocationAddress = showLocation
-                        ? match.LocationAddress : null,
-                    State = showLocation ? match.State : null,
+                    PlayersPerTeam = match.PlayersPerTeam,
+                    Venue = match.Venue,
+                    LocationAddress = match.LocationAddress,
+                    State = match.State,
                     Latitude = showLocation ? match.Latitude : null,
                     Longitude = showLocation ? match.Longitude : null,
                     MapsUrl = showLocation
@@ -1105,6 +1105,63 @@ public class MatchService : IMatchService
                     PlayerName = BuildPlayerName(p.User),
                     MobileNumber = p.User.MobileNumber,
                     Email = p.User.Email,
+                    Team = p.Team,
+                    IsCaptain = p.IsCaptain
+                })
+                .ToList()
+        };
+    }
+
+    public async Task<PublicMatchDetailsDto?> GetPublicMatchByIdAsync(
+    Guid matchId)
+    {
+        if (matchId == Guid.Empty)
+            throw new ArgumentException("Match ID is required.");
+
+        var match = await _matchRepository.GetByIdAsync(matchId);
+
+        if (match is null)
+            return null;
+
+        return new PublicMatchDetailsDto
+        {
+            MatchId = match.Id,
+
+            Name = match.Name,
+
+            TeamAName = match.TeamAName,
+            TeamALogo = match.TeamALogo,
+
+            TeamBName = match.TeamBName,
+            TeamBLogo = match.TeamBLogo,
+
+            ScheduledAt = match.ScheduledAt,
+
+            Venue = match.Venue,
+            LocationAddress = match.LocationAddress,
+            State = match.State,
+
+            Overs = match.Overs,
+            PlayersPerTeam = match.PlayersPerTeam,
+
+            Status = match.Status,
+
+            TossAgreed = match.TossAgreed,
+            TossWinnerTeam = match.TossWinnerTeam,
+            TossDecision = match.TossDecision,
+
+            CancellationReasonType = match.CancellationReasonType,
+            CancellationReason = match.CancellationReason,
+
+            WinnerTeam = match.WinnerTeam,
+            ResultText = match.ResultText,
+
+            Players = match.MatchPlayers
+                .OrderBy(p => p.Team)
+                .ThenBy(p => p.CreatedAt)
+                .Select(p => new PublicMatchPlayerDto
+                {
+                    PlayerName = BuildPlayerName(p.User),
                     Team = p.Team,
                     IsCaptain = p.IsCaptain
                 })

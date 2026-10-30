@@ -142,6 +142,7 @@ public class MatchController : ControllerBase
         }
     }
 
+
     [HttpPatch("{matchId:guid}/cancel")]
     public async Task<IActionResult> CancelMatch(
         Guid matchId,
@@ -176,6 +177,20 @@ public class MatchController : ControllerBase
         {
             return BadRequest(new { message = ex.Message });
         }
+    }
+
+    [HttpGet("public/{matchId:guid}")]
+    public async Task<IActionResult> GetPublicMatchById(Guid matchId)
+    {
+        var match = await _matchService.GetPublicMatchByIdAsync(matchId);
+
+        if (match is null)
+            return NotFound(new
+            {
+                message = "Match not found."
+            });
+
+        return Ok(match);
     }
 
 }

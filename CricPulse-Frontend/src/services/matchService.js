@@ -61,3 +61,12 @@ export const cancelMatch = async (
 
   return response.data;
 };
+export const getPublicMatchById = async (matchId) => {
+  const response = await apiClient.get(`/Match/public/${matchId}`);
+  return response.data;
+};
+// Get all Indian states and union territories
+export const getIndianStates = async () => {
+  const response = await apiClient.get('/Match/states');
+  return response.data;
+};

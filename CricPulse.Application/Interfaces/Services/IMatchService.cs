@@ -17,7 +17,7 @@ public interface IMatchService
         string? status);
 
     Task<MatchCreatedDto?> GetMatchByIdAsync(
-    Guid matchId,
+    Guid matchId,  
     Guid createdByUserId);
 
     Task<MatchCreatedDto> UpdateMatchAsync(
@@ -29,5 +29,7 @@ public interface IMatchService
         Guid matchId,
         Guid createdByUserId,
         CancelMatchDto dto);
+
+    Task<PublicMatchDetailsDto?> GetPublicMatchByIdAsync(Guid matchId);
 
 }

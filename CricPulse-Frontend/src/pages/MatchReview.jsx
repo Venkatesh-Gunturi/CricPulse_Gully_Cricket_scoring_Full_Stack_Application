@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { FaArrowLeft, FaInfoCircle, FaHistory, FaTrophy, FaBullseye, FaAward } from 'react-icons/fa';
 
-import { getMatchById } from '../services/matchService';
+import { getMatchById,getPublicMatchById} from '../services/matchService';
 import { getMatchState } from '../services/scoringService';
 import { useAuth } from '../context/AuthContext';
 
@@ -87,6 +87,22 @@ const formatOvers = (legalBalls, fallbackOvers) => {
 export default function MatchReview() {
   const { matchId } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
+
+const isAudienceView =
+  location.state?.viewMode === 'audience';
+
+const audienceReturnPath =
+  location.state?.returnTo || '/matches';
+
+const audienceReturnState =
+  location.state?.returnState || null;
+
+const backToAudienceMatches = () => {
+  navigate(audienceReturnPath, {
+    state: audienceReturnState,
+  });
+};
   const { user } = useAuth();
 
   const organizerUserId = getValue(
@@ -118,10 +134,9 @@ export default function MatchReview() {
     setStateError('');
 
     try {
-      const matchResult = await getMatchById(
-        matchId,
-        organizerUserId
-      );
+     const matchResult = isAudienceView
+  ? await getPublicMatchById(matchId)
+  : await getMatchById(matchId, organizerUserId);
 
       setMatch(matchResult);
 
@@ -145,7 +160,7 @@ export default function MatchReview() {
     } finally {
       setLoading(false);
     }
-  }, [matchId, organizerUserId]);
+  }, [matchId, organizerUserId, isAudienceView]);
 
   useEffect(() => {
     loadMatchReview();
@@ -204,8 +219,7 @@ export default function MatchReview() {
 
   // Show the First Innings section after the first innings is complete.
   // Its history is available when the innings data has been returned.
-  const showFirstInningsSection =
-    scoringStarted && firstInningsCompleted;
+
 
   const players = useMemo(() => {
     const result = getValue(
@@ -267,9 +281,21 @@ export default function MatchReview() {
     'battingTeam',
     'BattingTeam'
   );
-  const isCancelled = getStatus(matchStatus) === 'cancelled' ||
-    getStatus(getValue(match, 'status', 'Status')) === 'cancelled';
-  const showReviewTabs = overallMatchFinished || scoringStarted || (isCancelled && Boolean(firstInnings));
+ const isCancelled =
+  getStatus(matchStatus) === 'cancelled' ||
+  getStatus(getValue(match, 'status', 'Status')) === 'cancelled';
+
+const cancellationReasonType = getValue(
+  match,
+  'cancellationReasonType',
+  'CancellationReasonType'
+);
+
+const cancellationReason = getValue(
+  match,
+  'cancellationReason',
+  'CancellationReason'
+);
   const secondBattingTeam = getValue(secondInnings, 'battingTeam', 'BattingTeam');
   const secondBowlingTeam = getValue(secondInnings, 'bowlingTeam', 'BowlingTeam');
   const secondInningsRuns = getValue(secondInnings, 'totalRuns', 'TotalRuns');
@@ -368,7 +394,9 @@ export default function MatchReview() {
       firstInningsRuns !== null);
 
   const showUpdateButton =
-    !scoringStarted && !overallMatchFinished;
+  !isCancelled &&
+  !scoringStarted &&
+  !overallMatchFinished;
 
   const backToDashboard = () => navigate('/umpire');
 
@@ -532,9 +560,9 @@ export default function MatchReview() {
 
           <button
             type="button"
-            onClick={backToDashboard}
+            onClick={isAudienceView ? backToAudienceMatches : backToDashboard}
           >
-            Back to Dashboard
+            {isAudienceView ? 'Back to Matches' : 'Back to Dashboard'}
           </button>
 
           <button
@@ -551,17 +579,31 @@ export default function MatchReview() {
   return (
     <main className="match-review-page">
       <header className="match-review-topbar">
-        <button
-          type="button"
-          className="match-review-back"
-          onClick={scoringStarted && !overallMatchFinished && !isCancelled ? backToScoring : backToDashboard}
-        >
-          <FaArrowLeft />
-          {scoringStarted && !overallMatchFinished && !isCancelled ? 'Back to Scoring' : 'Back to Dashboard'}
-        </button>
+       <button
+  type="button"
+  className="match-review-back"
+  onClick={
+    isAudienceView
+      ? backToAudienceMatches
+      : scoringStarted && !overallMatchFinished && !isCancelled
+        ? backToScoring
+        : backToDashboard
+  }
+>
+  <FaArrowLeft />
+  {
+    isAudienceView
+      ? 'Back to Matches'
+      : scoringStarted && !overallMatchFinished && !isCancelled
+        ? 'Back to Scoring'
+        : 'Back to Dashboard'
+  }
+</button>
 
         <div className="match-review-heading">
-          <p className="match-review-eyebrow">CRICPULSE · UMPIRE</p>
+<p className="match-review-eyebrow">
+  {isAudienceView ? 'CRICPULSE · MATCH CENTER' : 'CRICPULSE · UMPIRE'}
+</p>
           <h1>Match Review</h1>
         </div>
       </header>
@@ -582,7 +624,33 @@ export default function MatchReview() {
           {getText(matchStatus, 'Upcoming')}
         </span>
       </section>
+{isCancelled && (
+  <section className="match-review-cancellation">
+    <div className="match-review-cancellation-heading">
+      <FaInfoCircle />
+      <div>
+        <h2>Match Cancelled</h2>
+        <p>This match will not be played.</p>
+      </div>
+    </div>
 
+    <div className="match-review-cancellation-content">
+      <div>
+        <span>Cancellation Reason</span>
+        <strong>
+          {getText(cancellationReasonType, 'Not specified')}
+        </strong>
+      </div>
+
+      <div>
+        <span>Additional Details</span>
+        <p>
+          {getText(cancellationReason, 'No additional details provided.')}
+        </p>
+      </div>
+    </div>
+  </section>
+)}
       {showTossDetails && (
         <section className="match-review-details match-review-toss">
           <div className="match-review-section-heading">
@@ -925,7 +993,7 @@ export default function MatchReview() {
       )}
 
       <footer className="match-review-actions">
-        {showUpdateButton && (
+        {!isAudienceView && showUpdateButton && (
           <button
             type="button"
             className="match-review-update"
@@ -938,10 +1006,20 @@ export default function MatchReview() {
         <button
           type="button"
           className="match-review-dashboard"
-          onClick={scoringStarted && !overallMatchFinished && !isCancelled ? backToScoring : backToDashboard}
-        >
-          {scoringStarted && !overallMatchFinished && !isCancelled ? 'Back to Scoring' : 'Back to Dashboard'}
-        </button>
+onClick={
+  isAudienceView
+    ? backToAudienceMatches
+    : scoringStarted && !overallMatchFinished && !isCancelled
+      ? backToScoring
+      : backToDashboard
+}>
+{
+  isAudienceView
+    ? 'Back to Matches'
+    : scoringStarted && !overallMatchFinished && !isCancelled
+      ? 'Back to Scoring'
+      : 'Back to Dashboard'
+}        </button>
       </footer>
     </main>
   );

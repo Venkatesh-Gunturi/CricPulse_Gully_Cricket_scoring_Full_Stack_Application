@@ -2060,3 +2060,54 @@
     grid-template-columns: 1fr;
   }
 }
+.match-review-cancellation {
+  margin: 20px 0;
+  padding: 20px;
+  border: 1px solid #f0caca;
+  border-left: 4px solid #dc3545;
+  border-radius: 12px;
+  background: #fff7f7;
+}
+
+.match-review-cancellation-heading {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: #b42318;
+  margin-bottom: 18px;
+}
+
+.match-review-cancellation-heading svg {
+  font-size: 22px;
+  flex-shrink: 0;
+}
+
+.match-review-cancellation-heading h2 {
+  margin: 0;
+  font-size: 18px;
+}
+
+.match-review-cancellation-heading p {
+  margin: 4px 0 0;
+  color: #765454;
+  font-size: 13px;
+}
+
+.match-review-cancellation-content {
+  display: grid;
+  gap: 14px;
+}
+
+.match-review-cancellation-content span {
+  display: block;
+  margin-bottom: 5px;
+  color: #765454;
+  font-size: 13px;
+}
+
+.match-review-cancellation-content strong,
+.match-review-cancellation-content p {
+  margin: 0;
+  color: #382727;
+  font-size: 14px;
+}

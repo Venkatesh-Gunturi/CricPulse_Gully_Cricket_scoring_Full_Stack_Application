@@ -630,3 +630,209 @@
     transition-duration: .01ms !important;
   }
 }
+/* Audience match cards */
+.umpire-dashboard .my-match-distance-pill {
+  display: inline-flex;
+  align-items: center;
+  align-self: flex-start;
+  gap: 6px;
+  margin-bottom: 10px;
+  padding: 5px 9px;
+  border: 1px solid #cce5d1;
+  border-radius: 999px;
+  color: #176b43;
+  background: #eaf7ec;
+  font-size: .7rem;
+  font-weight: 850;
+}
+
+.umpire-dashboard .audience-match-count {
+  margin: 0 0 12px;
+  color: #6b786e;
+  font-size: .82rem;
+  font-weight: 700;
+}
+
+.umpire-dashboard.audience-matches-page {
+  padding-top: 30px;
+}
+
+.umpire-dashboard.audience-matches-page .umpire-matches-section {
+  margin-top: 0;
+}
+
+/* Audience scoreboard card */
+
+.umpire-dashboard .audience-match-card {
+  cursor: pointer;
+}
+
+.umpire-dashboard .audience-card-header {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.umpire-dashboard .audience-card-header .my-match-status {
+  justify-self: end;
+}
+
+.umpire-dashboard .audience-card-header .my-match-distance-pill {
+  justify-self: center;
+  margin: 0;
+  white-space: nowrap;
+}
+
+.umpire-dashboard .audience-match-title {
+  text-align: center;
+  margin-bottom: 14px;
+}
+
+.umpire-dashboard .audience-scoreboard {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: center;
+  gap: 10px;
+  padding: 17px 10px;
+  margin-bottom: 12px;
+  border: 1px solid #e5ebdf;
+  border-radius: 10px;
+  background: linear-gradient(120deg, #f3f8f0, #fffbed);
+}
+
+.umpire-dashboard .audience-team-column {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+  min-width: 0;
+  text-align: center;
+}
+
+.umpire-dashboard .audience-team-name {
+  width: 100%;
+  overflow: hidden;
+  color: #25372d;
+  font-size: .85rem;
+  font-weight: 850;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.umpire-dashboard .audience-team-runs {
+  color: #0b3d2e;
+  font-size: 1.55rem;
+  font-weight: 950;
+  line-height: 1.2;
+}
+
+.umpire-dashboard .audience-team-overs {
+  color: #6b786e;
+  font-size: .7rem;
+}
+
+.umpire-dashboard .audience-score-vs {
+  color: #8c6815;
+  font-size: .7rem;
+  font-weight: 950;
+}
+
+.umpire-dashboard .audience-match-result {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-bottom: 12px;
+  padding: 12px;
+  border: 1px solid #d9e8d8;
+  border-radius: 9px;
+  color: #0b3d2e;
+  background: #f0f7ed;
+  font-size: .82rem;
+  font-weight: 850;
+  text-align: center;
+}
+
+.umpire-dashboard .audience-match-result.live-result {
+  flex-direction: column;
+  gap: 4px;
+  color: #126b3d;
+  background: #e5f8eb;
+}
+
+.umpire-dashboard .audience-match-footer {
+  display: flex;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: auto;
+  padding-top: 12px;
+  border-top: 1px solid #edf0eb;
+}
+
+@media (max-width: 420px) {
+  .umpire-dashboard .audience-card-header {
+    grid-template-columns: 1fr auto;
+  }
+
+  .umpire-dashboard .audience-card-header .my-match-distance-pill {
+    grid-column: 1 / -1;
+    grid-row: 2;
+    justify-self: center;
+  }
+
+  .umpire-dashboard .audience-team-runs {
+    font-size: 1.3rem;
+  }
+}
+.umpire-dashboard .audience-result-location-box {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.umpire-dashboard .audience-result-text {
+  text-align: center;
+}
+
+.umpire-dashboard .audience-match-location-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding-top: 10px;
+  border-top: 1px solid rgba(128, 128, 128, 0.2);
+  font-size: 13px;
+}
+
+.umpire-dashboard .audience-match-location-row span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 480px) {
+  .umpire-dashboard .audience-match-location-row {
+    font-size: 12px;
+  }
+}
+.umpire-dashboard .audience-match-location-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 20px;
+  width: 100%;
+  padding-top: 12px;
+  border-top: 1px solid rgba(128, 128, 128, 0.2);
+  font-size: 13px;
+}
+
+.umpire-dashboard .audience-match-location-row span {
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.umpire-dashboard .audience-match-location-row span:last-child {
+  text-align: right;
+}
