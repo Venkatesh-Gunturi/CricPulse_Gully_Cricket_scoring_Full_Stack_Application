@@ -20,7 +20,9 @@ public class MatchDiscoveryDto
     public DateTime ScheduledAt { get; set; }
     public string Status { get; set; } = string.Empty;
     public int PlayersPerTeam { get; set; }
-
+    public bool TossAgreed { get; set; }
+    public string? TossWinnerTeam { get; set; }
+    public string? TossDecision { get; set; }
     public string? CancellationReasonType { get; set; }
 
     public string? CancellationReason { get; set; }
