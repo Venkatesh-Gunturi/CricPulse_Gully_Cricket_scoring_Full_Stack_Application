@@ -82,11 +82,19 @@ function MatchCardTitle({ name }) {
 
 function Matches() {
   const navigate = useNavigate();
-
   const [nearbyMatches, setNearbyMatches] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
-  const [locationBlocked, setLocationBlocked] = useState(false);
+const [loading, setLoading] = useState(true);
+const [error, setError] = useState('');
+const [locationBlocked, setLocationBlocked] = useState(false);
+
+const [selectedStatus, setSelectedStatus] = useState('Upcoming');
+
+const filteredMatches = nearbyMatches.filter(
+  (match) =>
+    String(getValue(match, 'status', 'Status') || '')
+      .toLowerCase() === selectedStatus.toLowerCase()
+);
+  
 
   const loadNearbyMatches = () => {
     if (!navigator.geolocation) {
@@ -248,14 +256,15 @@ function Matches() {
             <span>{formatTime(scheduledAt) || 'Time not available'}</span>
           </div>
 
-          {distance != null ? (
-            <span className="my-match-distance-pill">
-              <FaMapMarkerAlt />
-              {Number(distance).toFixed(2)} km away
-            </span>
-          ) : (
-            <span />
-          )}
+          {(statusKey === 'upcoming' || statusKey === 'live') &&
+distance != null ? (
+  <span className="my-match-distance-pill">
+    <FaMapMarkerAlt />
+    {Number(distance).toFixed(2)} km away
+  </span>
+) : (
+  <span />
+)}
 
           <span className={`my-match-status status-${statusKey}`}>
             {statusKey === 'live' && (
@@ -280,7 +289,7 @@ function Matches() {
                 <span className="audience-team-overs">
                   {renderOvers(teamAInnings)}
                 </span>
-              </>
+              </> 
             )}
           </div>
 
@@ -364,7 +373,20 @@ function Matches() {
             Refresh
           </button>
         </div>
-
+<div className="audience-status-tabs">
+  {['Upcoming', 'Live', 'Finished', 'Cancelled'].map((status) => (
+    <button
+      key={status}
+      type="button"
+      className={`audience-status-tab ${
+        selectedStatus === status ? 'active' : ''
+      }`}
+      onClick={() => setSelectedStatus(status)}
+    >
+      {status}
+    </button>
+  ))}
+</div>
         <div className="umpire-match-panel">
           {loading ? (
             <div className="umpire-empty-state">
@@ -390,26 +412,26 @@ function Matches() {
                 Try Again
               </button>
             </div>
-          ) : nearbyMatches.length === 0 ? (
+          ) : filteredMatches.length === 0 ? (
             <div className="umpire-empty-state">
               <div className="umpire-empty-icon">
                 <FaMapMarkerAlt />
               </div>
-              <h3>No nearby matches found</h3>
-              <p>
-                There are no matches within 30 km of your current location.
-                Check again later.
-              </p>
+              <h3>No {selectedStatus.toLowerCase()} matches found</h3>
+<p>
+  There are currently no {selectedStatus.toLowerCase()} matches
+  available within 30 km of your location.
+</p>
             </div>
           ) : (
             <>
-              <p className="audience-match-count">
-                Found {nearbyMatches.length} matches near you
-              </p>
+             <p className="audience-match-count">
+  Found {filteredMatches.length} {selectedStatus.toLowerCase()} matches
+</p>
 
-              <div className="umpire-match-grid">
-                {nearbyMatches.map(renderMatchCard)}
-              </div>
+<div className="audience-match-scroll">
+  {filteredMatches.map(renderMatchCard)}
+</div>
             </>
           )}
         </div>
