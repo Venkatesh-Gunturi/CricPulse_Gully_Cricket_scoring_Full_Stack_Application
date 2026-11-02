@@ -1,0 +1,351 @@
+/* CricPulse audience Matches page — independent stylesheet.
+   Import this file from main.jsx (or index.jsx); Matches.jsx stays unchanged. */
+.audience-matches-page {
+  --cricket-green: #0b3d2e; --green-2: #15533e; --gold: #e5be58;
+  --gold-dark: #8c6815; --ink: #1b2b22; --muted: #6b786e;
+  --line: #e1e8df; --surface: #fff;
+  box-sizing: border-box; min-height: 100vh; width: 100%;
+  padding: 20px clamp(14px, 3vw, 38px) 36px;
+  color: var(--ink); background: #f5f8f3; font-family: inherit; line-height: 1.45;
+}
+.audience-matches-page *, .audience-matches-page *::before, .audience-matches-page *::after { box-sizing: border-box; }
+.audience-matches-page button, .audience-matches-page select { font: inherit; }
+.audience-matches-page button:focus-visible, .audience-matches-page select:focus-visible { outline: 3px solid var(--gold); outline-offset: 2px; }
+.audience-matches-page .umpire-matches-section { max-width: 1180px; width: 100%; min-width: 0; margin: 0 auto; padding: 20px; border: 1px solid var(--line); border-radius: 16px; background: var(--surface); box-shadow: 0 4px 15px rgb(18 45 29 / 4%); }
+.audience-matches-page .umpire-section-heading { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:16px; }
+.audience-matches-page .umpire-eyebrow { display:inline-block; color:var(--gold-dark); font-size:.68rem; font-weight:800; letter-spacing:.13em; }
+.audience-matches-page .umpire-section-heading h2 { margin:4px 0 0; color:var(--cricket-green); font-size:1.45rem; font-weight:750; letter-spacing:-.02em; }
+.audience-matches-page .umpire-section-heading p { margin:4px 0 0; color:var(--muted); font-size:.88rem; }
+.audience-matches-page .umpire-secondary-button { display:inline-flex; align-items:center; justify-content:center; gap:8px; min-height:38px; padding:9px 13px; border:1px solid #d9e3d7; border-radius:9px; color:var(--cricket-green); background:#fff; font-size:.84rem; font-weight:650; cursor:pointer; transition:.18s ease; }
+.audience-matches-page .umpire-secondary-button:hover:not(:disabled) { border-color:var(--gold); background:#fff9e8; }
+.audience-matches-page .umpire-secondary-button:disabled { opacity:.6; cursor:not-allowed; }
+.audience-matches-page .audience-match-subsection { min-width:0; padding:4px 0 16px; }
+.audience-matches-page .audience-subsection-heading { display:flex; align-items:center; justify-content:space-between; gap:14px; margin-bottom:10px; }
+.audience-matches-page .audience-subsection-heading h3 { margin:0; color:#24392c; font-size:1rem; font-weight:700; }
+.audience-matches-page .audience-subsection-heading p { margin:4px 0 0; color:var(--muted); font-size:.8rem; }
+.audience-matches-page .audience-match-count { margin:0 0 7px; color:var(--muted); font-size:.76rem; }
+.audience-matches-page .audience-section-divider { height:1px; margin:8px 0 18px; background:#e7ece4; }
+.audience-matches-page .audience-section-message { display:flex; align-items:center; justify-content:center; gap:10px; min-height:100px; padding:18px; border:1px dashed #dce6d9; border-radius:11px; color:#68766b; background:#fafcf9; font-size:.86rem; text-align:center; }
+.audience-matches-page .audience-section-error { border-color:#efd2ce; color:#a63d35; background:#fff8f7; }
+.audience-matches-page .audience-section-message p { margin:5px 0 10px; }
+.audience-matches-page .audience-section-message .umpire-secondary-button { margin-top:6px; }
+.audience-matches-page .audience-state-heading { align-items:center; }
+.audience-matches-page .audience-state-select-wrap { flex:0 0 auto; }
+.audience-matches-page .audience-state-select { min-width:180px; min-height:40px; padding:8px 34px 8px 12px; border:1px solid #d9e3d7; border-radius:9px; color:#34483a; background:#fff; font-size:.84rem; }
+.audience-matches-page .audience-state-select:disabled { opacity:.65; cursor:not-allowed; }
+.audience-matches-page .umpire-spin { animation: audience-spin 1s linear infinite; }
+@keyframes audience-spin { to { transform:rotate(360deg); } }
+@media (max-width:680px) {
+ .audience-matches-page { padding:14px 12px 26px; }
+ .audience-matches-page .umpire-matches-section { padding:14px; border-radius:13px; }
+ .audience-matches-page .umpire-section-heading h2 { font-size:1.3rem; }
+ .audience-matches-page .audience-subsection-heading { align-items:flex-start; }
+ .audience-matches-page .audience-state-heading { flex-direction:column; align-items:stretch; }
+ .audience-matches-page .audience-state-select-wrap, .audience-matches-page .audience-state-select { width:100%; }
+}
+@media (max-width:420px) {
+ .audience-matches-page .audience-subsection-heading { gap:8px; }
+ .audience-matches-page .audience-refresh-button { flex:0 0 auto; padding:8px 10px; }
+}
+
+/* =========================================================
+   UMPIRE DASHBOARD — AUDIENCE MATCH TABS + MATCH CARDS
+   Scoped to the existing umpire stylesheet; no extra CSS import.
+   ========================================================= */
+.audience-matches-page .audience-status-tabs {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  min-width: 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding: 4px 2px 12px;
+  margin-bottom: 16px;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-x: contain;
+  touch-action: pan-x;
+}
+.audience-matches-page .audience-status-tabs::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
+}
+.audience-matches-page .audience-status-tab {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  min-height: 42px;
+  padding: 10px 19px;
+  border: 1px solid #dfe7dc;
+  border-radius: 999px;
+  color: #536257;
+  background: #fff;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.2;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background .2s ease, color .2s ease, border-color .2s ease, box-shadow .2s ease;
+}
+.audience-matches-page .audience-status-tab:hover {
+  border-color: var(--gold);
+  color: var(--cricket-green);
+  background: #fffaf0;
+}
+.audience-matches-page .audience-status-tab.active {
+  color: #fff;
+  background: var(--cricket-green);
+  border-color: var(--cricket-green);
+  box-shadow: 0 3px 8px rgb(11 61 46 / 12%);
+}
+.audience-matches-page .audience-status-tab.audience-live-tab.active {
+  background: #b91c1c;
+  border-color: #b91c1c;
+}
+.audience-matches-page .audience-tab-live-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #36c878;
+  box-shadow: 0 0 0 3px rgb(54 200 120 / 15%);
+}
+.audience-matches-page .audience-match-scroll {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: stretch;
+  gap: 18px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding: 8px 2px 16px;
+  scrollbar-width: thin;
+  scrollbar-color: #cbd8c8 transparent;
+  scroll-snap-type: x proximity;
+}
+.audience-matches-page .audience-match-scroll .audience-match-card {
+  flex: 0 0 360px;
+  width: 360px;
+  min-width: 360px;
+  min-height: 100%;
+  height: auto;
+  padding: 16px;
+  border: 1px solid #dce6d9;
+  border-radius: 14px;
+  background: #fff;
+  box-shadow: 0 4px 14px rgb(18 45 29 / 5%);
+  scroll-snap-align: start;
+}
+.audience-matches-page .audience-match-card::before { display: none; }
+.audience-matches-page .audience-match-card:hover {
+  border-color: #c9b66e;
+  box-shadow: 0 8px 22px rgb(11 61 46 / 10%);
+  transform: translateY(-2px);
+}
+.audience-matches-page .audience-card-header {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, auto);
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+.audience-matches-page .audience-card-header-spacer { min-width: 4px; }
+.audience-matches-page .audience-match-title {
+  width: 100%;
+  margin: 0 0 12px;
+  overflow: hidden;
+  color: var(--cricket-green);
+  font-size: 1rem;
+  font-weight: 900;
+  line-height: 1.35;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.audience-matches-page .audience-scoreboard {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: center;
+  gap: 10px;
+  min-height: 116px;
+  margin-bottom: 12px;
+  padding: 14px 12px;
+  border: 1px solid #e5ebdf;
+  border-radius: 11px;
+  background: linear-gradient(120deg, #f3f8f0, #fffbed);
+  text-align: center;
+}
+.audience-matches-page .audience-team-column {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  min-width: 0;
+}
+.audience-matches-page .audience-team-name {
+  max-width: 100%;
+  overflow: hidden;
+  color: #25372d;
+  font-size: .83rem;
+  font-weight: 850;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.audience-matches-page .audience-team-runs {
+  color: var(--cricket-green);
+  font-size: 1.3rem;
+  font-weight: 950;
+  line-height: 1.15;
+  font-variant-numeric: tabular-nums;
+}
+.audience-matches-page .audience-team-overs {
+  color: var(--muted);
+  font-size: .7rem;
+  font-weight: 700;
+}
+.audience-matches-page .audience-score-vs {
+  color: var(--gold-dark);
+  font-size: .68rem;
+  font-weight: 950;
+}
+.audience-matches-page .audience-match-result.audience-result-location-box {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 0 0 11px;
+  padding: 10px 11px;
+  border: 1px solid #d9e8d8;
+  border-radius: 9px;
+  color: var(--cricket-green);
+  background: #f0f7ed;
+  font-size: .77rem;
+}
+.audience-matches-page .audience-result-text {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  overflow-wrap: anywhere;
+}
+.audience-matches-page .audience-result-text span { color: var(--muted); }
+.audience-matches-page .audience-match-location-row {
+  display: grid;
+  gap: 4px;
+  padding-top: 8px;
+  border-top: 1px solid #e0eadd;
+  color: #536257;
+  font-size: .73rem;
+}
+.audience-matches-page .audience-match-location-row span { overflow-wrap: anywhere; }
+.audience-matches-page .audience-match-location-row strong { color: #394a3d; }
+.audience-matches-page .audience-match-footer {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: auto;
+  padding-top: 10px;
+  border-top: 1px solid #edf0eb;
+}
+.audience-matches-page .audience-match-footer .my-match-meta-pill {
+  padding: 5px 8px;
+  border: 1px solid #e1e9de;
+  border-radius: 7px;
+  color: #566458;
+  background: #f7faf5;
+  font-size: .69rem;
+  font-weight: 800;
+}
+.audience-matches-page .audience-match-card .my-match-actions { margin-top: 11px; }
+
+@media (max-width: 680px) {
+  .audience-matches-page .audience-status-tabs {
+    gap: 8px;
+    margin-right: -2px;
+    padding-bottom: 12px;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+  .audience-matches-page .audience-status-tabs::-webkit-scrollbar { display: none; }
+  .audience-matches-page .audience-status-tab {
+    flex: 0 0 auto;
+    min-height: 40px;
+    padding: 9px 15px;
+    font-size: 14px;
+  }
+  .audience-matches-page .audience-match-scroll { gap: 12px; }
+  .audience-matches-page .audience-match-scroll .audience-match-card {
+    flex-basis: min(330px, calc(100vw - 54px));
+    width: min(330px, calc(100vw - 54px));
+    min-width: min(330px, calc(100vw - 54px));
+    padding: 14px;
+  }
+  .audience-matches-page .audience-scoreboard { min-height: 106px; gap: 6px; padding: 12px 8px; }
+}
+
+/* Push Venue and State to opposite ends of the match card */
+.audience-matches-page .audience-match-result.audience-result-location-box
+.audience-match-location-row {
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: center;
+    width: 100%;
+    gap: 12px;
+}
+
+.audience-matches-page .audience-match-location-row span:first-child {
+    text-align: left;
+}
+
+.audience-matches-page .audience-match-location-row span:last-child {
+    text-align: right;
+    margin-left: auto;
+}
+
+/* Classic, clean typography for match cards */
+
+.audience-matches-page .audience-match-title {
+    font-size: 0.98rem;
+    font-weight: 650;
+    letter-spacing: 0.1px;
+}
+
+.audience-matches-page .audience-team-name {
+    font-size: 0.82rem;
+    font-weight: 600;
+}
+
+.audience-matches-page .audience-team-runs {
+    font-size: 1.25rem;
+    font-weight: 700;
+}
+
+.audience-matches-page .audience-team-overs {
+    font-size: 0.72rem;
+    font-weight: 500;
+}
+
+.audience-matches-page .audience-score-vs {
+    font-size: 0.7rem;
+    font-weight: 600;
+}
+
+.audience-matches-page .audience-result-location-box {
+    font-weight: 400;
+}
+
+.audience-matches-page .audience-match-location-row {
+    font-size: 0.74rem;
+    font-weight: 400;
+}
+
+.audience-matches-page .audience-match-location-row strong {
+    font-weight: 600;
+}
+
+.audience-matches-page .audience-match-footer .my-match-meta-pill {
+    font-size: 0.7rem;
+    font-weight: 500;
+}

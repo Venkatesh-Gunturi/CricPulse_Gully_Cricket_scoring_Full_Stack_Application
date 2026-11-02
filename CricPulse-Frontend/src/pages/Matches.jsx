@@ -10,7 +10,7 @@ import {
   getMatches,
   getIndianStates,
 } from '../services/matchService';
-import '../styles/umpire-dashboard.css';
+import '../styles/audience-matches.css';
 
 const MATCH_STATUSES = ['Upcoming', 'Live', 'Finished', 'Cancelled'];
 

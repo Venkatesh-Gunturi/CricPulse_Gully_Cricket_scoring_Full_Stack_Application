@@ -392,202 +392,159 @@
 .umpire-dashboard .umpire-data-note { margin: 10px 0 0; color: var(--muted); font-size: .72rem; }
 
 /* Matches */
+
+/* Match section: tabs and cards follow the audience Matches visual style. */
 .umpire-dashboard .umpire-matches-section { margin-top: 18px; }
 .umpire-dashboard .umpire-matches-section > .umpire-section-heading { margin-bottom: 16px; }
-
-.umpire-dashboard .umpire-match-tabs {
-  display: flex; gap: 6px; margin-bottom: 16px; padding: 5px;
-  border: 1px solid #e0e7dd; border-radius: 12px; background: #f0f4ed;
-}
-.umpire-dashboard .umpire-match-tab {
-  display: inline-flex; flex: 1 1 0; align-items: center; justify-content: center;
-  gap: 7px; min-width: 0; min-height: 40px; padding: 8px 10px;
-  border: 1px solid transparent; border-radius: 8px;
-  color: #536257; background: transparent; font-size: .81rem; font-weight: 800; cursor: pointer;
-  transition: .18s ease;
-}
-.umpire-dashboard .umpire-match-tab:hover:not(.active) { color: var(--cricket-green); background: #fff; }
-.umpire-dashboard .umpire-match-tab.active {
-  border-color: #d8c98e; color: #fff; background: var(--cricket-green);
-  box-shadow: 0 3px 8px rgb(11 61 46 / 12%);
-}
-.umpire-dashboard .umpire-tab-count { font-size: .75rem; opacity: .8; }
+.umpire-dashboard .umpire-section-heading h2 { font-weight: 700; }
+.umpire-dashboard .umpire-section-heading p { font-size: .84rem; }
 .umpire-dashboard .umpire-match-panel { min-height: 150px; }
-.umpire-dashboard .umpire-match-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
 
-/* Match cards */
-.umpire-dashboard .umpire-match-card {
-  position: relative; display: flex; flex-direction: column; min-width: 0;
-  padding: 16px; overflow: hidden; border: 1px solid #cfdacf; border-radius: 14px;
-  background: #fff; box-shadow: 0 3px 12px rgb(18 45 29 / 5%);
-  cursor: pointer; transition: .18s ease;
+.umpire-dashboard .audience-status-tabs {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  min-width: 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+  margin: 0 0 16px;
+  padding: 4px 2px 12px;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-x: contain;
+  touch-action: pan-x;
 }
-.umpire-dashboard .umpire-match-card::before {
-  content: ""; position: absolute; inset: 0 auto 0 0; width: 3px; background: #d7e0d4;
+.umpire-dashboard .audience-status-tabs::-webkit-scrollbar { display: none; }
+.umpire-dashboard .audience-status-tab {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  min-height: 42px;
+  padding: 10px 19px;
+  border: 1px solid #dfe7dc;
+  border-radius: 999px;
+  color: #536257;
+  background: #fff;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.2;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background .18s ease, color .18s ease, border-color .18s ease;
 }
-.umpire-dashboard .umpire-match-card:hover {
-  border-color: #d9c989; box-shadow: 0 8px 20px rgb(11 61 46 / 8%); transform: translateY(-1px);
-}
-.umpire-dashboard .umpire-match-card.status-card-live { border-color: #8fcba4; }
-.umpire-dashboard .umpire-match-card.status-card-upcoming { border-color: #d9bd58; }
-.umpire-dashboard .umpire-match-card.status-card-finished { border-color: #a9c5ad; }
-.umpire-dashboard .umpire-match-card.status-card-cancelled { border-color: #e0aaa5; }
-.umpire-dashboard .umpire-match-card.status-card-live::before { background: #1d9a5b; }
-.umpire-dashboard .umpire-match-card.status-card-upcoming::before { background: var(--gold); }
-.umpire-dashboard .umpire-match-card.status-card-finished::before { background: var(--cricket-green); }
-.umpire-dashboard .umpire-match-card.status-card-cancelled::before { background: #c75a52; }
-.umpire-dashboard .umpire-match-card.status-card-upcoming:hover { border-color: #c49b18; }
-.umpire-dashboard .umpire-match-card.status-card-live:hover { border-color: #269451; }
-.umpire-dashboard .umpire-match-card.status-card-finished:hover { border-color: #0b3d2e; }
-.umpire-dashboard .umpire-match-card.status-card-cancelled:hover { border-color: #c75a52; }
+.umpire-dashboard .audience-status-tab:hover { border-color: var(--gold); color: var(--cricket-green); background: #fffaf0; }
+.umpire-dashboard .audience-status-tab.active { border-color: var(--cricket-green); color: #fff; background: var(--cricket-green); }
+.umpire-dashboard .audience-status-tab.audience-live-tab.active { border-color: #b91c1c; background: #b91c1c; }
+.umpire-dashboard .audience-tab-live-dot { width: 7px; height: 7px; border-radius: 50%; background: #36c878; box-shadow: 0 0 0 3px rgb(54 200 120 / 15%); }
 
-
-.umpire-dashboard .my-match-card-header {
-  display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; margin-bottom: 10px;
+.umpire-dashboard .audience-match-scroll {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: stretch;
+  gap: 18px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding: 8px 2px 16px;
+  scrollbar-width: thin;
+  scrollbar-color: #cbd8c8 transparent;
+  scroll-snap-type: x proximity;
 }
-.umpire-dashboard .my-match-date {
-  display: flex; flex-direction: column; gap: 2px; min-width: 0;
-  color: var(--muted); font-size: .74rem; font-weight: 650;
+.umpire-dashboard .audience-match-card {
+  position: relative;
+  display: flex;
+  flex: 0 0 360px;
+  flex-direction: column;
+  width: 360px;
+  min-width: 360px;
+  min-height: 100%;
+  padding: 16px;
+  border: 1px solid #dce6d9;
+  border-radius: 14px;
+  background: #fff;
+  box-shadow: 0 4px 14px rgb(18 45 29 / 5%);
+  cursor: pointer;
+  scroll-snap-align: start;
+  transition: border-color .18s ease, box-shadow .18s ease, transform .18s ease;
 }
-.umpire-dashboard .my-match-live-score { color: var(--cricket-green); font-size: .78rem; font-weight: 900; overflow-wrap: anywhere; }
-.umpire-dashboard .my-match-status {
-  display: inline-flex; flex: 0 0 auto; align-items: center; gap: 6px;
-  padding: 5px 8px; border: 1px solid #e2e8df; border-radius: 999px;
-  color: #536456; background: #f3f6f1; font-size: .67rem; font-weight: 900; line-height: 1.2;
-}
+.umpire-dashboard .audience-match-card::before { display: none; }
+.umpire-dashboard .audience-match-card:hover { border-color: #c9b66e; box-shadow: 0 8px 22px rgb(11 61 46 / 10%); transform: translateY(-2px); }
+.umpire-dashboard .audience-card-header { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 12px; }
+.umpire-dashboard .audience-card-header-spacer { flex: 1; }
+.umpire-dashboard .my-match-date { display: flex; flex-direction: column; gap: 2px; min-width: 0; color: var(--muted); font-size: .74rem; font-weight: 500; }
+.umpire-dashboard .my-match-status { display: inline-flex; flex: 0 0 auto; align-items: center; gap: 6px; padding: 5px 8px; border: 1px solid #e2e8df; border-radius: 999px; color: #536456; background: #f3f6f1; font-size: .68rem; font-weight: 600; line-height: 1.2; }
 .umpire-dashboard .my-match-status.status-upcoming { color: #785b0d; border-color: #eadba2; background: #fff7d9; }
 .umpire-dashboard .my-match-status.status-live { color: #126b3d; border-color: #bfe8cd; background: #e5f8eb; }
 .umpire-dashboard .my-match-status.status-finished { color: var(--cricket-green); border-color: #d1e5d4; background: #eaf3e9; }
 .umpire-dashboard .my-match-status.status-cancelled { color: #a63d35; border-color: #f0d3d0; background: #fff0ee; }
-.umpire-dashboard .live-pulse-dot {
-  width: 7px; height: 7px; border-radius: 50%; background: #169650;
-  animation: umpire-pulse 1.5s ease-out infinite;
-}
-@keyframes umpire-pulse {
-  0% { box-shadow: 0 0 0 0 rgb(22 150 80 / 32%); }
-  70% { box-shadow: 0 0 0 5px rgb(22 150 80 / 0%); }
-  100% { box-shadow: 0 0 0 0 rgb(22 150 80 / 0%); }
-}
-.umpire-dashboard .my-match-title {
-  width: 100%; min-width: 0; margin: 0 0 10px; overflow: hidden;
-  color: var(--cricket-green); font-size: 1.02rem; font-weight: 900;
-  line-height: 1.35; white-space: nowrap; text-overflow: ellipsis;
-}
+.umpire-dashboard .live-pulse-dot { width: 7px; height: 7px; border-radius: 50%; background: #169650; animation: umpire-pulse 1.5s ease-out infinite; }
+@keyframes umpire-pulse { 0% { box-shadow: 0 0 0 0 rgb(22 150 80 / 32%); } 70% { box-shadow: 0 0 0 5px rgb(22 150 80 / 0%); } 100% { box-shadow: 0 0 0 0 rgb(22 150 80 / 0%); } }
+.umpire-dashboard .my-match-title { width: 100%; min-width: 0; margin: 0 0 12px; overflow: hidden; color: var(--cricket-green); font-size: 1rem; font-weight: 650; line-height: 1.35; white-space: nowrap; text-overflow: ellipsis; }
 .umpire-dashboard .my-match-title span { display: inline-block; max-width: 100%; vertical-align: top; }
-.umpire-dashboard .my-match-title.my-match-marquee span {
-  max-width: none; animation: umpire-marquee 9s ease-in-out infinite alternate;
-}
-@keyframes umpire-marquee {
-  from { transform: translateX(0); }
-  to { transform: translateX(calc(-1 * var(--title-overflow, 0px))); }
-}
-.umpire-dashboard .my-match-teams {
-  display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
-  align-items: center; gap: 8px; margin-bottom: 11px; padding: 10px;
-  border: 1px solid #e5ebdf; border-radius: 10px;
-  background: linear-gradient(120deg, #f3f8f0, #fffbed); text-align: center;
-}
-.umpire-dashboard .my-match-teams > span:not(.my-match-vs) {
-  min-width: 0; overflow: hidden; color: #25372d; font-size: .83rem;
-  font-weight: 850; text-overflow: ellipsis; white-space: nowrap;
-}
-.umpire-dashboard .my-match-vs { color: var(--gold-dark); font-size: .64rem; font-weight: 950; }
-.umpire-dashboard .my-match-location { display: grid; gap: 4px; margin-bottom: 10px; }
-.umpire-dashboard .my-match-location p {
-  margin: 0; color: var(--muted); font-size: .77rem; overflow-wrap: anywhere;
-}
-.umpire-dashboard .my-match-location strong { color: #394a3d; font-weight: 850; }
-.umpire-dashboard .my-match-result,
-.umpire-dashboard .my-match-cancellation {
-  display: flex; flex-direction: column; gap: 3px; margin-bottom: 10px; padding: 10px 11px;
-  border: 1px solid #d9e8d8; border-radius: 9px; color: var(--cricket-green);
-  background: #f0f7ed; font-size: .78rem;
-}
-.umpire-dashboard .my-match-result span,
-.umpire-dashboard .my-match-cancellation span { color: var(--muted); overflow-wrap: anywhere; }
-.umpire-dashboard .my-match-cancellation { border-color: #f0d8d5; color: #a63d35; background: #fff5f3; }
-.umpire-dashboard .my-match-footer {
-  display: flex; flex-wrap: wrap; gap: 6px; margin-top: auto; padding-top: 10px;
-  border-top: 1px solid #edf0eb;
-}
-.umpire-dashboard .my-match-meta-pill {
-  padding: 5px 8px; border: 1px solid #e1e9de; border-radius: 7px;
-  color: #566458; background: #f7faf5; font-size: .69rem; font-weight: 800;
-}
-.umpire-dashboard .my-match-actions { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 11px; }
-.umpire-dashboard .my-match-actions .umpire-secondary-button {
-  flex: 1 1 auto; min-height: 35px; padding: 7px 10px; font-size: .76rem;
-}
-.umpire-dashboard .my-match-actions .my-match-action-start {
-  color: #fff; border-color: var(--cricket-green); background: var(--cricket-green);
-}
-.umpire-dashboard .my-match-actions .my-match-action-start:hover { background: var(--green-2); }
-.umpire-dashboard .my-match-actions .my-match-action-update {
-  color: #725a1a; border-color: #e5d49a; background: #fff7d9;
-}
-.umpire-dashboard .my-match-actions .my-match-action-update:hover { background: #fff0be; }
-.umpire-dashboard .my-match-actions .my-match-action-cancel { color: #a63d35; border-color: #f0d3d0; }
-.umpire-dashboard .my-match-actions .my-match-action-cancel:hover:not(:disabled) { background: #fff0ee; }
+.umpire-dashboard .my-match-title.my-match-marquee span { max-width: none; animation: umpire-marquee 9s ease-in-out infinite alternate; }
+@keyframes umpire-marquee { from { transform: translateX(0); } to { transform: translateX(calc(-1 * var(--title-overflow, 0px))); } }
+.umpire-dashboard .audience-scoreboard { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: center; gap: 10px; min-height: 116px; margin-bottom: 12px; padding: 14px 12px; border: 1px solid #e5ebdf; border-radius: 11px; background: linear-gradient(120deg, #f3f8f0, #fffbed); text-align: center; }
+.umpire-dashboard .audience-team-column { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; min-width: 0; }
+.umpire-dashboard .audience-team-name { max-width: 100%; overflow: hidden; color: #25372d; font-size: .83rem; font-weight: 600; text-overflow: ellipsis; white-space: nowrap; }
+.umpire-dashboard .audience-team-runs { color: var(--cricket-green); font-size: 1.25rem; font-weight: 700; line-height: 1.15; font-variant-numeric: tabular-nums; }
+.umpire-dashboard .audience-team-overs { color: var(--muted); font-size: .7rem; font-weight: 500; }
+.umpire-dashboard .audience-score-vs { color: var(--gold-dark); font-size: .68rem; font-weight: 600; }
+.umpire-dashboard .audience-match-result.audience-result-location-box { display: flex; flex-direction: column; gap: 10px; margin: 0 0 11px; padding: 10px 11px; border: 1px solid #d9e8d8; border-radius: 9px; color: var(--cricket-green); background: #f0f7ed; font-size: .77rem; }
+.umpire-dashboard .audience-result-text { display: flex; flex-direction: column; gap: 3px; overflow-wrap: anywhere; font-weight: 400; }
+.umpire-dashboard .audience-result-text strong { font-weight: 600; }
+.umpire-dashboard .audience-result-text span { color: var(--muted); }
 
-/* Empty, loading, and error states */
-.umpire-dashboard .umpire-empty-state {
-  display: flex; flex-direction: column; align-items: center; justify-content: center;
-  gap: 8px; min-height: 180px; padding: 24px 18px;
-  border: 1px dashed #cbd9ca; border-radius: 13px; background: #fbfdf9; text-align: center;
-}
-.umpire-dashboard .umpire-empty-icon {
-  display: grid; place-items: center; width: 45px; height: 45px; margin-bottom: 2px;
-  border: 1px solid #eadba2; border-radius: 13px; color: var(--gold-dark); background: #fff7d9;
-}
+/* Venue stays left and State stays at the far right, on the same row. */
+.umpire-dashboard .audience-match-location-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; width: 100%; padding-top: 8px; border-top: 1px solid #e0eadd; color: #536257; font-size: .73rem; font-weight: 400; }
+.umpire-dashboard .audience-match-location-row span:first-child { flex: 1 1 auto; min-width: 0; text-align: left; overflow-wrap: anywhere; }
+.umpire-dashboard .audience-match-location-row span:last-child { flex: 0 1 auto; min-width: 0; margin-left: auto; text-align: right; overflow-wrap: anywhere; }
+.umpire-dashboard .audience-match-location-row strong { color: #394a3d; font-weight: 600; }
+.umpire-dashboard .audience-match-footer { display: flex; flex-wrap: wrap; gap: 6px; margin-top: auto; padding-top: 10px; border-top: 1px solid #edf0eb; }
+.umpire-dashboard .audience-match-footer .my-match-meta-pill { padding: 5px 8px; border: 1px solid #e1e9de; border-radius: 7px; color: #566458; background: #f7faf5; font-size: .69rem; font-weight: 500; }
+
+/* Umpire-only card actions */
+.umpire-dashboard .my-match-actions { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 11px; }
+.umpire-dashboard .my-match-actions .umpire-secondary-button { min-height: 34px; padding: 7px 10px; font-size: .78rem; font-weight: 600; }
+.umpire-dashboard .my-match-actions .my-match-action-start { color: #fff; border-color: var(--cricket-green); background: var(--cricket-green); }
+.umpire-dashboard .my-match-actions .my-match-action-update { color: #6d520d; border-color: #eadba2; background: #fff7d9; }
+.umpire-dashboard .my-match-actions .my-match-action-cancel { color: #a63d35; border-color: #f0d3d0; background: #fff; }
+.umpire-dashboard .my-match-actions .my-match-action-cancel:hover:not(:disabled) { background: #fff0ee; }
+.umpire-dashboard .my-match-actions .umpire-secondary-button:disabled { opacity: .6; cursor: not-allowed; }
+
+/* Loading, empty and error states */
+.umpire-dashboard .umpire-empty-state { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; min-height: 180px; padding: 24px 18px; border: 1px dashed #cbd9ca; border-radius: 13px; background: #fbfdf9; text-align: center; }
+.umpire-dashboard .umpire-empty-icon { display: grid; place-items: center; width: 45px; height: 45px; margin-bottom: 2px; border: 1px solid #eadba2; border-radius: 13px; color: var(--gold-dark); background: #fff7d9; }
 .umpire-dashboard .umpire-loading-icon { color: var(--cricket-green); font-size: 1.4rem; }
-.umpire-dashboard .umpire-empty-state h3 { margin: 0; color: var(--cricket-green); font-size: 1rem; font-weight: 900; }
+.umpire-dashboard .umpire-empty-state h3 { margin: 0; color: var(--cricket-green); font-size: 1rem; font-weight: 650; }
 .umpire-dashboard .umpire-empty-state p { max-width: 460px; margin: 0; color: var(--muted); font-size: .84rem; overflow-wrap: anywhere; }
 .umpire-dashboard .umpire-error-state { border-color: #efcfcc; background: #fff9f8; }
-.umpire-dashboard .umpire-error-state .umpire-loading-icon,
-.umpire-dashboard .umpire-error-state h3 { color: #a63d35; }
-
-/* Small cancellation notice */
-.umpire-dashboard .cancel-notice {
-  position: fixed; right: 18px; bottom: 18px; z-index: 1000;
-  display: flex; align-items: center; gap: 12px; max-width: min(420px, calc(100vw - 28px));
-  padding: 12px 14px; border: 1px solid #cce5d1; border-radius: 10px;
-  color: #155c35; background: #effaf0; box-shadow: 0 8px 24px rgb(11 61 46 / 14%);
-  font-size: .85rem; font-weight: 700;
-}
-.umpire-dashboard .cancel-notice button {
-  display: grid; flex: 0 0 26px; place-items: center; width: 26px; height: 26px;
-  border: 0; border-radius: 7px; color: inherit; background: rgb(21 92 53 / 8%);
-  font-size: 1.2rem; cursor: pointer;
-}
-.umpire-dashboard .cancel-notice button:hover { background: rgb(21 92 53 / 15%); }
+.umpire-dashboard .umpire-error-state .umpire-loading-icon, .umpire-dashboard .umpire-error-state h3 { color: #a63d35; }
+.umpire-dashboard .cancel-notice { position: fixed; right: 18px; bottom: 18px; z-index: 1000; display: flex; align-items: center; gap: 12px; max-width: min(420px, calc(100vw - 28px)); padding: 12px 14px; border: 1px solid #cce5d1; border-radius: 10px; color: #155c35; background: #effaf0; box-shadow: 0 8px 24px rgb(11 61 46 / 14%); font-size: .85rem; font-weight: 500; }
+.umpire-dashboard .cancel-notice button { display: grid; flex: 0 0 26px; place-items: center; width: 26px; height: 26px; border: 0; border-radius: 7px; color: inherit; background: rgb(21 92 53 / 8%); font-size: 1.2rem; cursor: pointer; }
 .umpire-dashboard .umpire-spin { animation: umpire-spin .9s linear infinite; }
 @keyframes umpire-spin { to { transform: rotate(360deg); } }
 
-/* Responsive layout */
 @media (max-width: 900px) {
   .umpire-dashboard .umpire-profile-stats-section { grid-template-columns: 1fr; }
   .umpire-dashboard .umpire-profile-section { min-height: 100px; }
   .umpire-dashboard .umpire-hero { grid-template-columns: minmax(0, 1fr) 190px; padding: 25px; }
   .umpire-dashboard .umpire-hero-art { transform: scale(.9); }
 }
-
 @media (max-width: 680px) {
   .umpire-dashboard { padding: 14px 12px 28px; }
   .umpire-dashboard .umpire-topbar { flex-wrap: wrap; gap: 9px; margin-bottom: 14px; }
   .umpire-dashboard .umpire-topbar-label { order: 3; width: 100%; text-align: left; }
-  .umpire-dashboard .umpire-back-button,
-  .umpire-dashboard .umpire-top-create-button { min-height: 36px; padding: 8px 10px; font-size: .78rem; }
-  .umpire-dashboard .umpire-hero {
-    grid-template-columns: 1fr; gap: 2px; min-height: auto;
-    padding: 23px 20px 0; border-radius: 15px;
-  }
+  .umpire-dashboard .umpire-back-button, .umpire-dashboard .umpire-top-create-button { min-height: 36px; padding: 8px 10px; font-size: .78rem; }
+  .umpire-dashboard .umpire-hero { grid-template-columns: 1fr; gap: 2px; min-height: auto; padding: 23px 20px 0; border-radius: 15px; }
   .umpire-dashboard .umpire-hero h1 { font-size: clamp(1.75rem, 7vw, 2.35rem); }
   .umpire-dashboard .umpire-hero-content p { font-size: .86rem; }
   .umpire-dashboard .umpire-hero-art { width: 190px; height: 150px; transform: scale(.82); transform-origin: bottom center; }
   .umpire-dashboard .umpire-profile-stats-section { gap: 12px; margin-top: 12px; }
-  .umpire-dashboard .umpire-profile-section,
-  .umpire-dashboard .umpire-stats-section,
-  .umpire-dashboard .umpire-matches-section { padding: 15px; border-radius: 13px; }
+  .umpire-dashboard .umpire-profile-section, .umpire-dashboard .umpire-stats-section, .umpire-dashboard .umpire-matches-section { padding: 15px; border-radius: 13px; }
   .umpire-dashboard .umpire-stats-grid { gap: 7px; }
   .umpire-dashboard .umpire-stat-card { padding: 10px; }
   .umpire-dashboard .umpire-stat-icon { width: 29px; height: 29px; margin-bottom: 7px; }
@@ -595,15 +552,14 @@
   .umpire-dashboard .umpire-stat-card h3 { font-size: .68rem; }
   .umpire-dashboard .umpire-matches-section { margin-top: 12px; }
   .umpire-dashboard .umpire-matches-section > .umpire-section-heading { align-items: flex-start; }
-  .umpire-dashboard .umpire-match-tabs { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .umpire-dashboard .umpire-match-tab { justify-content: flex-start; min-height: 38px; padding: 8px; font-size: .77rem; }
-  .umpire-dashboard .umpire-match-grid { grid-template-columns: 1fr; gap: 10px; }
-  .umpire-dashboard .umpire-match-card { padding: 14px; }
+  .umpire-dashboard .audience-status-tabs { gap: 8px; margin-right: -2px; padding-bottom: 12px; }
+  .umpire-dashboard .audience-status-tab { min-height: 40px; padding: 9px 15px; font-size: 14px; }
+  .umpire-dashboard .audience-match-scroll { gap: 12px; }
+  .umpire-dashboard .audience-match-card { flex-basis: min(330px, calc(100vw - 54px)); width: min(330px, calc(100vw - 54px)); min-width: min(330px, calc(100vw - 54px)); padding: 14px; }
+  .umpire-dashboard .audience-scoreboard { min-height: 106px; gap: 6px; padding: 12px 8px; }
 }
-
 @media (max-width: 420px) {
-  .umpire-dashboard .umpire-back-button,
-  .umpire-dashboard .umpire-top-create-button { flex: 1 1 auto; }
+  .umpire-dashboard .umpire-back-button, .umpire-dashboard .umpire-top-create-button { flex: 1 1 auto; }
   .umpire-dashboard .umpire-hero { padding-inline: 16px; }
   .umpire-dashboard .umpire-profile-section { align-items: center; gap: 12px; padding: 13px; text-align: center; }
   .umpire-dashboard .umpire-avatar { flex-basis: 52px; width: 52px; height: 52px; }
@@ -615,883 +571,53 @@
   .umpire-dashboard .umpire-stat-card h3 { margin-top: 2px; }
   .umpire-dashboard .umpire-matches-section > .umpire-section-heading { flex-direction: column; }
   .umpire-dashboard .umpire-matches-section > .umpire-section-heading .umpire-secondary-button { align-self: flex-start; }
-  .umpire-dashboard .my-match-teams { gap: 5px; padding: 9px 7px; }
-  .umpire-dashboard .my-match-teams > span:not(.my-match-vs) { font-size: .76rem; }
   .umpire-dashboard .my-match-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .umpire-dashboard .my-match-actions .my-match-action-cancel { grid-column: 1 / -1; }
+  .umpire-dashboard .audience-match-location-row { align-items: flex-start; gap: 8px; }
 }
-
 @media (prefers-reduced-motion: reduce) {
-  .umpire-dashboard *,
-  .umpire-dashboard *::before,
-  .umpire-dashboard *::after {
-    animation-duration: .01ms !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: .01ms !important;
-  }
+  .umpire-dashboard *, .umpire-dashboard *::before, .umpire-dashboard *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
 }
-/* Audience match cards */
-.umpire-dashboard .my-match-distance-pill {
-  display: inline-flex;
-  align-items: center;
-  align-self: flex-start;
-  gap: 6px;
-  margin-bottom: 10px;
-  padding: 5px 9px;
-  border: 1px solid #cce5d1;
-  border-radius: 999px;
-  color: #176b43;
-  background: #eaf7ec;
-  font-size: .7rem;
-  font-weight: 850;
+/* Center match name */
+.umpire-dashboard .audience-match-title,
+.umpire-dashboard .my-match-title {
+    text-align: center;
 }
 
-.umpire-dashboard .audience-match-count {
-  margin: 0 0 12px;
-  color: #6b786e;
-  font-size: .82rem;
-  font-weight: 700;
-}
-
-.umpire-dashboard.audience-matches-page {
-  padding-top: 30px;
-}
-
-.umpire-dashboard.audience-matches-page .umpire-matches-section {
-  margin-top: 0;
-}
-
-/* Audience scoreboard card */
-
-.umpire-dashboard .audience-match-card {
-  cursor: pointer;
-}
-
-.umpire-dashboard .audience-card-header {
-  display: grid;
-  grid-template-columns: 1fr auto 1fr;
-  align-items: center;
-  gap: 8px;
-  margin-bottom: 12px;
-}
-
-.umpire-dashboard .audience-card-header .my-match-status {
-  justify-self: end;
-}
-
-.umpire-dashboard .audience-card-header .my-match-distance-pill {
-  justify-self: center;
-  margin: 0;
-  white-space: nowrap;
-}
-
-.umpire-dashboard .audience-match-title {
-  text-align: center;
-  margin-bottom: 14px;
-}
-
-.umpire-dashboard .audience-scoreboard {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
-  align-items: center;
-  gap: 10px;
-  padding: 17px 10px;
-  margin-bottom: 12px;
-  border: 1px solid #e5ebdf;
-  border-radius: 10px;
-  background: linear-gradient(120deg, #f3f8f0, #fffbed);
-}
-
-.umpire-dashboard .audience-team-column {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 5px;
-  min-width: 0;
-  text-align: center;
-}
-
-.umpire-dashboard .audience-team-name {
-  width: 100%;
-  overflow: hidden;
-  color: #25372d;
-  font-size: .85rem;
-  font-weight: 850;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.umpire-dashboard .audience-team-runs {
-  color: #0b3d2e;
-  font-size: 1.55rem;
-  font-weight: 950;
-  line-height: 1.2;
-}
-
-.umpire-dashboard .audience-team-overs {
-  color: #6b786e;
-  font-size: .7rem;
-}
-
-.umpire-dashboard .audience-score-vs {
-  color: #8c6815;
-  font-size: .7rem;
-  font-weight: 950;
-}
-
-.umpire-dashboard .audience-match-result {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  margin-bottom: 12px;
-  padding: 12px;
-  border: 1px solid #d9e8d8;
-  border-radius: 9px;
-  color: #0b3d2e;
-  background: #f0f7ed;
-  font-size: .82rem;
-  font-weight: 850;
-  text-align: center;
-}
-
-.umpire-dashboard .audience-match-result.live-result {
-  flex-direction: column;
-  gap: 4px;
-  color: #126b3d;
-  background: #e5f8eb;
-}
-
-.umpire-dashboard .audience-match-footer {
-  display: flex;
-  justify-content: space-between;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin-top: auto;
-  padding-top: 12px;
-  border-top: 1px solid #edf0eb;
-}
-
-@media (max-width: 420px) {
-  .umpire-dashboard .audience-card-header {
-    grid-template-columns: 1fr auto;
-  }
-
-  .umpire-dashboard .audience-card-header .my-match-distance-pill {
-    grid-column: 1 / -1;
-    grid-row: 2;
-    justify-self: center;
-  }
-
-  .umpire-dashboard .audience-team-runs {
-    font-size: 1.3rem;
-  }
-}
-.umpire-dashboard .audience-result-location-box {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
+/* Center result text */
 .umpire-dashboard .audience-result-text {
-  text-align: center;
+    align-items: center;
+    text-align: center;
 }
 
-.umpire-dashboard .audience-match-location-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 12px;
-  padding-top: 10px;
-  border-top: 1px solid rgba(128, 128, 128, 0.2);
-  font-size: 13px;
+/* Cancelled match result - red styling */
+.umpire-dashboard .status-card-cancelled .audience-match-result {
+    color: #a63d35;
+    background: #fff0ee;
+    border-color: #f0d3d0;
 }
 
-.umpire-dashboard .audience-match-location-row span {
-  min-width: 0;
-  overflow-wrap: anywhere;
+.umpire-dashboard .status-card-cancelled .audience-result-text,
+.umpire-dashboard .status-card-cancelled .audience-result-text strong,
+.umpire-dashboard .status-card-cancelled .audience-result-text span {
+    color: #a63d35;
 }
 
-@media (max-width: 480px) {
-  .umpire-dashboard .audience-match-location-row {
-    font-size: 12px;
-  }
-}
-.umpire-dashboard .audience-match-location-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 20px;
-  width: 100%;
-  padding-top: 12px;
-  border-top: 1px solid rgba(128, 128, 128, 0.2);
-  font-size: 13px;
-}
-
-.umpire-dashboard .audience-match-location-row span {
-  flex: 1;
-  min-width: 0;
-  overflow-wrap: anywhere;
-}
-
-.umpire-dashboard .audience-match-location-row span:last-child {
-  text-align: right;
-}
-/* Audience Matches Status Tabs */
-
-.audience-status-tabs {
-  display: flex;
-  gap: 12px;
-  margin: 20px 0;
-  overflow-x: auto;
-}
-
-.audience-status-tab {
-  flex: 1;
-  min-width: 110px;
-  padding: 12px 18px;
-  border: 1px solid var(--border-color, #ddd);
-  border-radius: 10px;
-  background: transparent;
-  color: inherit;
-  font-weight: 600;
-  cursor: pointer;
-  transition: 0.2s ease;
-}
-
-.audience-status-tab.active {
-  background: #2563eb;
-  color: white;
-  border-color: #2563eb;
-}
-
-@media (max-width: 600px) {
-  .audience-status-tabs {
+/* Equal width for Start, Update and Cancel */
+.umpire-dashboard .my-match-actions {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 8px;
-  }
-
-  .audience-status-tab {
-    min-width: 100px;
-    padding: 10px;
-  }
-}
-/* Hide scrollbar but preserve horizontal scrolling */
-.audience-status-tabs,
-.audience-match-scroll {
-  display: flex;
-  overflow-x: auto;
-  scrollbar-width: none;
-  -ms-overflow-style: none;
-}
-
-.audience-status-tabs::-webkit-scrollbar,
-.audience-match-scroll::-webkit-scrollbar {
-  display: none;
-}
-/* Nearby matches horizontal scrolling */
-.audience-match-scroll {
-  display: flex;
-  flex-wrap: nowrap;
-  gap: 20px;
-  overflow-x: auto;
-  overflow-y: hidden;
-  padding: 10px 2px 16px;
-  scrollbar-width: none;
-  -ms-overflow-style: none;
-}
-
-.audience-match-scroll::-webkit-scrollbar {
-  display: none;
-}
-
-.audience-match-scroll .audience-match-card {
-  flex: 0 0 320px;
-  width: 320px;
-  min-width: 320px;
-  height: auto;
-}
-
-@media (max-width: 600px) {
-  .audience-match-scroll {
-    gap: 12px;
-  }
-
-  .audience-match-scroll .audience-match-card {
-    flex-basis: 280px;
-    width: 280px;
-    min-width: 280px;
-  }
-}
-/* Nearby matches horizontal scrolling */
-.audience-match-scroll {
-  display: flex;
-  flex-wrap: nowrap;
-  align-items: stretch;
-  gap: 20px;
-  overflow-x: auto;
-  overflow-y: hidden;
-  padding: 10px 2px 16px;
-  scrollbar-width: none;
-  -ms-overflow-style: none;
-}
-
-.audience-match-scroll::-webkit-scrollbar {
-  display: none;
-}
-
-.audience-match-scroll .audience-match-card {
-  flex: 0 0 400px;
-  width: 400px;
-  min-width: 400px;
-  height: auto;
-}
-
-@media (max-width: 600px) {
-  .audience-match-scroll {
-    gap: 12px;
-  }
-
-  .audience-match-scroll .audience-match-card {
-    flex-basis: 340px;
-    width: 340px;
-    min-width: 340px;
-  }
-}
-/* =========================================================
-   AUDIENCE MATCHES - STATUS TABS + TWO HORIZONTAL SECTIONS
-   ========================================================= */
-
-.audience-matches-page .audience-page-heading {
-  margin-bottom: 18px;
-}
-
-.audience-status-tabs {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  overflow-x: auto;
-  padding: 4px 2px 12px;
-  margin-bottom: 16px;
-  scrollbar-width: none;
-  -ms-overflow-style: none;
-}
-
-.audience-status-tabs::-webkit-scrollbar {
-  display: none;
-}
-
-.audience-status-tab {
-  flex: 0 0 auto;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 9px;
-  min-height: 42px;
-  padding: 10px 19px;
-  border: 1px solid var(--border-color, #e5e7eb);
-  border-radius: 999px;
-  background: var(--card-bg, #fff);
-  color: var(--text-color, #475569);
-  font-size: 14px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: background 0.2s ease, color 0.2s ease, border-color 0.2s ease;
-}
-
-.audience-status-tab:hover {
-  border-color: var(--primary-color, #2563eb);
-  color: var(--primary-color, #2563eb);
-}
-
-.audience-status-tab.active {
-  color: #fff;
-  background: var(--primary-color, #2563eb);
-  border-color: var(--primary-color, #2563eb);
-}
-
-.audience-status-tab.audience-live-tab.active {
-  background: #b91c1c;
-  border-color: #b91c1c;
-}
-
-.audience-status-content {
-  display: flex;
-  flex-direction: column;
-  gap: 0;
-  min-width: 0;
-}
-
-.audience-match-subsection {
-  min-width: 0;
-  padding: 8px 0 22px;
-}
-
-.audience-subsection-heading {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-  margin-bottom: 10px;
-}
-
-.audience-subsection-heading h3 {
-  margin: 0;
-  color: var(--heading-color, #172033);
-  font-size: 19px;
-  font-weight: 700;
-}
-
-.audience-subsection-heading p {
-  margin: 4px 0 0;
-  color: var(--muted-color, #64748b);
-  font-size: 13px;
-}
-
-.audience-refresh-button {
-  flex: 0 0 auto;
-  white-space: nowrap;
-}
-
-.audience-state-heading {
-  align-items: center;
-}
-
-.audience-state-select-wrap {
-  flex: 0 0 auto;
-  width: min(230px, 42%);
-}
-
-.audience-state-select {
-  width: 100%;
-  min-height: 42px;
-  padding: 9px 36px 9px 12px;
-  border: 1px solid var(--border-color, #d7dce5);
-  border-radius: 9px;
-  background: var(--card-bg, #fff);
-  color: var(--text-color, #334155);
-  font: inherit;
-  font-size: 14px;
-  outline: none;
-  cursor: pointer;
-}
-
-.audience-state-select:focus {
-  border-color: var(--primary-color, #2563eb);
-  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
-}
-
-.audience-match-count {
-  margin: 8px 0 2px;
-  color: var(--muted-color, #64748b);
-  font-size: 12px;
-  font-weight: 600;
-}
-
-.audience-match-scroll {
-  display: flex;
-  flex-wrap: nowrap;
-  align-items: stretch;
-  gap: 18px;
-  width: 100%;
-  min-width: 0;
-  overflow-x: auto;
-  overflow-y: hidden;
-  padding: 10px 2px 16px;
-  scrollbar-width: none;
-  -ms-overflow-style: none;
-  overscroll-behavior-x: contain;
-}
-
-.audience-match-scroll::-webkit-scrollbar {
-  display: none;
-}
-
-.audience-match-scroll .audience-match-card {
-  flex: 0 0 400px;
-  width: 400px;
-  min-width: 400px;
-  height: auto;
-  cursor: pointer;
-}
-
-.audience-match-scroll .audience-match-card:focus-visible {
-  outline: 3px solid rgba(37, 99, 235, 0.35);
-  outline-offset: 3px;
-}
-
-.audience-card-header-spacer {
-  display: block;
-  min-width: 8px;
-  flex: 1 1 auto;
-}
-
-.audience-match-location-row {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px 16px;
-}
-
-.audience-section-message {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  min-height: 76px;
-  padding: 16px 18px;
-  border: 1px dashed var(--border-color, #d9dee8);
-  border-radius: 12px;
-  color: var(--muted-color, #64748b);
-  background: var(--card-bg, #fff);
-  font-size: 14px;
-}
-
-.audience-section-message > svg {
-  flex: 0 0 auto;
-  font-size: 18px;
-}
-
-.audience-section-message p {
-  margin: 5px 0 10px;
-}
-
-.audience-section-error {
-  color: #b91c1c;
-  border-color: rgba(185, 28, 28, 0.25);
-  background: rgba(185, 28, 28, 0.035);
-}
-
-.audience-section-divider {
-  width: 100%;
-  height: 1px;
-  margin: 2px 0 8px;
-  background: var(--border-color, #e5e7eb);
-}
-
-/* Red blinking indicator for Live tab and Live card badges. */
-
-.live-pulse-dot {
-  display: inline-block;
-  flex: 0 0 8px;
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: #ef4444;
-  box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.65);
-  animation: audience-live-blink 1.15s ease-in-out infinite;
-}
-
-.audience-tab-live-dot {
-  width: 8px;
-  height: 8px;
-}
-
-.my-match-status.status-live {
-  display: inline-flex;
-  align-items: center;
-  gap: 7px;
-  color: #b91c1c;
-  background: rgba(239, 68, 68, 0.1);
-}
-
-@keyframes audience-live-blink {
-  0%, 100% {
-    opacity: 1;
-    box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.55);
-  }
-
-  50% {
-    opacity: 0.35;
-    box-shadow: 0 0 0 5px rgba(239, 68, 68, 0);
-  }
-}
-
-@media (max-width: 700px) {
-  .audience-subsection-heading {
-    align-items: flex-start;
-  }
-
-  .audience-subsection-heading h3 {
-    font-size: 17px;
-  }
-
-  .audience-match-scroll {
-    gap: 12px;
-  }
-
-  .audience-match-scroll .audience-match-card {
-    flex-basis: 340px;
-    width: 340px;
-    min-width: 340px;
-  }
-
-  .audience-state-select-wrap {
-    width: min(190px, 45%);
-  }
-}
-
-@media (max-width: 420px) {
-  .audience-subsection-heading {
-    gap: 8px;
-  }
-
-  .audience-subsection-heading p {
-    max-width: 190px;
-    line-height: 1.4;
-  }
-
-  .audience-match-scroll .audience-match-card {
-    flex-basis: 300px;
-    width: 300px;
-    min-width: 300px;
-  }
-
-  .audience-state-select-wrap {
-    width: 145px;
-  }
-
-  .audience-state-select {
-    font-size: 12px;
-    padding-left: 8px;
-  }
-
-  .audience-status-tab {
-    min-height: 39px;
-    padding: 8px 14px;
-    font-size: 13px;
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .live-pulse-dot {
-    animation: none;
-  }
-}
-/* =========================================
-   START MATCH CONFIRMATION MODAL
-========================================= */
-
-.start-match-modal-backdrop {
-  position: fixed;
-  inset: 0;
-  z-index: 2000;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 20px;
-  background: rgba(5, 25, 17, 0.68);
-  backdrop-filter: blur(5px);
-}
-
-.start-match-modal {
-  position: relative;
-  width: 100%;
-  max-width: 440px;
-  padding: 32px;
-  border: 1px solid #e1e8df;
-  border-radius: 18px;
-  color: #1b2b22;
-  background: #fff;
-  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.25);
-  animation: start-modal-enter 0.22s ease-out;
-}
-
-@keyframes start-modal-enter {
-  from {
-    opacity: 0;
-    transform: translateY(12px) scale(0.98);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-  }
-}
-
-.start-match-close {
-  position: absolute;
-  top: 13px;
-  right: 15px;
-  width: 34px;
-  height: 34px;
-  border: 1px solid #e1e8df;
-  border-radius: 50%;
-  color: #536257;
-  background: #f5f8f3;
-  font-size: 22px;
-  cursor: pointer;
-}
-
-.start-match-close:hover {
-  color: #a63d35;
-  background: #fff0ee;
-}
-
-.start-match-eyebrow {
-  display: block;
-  margin-bottom: 10px;
-  color: #8c6815;
-  font-size: 0.7rem;
-  font-weight: 900;
-  letter-spacing: 0.13em;
-}
-
-.start-match-modal h2 {
-  margin: 0 0 8px;
-  color: #0b3d2e;
-  font-size: 1.7rem;
-  font-weight: 900;
-}
-
-.start-match-description {
-  margin: 0 0 20px;
-  color: #6b786e;
-  font-size: 0.9rem;
-}
-
-.start-match-details {
-  display: grid;
-  gap: 12px;
-  padding: 16px;
-  border: 1px solid #e1e8df;
-  border-radius: 12px;
-  background: #f5f8f3;
-}
-
-.start-match-details strong {
-  color: #0b3d2e;
-  font-size: 1rem;
-}
-
-.start-match-details span {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  color: #6b786e;
-  font-size: 0.82rem;
-}
-
-.start-match-error {
-  margin: 14px 0 0;
-  padding: 10px 12px;
-  border: 1px solid #f0d3d0;
-  border-radius: 9px;
-  color: #a63d35;
-  background: #fff0ee;
-  font-size: 0.82rem;
-}
-
-.start-match-actions {
-  display: flex;
-  gap: 10px;
-  margin-top: 22px;
-}
-
-.start-match-cancel,
-.start-match-confirm {
-  flex: 1;
-  min-height: 43px;
-  padding: 10px 14px;
-  border: 1px solid transparent;
-  border-radius: 9px;
-  font: inherit;
-  font-size: 0.85rem;
-  font-weight: 850;
-  cursor: pointer;
-  transition: 0.18s ease;
-}
-
-.start-match-cancel {
-  border-color: #d9e3d7;
-  color: #0b3d2e;
-  background: #fff;
-}
-
-.start-match-cancel:hover {
-  background: #f5f8f3;
-}
-
-.start-match-confirm {
-  border-color: #0b3d2e;
-  color: #fff;
-  background: #0b3d2e;
-}
-
-.start-match-confirm:hover:not(:disabled) {
-  background: #15533e;
-  transform: translateY(-1px);
-}
-
-.start-match-cancel:disabled,
-.start-match-confirm:disabled,
-.start-match-close:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
-
-.start-match-footnote {
-  margin: 16px 0 0;
-  color: #8a948c;
-  font-size: 0.72rem;
-  text-align: center;
-}
-
-@media (max-width: 480px) {
-  .start-match-modal {
-    padding: 26px 20px;
-  }
-
-  .start-match-actions {
-    flex-direction: column-reverse;
-  }
-}
-/* Audience match updates */
-.audience-live-update {
-  color: #0b6840;
-}
-
-.audience-live-update strong {
-  color: #16834f;
-}
-
-.audience-cancellation-update {
-  color: #b42318;
-}
-
-.audience-cancellation-update strong {
-  color: #b42318;
+    width: 100%;
 }
-
-.audience-cancellation-update span {
-  color: #c0392b;
-}
-
-/* Umpire dashboard: horizontally scrollable tabs and cards on small screens */
-@media (max-width: 680px) {
-  .umpire-dashboard .umpire-match-tabs {
-    display: flex;
-    flex-wrap: nowrap;
-    overflow-x: auto;
-    overflow-y: hidden;
-    gap: 8px;
-    padding-bottom: 8px;
-    scrollbar-width: thin;
-  }
-
-  .umpire-dashboard .umpire-match-tab {
-    flex: 0 0 auto;
-    white-space: nowrap;
-  }
-
-  .umpire-dashboard .umpire-match-grid {
-    display: flex;
-    flex-wrap: nowrap;
-    overflow-x: auto;
-    overflow-y: hidden;
-    gap: 12px;
-    padding: 2px 2px 12px;
-    scroll-snap-type: x mandatory;
-  }
 
-  .umpire-dashboard .umpire-match-card {
-    flex: 0 0 min(86vw, 340px);
+.umpire-dashboard .my-match-actions .umpire-secondary-button {
+    width: 100%;
     min-width: 0;
-    scroll-snap-align: start;
-  }
+    justify-content: center;
+}
+
+/* Live match: Cancel button takes full card width */
+.umpire-dashboard .my-match-actions .umpire-secondary-button:only-child {
+    grid-column: 1 / -1;
 }

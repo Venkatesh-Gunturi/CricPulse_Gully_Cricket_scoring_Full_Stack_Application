@@ -40,17 +40,7 @@ import apiClient from '../services/apiClient';
 
 import '../styles/umpire-dashboard.css';
 
-const matchTabs = [
-
-  { label: 'Upcoming', status: 'Upcoming', Icon: FaCalendarAlt },
-
-  { label: 'Live', status: 'Live', Icon: FaClock },
-
-  { label: 'Finished', status: 'Finished', Icon: FaTrophy },
-
-  { label: 'Cancelled', status: 'Cancelled', Icon: FaTimesCircle },
-
-];
+const matchTabs = ['Upcoming', 'Live', 'Finished', 'Cancelled'];
 
 
 function MatchCardTitle({ name }) {
@@ -137,6 +127,21 @@ function getValue(object, ...keys) {
 
   }
   return null;
+}
+
+
+function getTeamScore(innings, teamKey) {
+  if (!Array.isArray(innings)) return null;
+
+  return innings.find((inning) => {
+    const battingTeam = String(
+      getValue(inning, 'battingTeam', 'BattingTeam') || ''
+    )
+      .toLowerCase()
+      .replace(/[\s_-]/g, '');
+
+    return battingTeam === teamKey.toLowerCase();
+  });
 }
 
 function formatDate(value) {
@@ -356,32 +361,19 @@ const organizerUserId = getValue(
   );
 
 
-
   const counts = useMemo(() => {
+  const result = {};
 
-    const result = {};
+  for (const tab of matchTabs) {
+    result[tab] = matches.filter(
+      (match) =>
+        String(getValue(match, 'status', 'Status') || '').toLowerCase() ===
+        tab.toLowerCase()
+    ).length;
+  }
 
-
-
-    for (const tab of matchTabs) {
-
-      result[tab.status] = matches.filter(
-
-        (match) =>
-
-          String(getValue(match, 'status', 'Status') || '').toLowerCase() ===
-
-          tab.status.toLowerCase()
-
-      ).length;
-
-    }
-
-
-
-    return result;
-
-  }, [matches]);
+  return result;
+}, [matches]);
 
 
 
@@ -819,51 +811,24 @@ const handleConfirmCancellation = async (cancellationData) => {
 
 
 
-        <div className="umpire-match-tabs" role="tablist" aria-label="Match status">
-
-          {matchTabs.map(({ label, status, Icon }) => (
-
+        <div className="audience-status-tabs" role="tablist" aria-label="Match status">
+          {matchTabs.map((status) => (
             <button
-
               type="button"
-
               role="tab"
-
               aria-selected={activeTab === status}
-
               aria-controls="umpire-match-panel"
-
-              className={
-
-                activeTab === status
-
-                  ? 'umpire-match-tab active'
-
-                  : 'umpire-match-tab'
-
-              }
-
+              className={`audience-status-tab ${activeTab === status ? 'active' : ''} ${status === 'Live' ? 'audience-live-tab' : ''}`}
               key={status}
-
               onClick={() => setActiveTab(status)}
-
             >
-
-              <Icon />
-
-              <span>{label}</span>
-
-              <span className="umpire-tab-count">({counts[status] ?? 0})</span>
-
+              {status === 'Live' && (
+                <span className="live-pulse-dot audience-tab-live-dot" aria-hidden="true" />
+              )}
+              {status}
             </button>
-
           ))}
-
-        </div>
-
-
-
-        <div
+        </div>        <div
 
           id="umpire-match-panel"
 
@@ -959,181 +924,189 @@ const handleConfirmCancellation = async (cancellationData) => {
 
           ) : (
 
-            <div className="umpire-match-grid">              
-                {visibleMatches.map((match, index) => {
-                  const id = getValue(match, 'id', 'matchId', 'Id', 'MatchId');
-                  const name = getValue(match, 'name', 'Name') || `${getValue(match, 'teamAName', 'TeamAName') || 'Team A'} vs ${getValue(match, 'teamBName', 'TeamBName') || 'Team B'}`;
-                  const teamA = getValue(match, 'teamAName', 'TeamAName') || 'Team A';
-                  const teamB = getValue(match, 'teamBName', 'TeamBName') || 'Team B';
-                  const scheduledAt = getValue(match, 'scheduledAt', 'ScheduledAt');
-                  const venue = getValue(match, 'venue', 'Venue');
-                  const address = getValue(match, 'locationAddress', 'LocationAddress');
-                  const state = getValue(match, 'state', 'State');
-                  const overs = getValue(match, 'overs', 'Overs');
-                  const playersPerTeam = getValue(match, 'playersPerTeam', 'PlayersPerTeam');
-                  const status = getValue(match, 'status', 'Status') || activeTab;
-                  const statusKey = String(status).toLowerCase();
-
-                  const innings = getValue(match, 'innings', 'Innings') || [];
-                  const activeInnings = Array.isArray(innings)
-                    ? innings.find((item) =>
-                        ['live', 'inprogress', 'in progress'].includes(
-                          String(getValue(item, 'status', 'Status') || '').toLowerCase()
-                        )
+            <div className="audience-match-scroll">
+              {visibleMatches.map((match, index) => {
+                const id = getValue(match, 'id', 'matchId', 'Id', 'MatchId');
+                const teamA = getValue(match, 'teamAName', 'TeamAName') || 'Team A';
+                const teamB = getValue(match, 'teamBName', 'TeamBName') || 'Team B';
+                const name =
+                  getValue(match, 'name', 'Name') || `${teamA} vs ${teamB}`;
+                const scheduledAt = getValue(match, 'scheduledAt', 'ScheduledAt');
+                const venue = getValue(match, 'venue', 'Venue');
+                const address = getValue(match, 'locationAddress', 'LocationAddress');
+                const state = getValue(match, 'state', 'State');
+                const overs = getValue(match, 'overs', 'Overs');
+                const playersPerTeam = getValue(match, 'playersPerTeam', 'PlayersPerTeam');
+                const status = getValue(match, 'status', 'Status') || activeTab;
+                const statusKey = String(status).toLowerCase();
+                const innings = getValue(match, 'innings', 'Innings') || [];
+                const teamAInnings = getTeamScore(innings, 'TeamA');
+                const teamBInnings = getTeamScore(innings, 'TeamB');
+                const currentInnings = Array.isArray(innings)
+                  ? innings.find((item) =>
+                      ['live', 'inprogress', 'in progress'].includes(
+                        String(getValue(item, 'status', 'Status') || '')
+                          .toLowerCase()
+                          .replace(/[_-]/g, ' ')
                       )
-                    : null;
+                    )
+                  : null;
+                const liveBattingTeam = currentInnings
+                  ? getValue(currentInnings, 'battingTeamName', 'BattingTeamName') ||
+                    getValue(currentInnings, 'battingTeam', 'BattingTeam')
+                  : null;
+                const winner = getValue(match, 'winnerTeam', 'WinnerTeam');
+                const resultText = getValue(match, 'resultText', 'ResultText');
+                const cancellationReason =
+                  getValue(match, 'cancellationReason', 'CancellationReason') ||
+                  getValue(match, 'cancellationReasonType', 'CancellationReasonType');
 
-                  const runs = getValue(activeInnings, 'totalRuns', 'TotalRuns');
-                  const wickets = getValue(activeInnings, 'wickets', 'Wickets');
-                  const legalBalls = getValue(activeInnings, 'legalBalls', 'LegalBalls');
-                  const battingTeam =
-                    getValue(activeInnings, 'battingTeamName', 'BattingTeamName') ||
-                    getValue(activeInnings, 'battingTeam', 'BattingTeam') ||
-                    'Batting team';
+                const renderScore = (inning) => {
+                  if (!inning) return '—';
+                  const runs = getValue(inning, 'totalRuns', 'TotalRuns') ?? 0;
+                  const wickets = getValue(inning, 'wickets', 'Wickets') ?? 0;
+                  return `${runs}/${wickets}`;
+                };
 
-                  const liveScore =
-                    activeInnings && runs != null && wickets != null
-                      ? `${battingTeam}: ${runs}/${wickets} (${Math.floor((legalBalls || 0) / 6)}.${(legalBalls || 0) % 6})`
-                      : 'Live score unavailable';
+                const renderOvers = (inning) => {
+                  if (!inning) return '';
+                  return `${getValue(inning, 'totalOvers', 'TotalOvers') ?? 0} overs`;
+                };
 
-                  const winner = getValue(match, 'winnerTeam', 'WinnerTeam');
-                  const resultText = getValue(match, 'resultText', 'ResultText');
-                  const cancellationReason =
-                    getValue(match, 'cancellationReason', 'CancellationReason');
+                return (
+                  <article
+                    className={`umpire-match-card my-match-card audience-match-card status-card-${statusKey}`}
+                    key={id || index}
+                    role="link"
+                    tabIndex={0}
+                    aria-label={`View ${name}`}
+                    onClick={() => handleMatchClick(match)}
+                    onKeyDown={(event) => {
+                      if (event.key === 'Enter' || event.key === ' ') {
+                        event.preventDefault();
+                        handleMatchClick(match);
+                      }
+                    }}
+                  >
+                    <div className="audience-card-header">
+                      <div className="my-match-date">
+                        <span>{formatDate(scheduledAt)}</span>
+                        <span>{formatTime(scheduledAt) || 'Time not available'}</span>
+                      </div>
+                      <span className="audience-card-header-spacer" aria-hidden="true" />
+                      <span className={`my-match-status status-${statusKey}`}>
+                        {statusKey === 'live' && (
+                          <span className="live-pulse-dot" aria-hidden="true" />
+                        )}
+                        {status}
+                      </span>
+                    </div>
 
-                  return (
-                    <article
-                      className={`umpire-match-card my-match-card status-card-${statusKey}`}
-                      key={id || index}
-                      role="link"
-                      tabIndex={0}
-                      onClick={() => handleMatchClick(match)}
-                      onKeyDown={(event) => {
-                        if (event.key === 'Enter' || event.key === ' ') {
-                          event.preventDefault();
-                          handleMatchClick(match);
-                        }
-                      }}
-                    >
-                      <div className="my-match-card-header">
-                        <div className="my-match-date">
-                          {statusKey === 'live' ? (
-                            <span className="my-match-live-score">{liveScore}</span>
-                          ) : (
-                            <>
-                              <span>{formatDate(scheduledAt)}</span>
-                              <span>{formatTime(scheduledAt) || 'Time not available'}</span>
-                            </>
-                          )}
-                        </div>
+                    <MatchCardTitle name={name} />
 
-                        <span className={`my-match-status status-${statusKey}`}>
-                          {statusKey === 'live' && (
-                            <span className="live-pulse-dot" aria-hidden="true" />
-                          )}
-                          {status}
-                        </span>
+                    <div className="audience-scoreboard">
+                      <div className="audience-team-column">
+                        <strong className="audience-team-name">{teamA}</strong>
+                        {(statusKey === 'live' || statusKey === 'finished') && (
+                          <>
+                            <strong className="audience-team-runs">
+                              {renderScore(teamAInnings)}
+                            </strong>
+                            <span className="audience-team-overs">
+                              {renderOvers(teamAInnings)}
+                            </span>
+                          </>
+                        )}
                       </div>
 
-                     <MatchCardTitle name={name} />
+                      <span className="audience-score-vs">VS</span>
 
-                      <div className="my-match-teams" title={`${teamA} vs ${teamB}`}>
-                        <span className={teamA.length > 16 ? 'team-marquee' : ''}>
-                          {teamA}
-                        </span>
-                        <span className="my-match-vs">VS</span>
-                        <span className={teamB.length > 16 ? 'team-marquee' : ''}>
-                          {teamB}
-                        </span>
+                      <div className="audience-team-column">
+                        <strong className="audience-team-name">{teamB}</strong>
+                        {(statusKey === 'live' || statusKey === 'finished') && (
+                          <>
+                            <strong className="audience-team-runs">
+                              {renderScore(teamBInnings)}
+                            </strong>
+                            <span className="audience-team-overs">
+                              {renderOvers(teamBInnings)}
+                            </span>
+                          </>
+                        )}
                       </div>
+                    </div>
 
-                      <div className="my-match-location">
-                        <p>
-                          <strong>Venue:</strong> {venue || address || 'Not provided'}
-                        </p>
-                        <p>
-                          <strong>State:</strong> {state || 'Not available'}
-                        </p>
-                      </div>
-
-                      {statusKey === 'finished' && (winner || resultText) && (
-                        <div className="my-match-result">
-                          {winner && <strong>{winner} won</strong>}
-                          {resultText && <span>{resultText}</span>}
+                    <div className="audience-match-result audience-result-location-box">
+                      {statusKey === 'live' && (
+                        <div className="audience-result-text">
+                          <strong>LIVE MATCH</strong>
+                          <span>{liveBattingTeam || 'Current innings in progress'}</span>
                         </div>
                       )}
-
+                      {statusKey === 'finished' && (
+                        <div className="audience-result-text">
+                          {resultText || (winner ? `${winner} won` : 'Match completed')}
+                        </div>
+                      )}
                       {statusKey === 'cancelled' && (
-                        <div className="my-match-cancellation">
-                          <strong>Cancellation reason</strong>
-                          <span>
-                            {cancellationReason ||
-                              getValue(match, 'cancellationReasonType', 'CancellationReasonType') ||
-                              'Reason not recorded'}
-                          </span>
+                        <div className="audience-result-text">
+                          <strong>Match Cancelled</strong>
+                          <span>{cancellationReason || 'Reason not recorded'}</span>
                         </div>
                       )}
-
-                      <div className="my-match-footer">
-                        <span className="my-match-meta-pill">
-                          Overs: {overs ?? '—'}
-                        </span>
-                        <span className="my-match-meta-pill">
-                          Per team: {playersPerTeam ?? '—'}
-                        </span>
+                      <div className="audience-match-location-row">
+                        <span><strong>Venue:</strong> {venue || address || 'Unavailable'}</span>
+                        <span><strong>State:</strong> {state || 'Unavailable'}</span>
                       </div>
+                    </div>
 
-                     
-       {(statusKey === 'upcoming' || statusKey === 'live') && (
-  <div className="my-match-actions">
-  {statusKey === 'upcoming' && (
-    <>
-      <button
-        type="button"
-        className="umpire-secondary-button my-match-action-start"
-        onClick={(event) => {
-          event.stopPropagation();
-          handleStartMatch(match);
-        }}
-      >
-        <FaPlay />
-        Start
-      </button>
+                    <div className="audience-match-footer">
+                      <span className="my-match-meta-pill">Overs: {overs ?? '—'}</span>
+                      <span className="my-match-meta-pill">Per team: {playersPerTeam ?? '—'}</span>
+                    </div>
 
-      <button
-        type="button"
-        className="umpire-secondary-button my-match-action-update"
-        onClick={(event) => {
-          event.stopPropagation();
-          handleUpdateMatch(match);
-        }}
-      >
-        <FaEdit />
-        Update
-      </button>
-    </>
-  )}
-
-  {(statusKey === 'upcoming' || statusKey === 'live') && (
-    <button
-      type="button"
-      className="umpire-secondary-button my-match-action-cancel"
-      disabled={cancelSubmitting}
-      onClick={(event) => {
-        event.stopPropagation();
-        handleCancelMatch(match);
-      }}
-    >
-      <FaBan />
-      Cancel
-    </button>
-  )}
-</div>
-)}
-
-                    </article>
-                  );
-                })}
+                    {(statusKey === 'upcoming' || statusKey === 'live') && (
+                      <div className="my-match-actions">
+                        {statusKey === 'upcoming' && (
+                          <>
+                            <button
+                              type="button"
+                              className="umpire-secondary-button my-match-action-start"
+                              onClick={(event) => {
+                                event.stopPropagation();
+                                handleStartMatch(match);
+                              }}
+                            >
+                              <FaPlay /> Start
+                            </button>
+                            <button
+                              type="button"
+                              className="umpire-secondary-button my-match-action-update"
+                              onClick={(event) => {
+                                event.stopPropagation();
+                                handleUpdateMatch(match);
+                              }}
+                            >
+                              <FaEdit /> Update
+                            </button>
+                          </>
+                        )}
+                        <button
+                          type="button"
+                          className="umpire-secondary-button my-match-action-cancel"
+                          disabled={cancelSubmitting}
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            handleCancelMatch(match);
+                          }}
+                        >
+                          <FaBan /> Cancel
+                        </button>
+                      </div>
+                    )}
+                  </article>
+                );
+              })}
             </div>
           )}
 
@@ -1275,7 +1248,4 @@ const handleConfirmCancellation = async (cancellationData) => {
   );
 
 }
-
-
-
 export default UmpireDashboard;
