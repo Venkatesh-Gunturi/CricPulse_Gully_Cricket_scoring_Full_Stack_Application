@@ -1,6 +1,6 @@
 
 import { useEffect, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import {  useLocation, useNavigate, useParams } from 'react-router-dom';
 import { getMatchById } from '../services/matchService';
 import apiClient from '../services/apiClient';
 import { useAuth } from '../context/AuthContext';
@@ -45,6 +45,10 @@ const getErrorMessage = (error) =>
 export default function InningsSetup() {
   const { matchId } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
+
+const dashboardPath = location.state?.returnTo || '/umpire';
+const dashboardState = location.state?.returnState || { activeTab: 'Live' };
   const { user } = useAuth();
 
   const createdByUserId = getValue(
@@ -95,6 +99,7 @@ if (
 ) {
   navigate(`/umpire/matches/${matchId}/live-scoring`, {
     replace: true,
+    state: location.state,
   });
   return;
 }
@@ -248,8 +253,9 @@ setInningsNumber(nextInningsNumber);
       );
 
       navigate(`/umpire/matches/${matchId}/live-scoring`, {
-        replace: true,
-      });
+  replace: true,
+  state: location.state,
+});
     } catch (requestError) {
       setError(getErrorMessage(requestError));
     } finally {
@@ -277,8 +283,11 @@ setInningsNumber(nextInningsNumber);
           <button
             type="button"
             className="innings-button innings-button-secondary"
-            onClick={() => navigate(`/umpire/matches/${matchId}/toss`)}
-          >
+onClick={() =>
+  navigate(`/umpire/matches/${matchId}/toss`, {
+    state: location.state,
+  })
+}          >
             Return to toss
           </button>
         </section>
@@ -325,8 +334,11 @@ setInningsNumber(nextInningsNumber);
         <button
           type="button"
           className="innings-back"
-          onClick={() => navigate('/umpire')}
-        >
+onClick={() =>
+  navigate(dashboardPath, {
+    state: dashboardState,
+  })
+}        >
           Back to Dashboard
         </button>
         <span className="innings-brand">CRICPULSE</span>

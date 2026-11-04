@@ -219,8 +219,16 @@ const mvpScore = read(matchState, 'mvpScore', 'MVPScore');
   const topBowler = bowlingHighlights[0];
 
   const goToDashboard = () => {
-    navigate('/umpire', { replace: true });
-  };
+  navigate('/umpire', { replace: true });
+};
+const handleConfirm = () => {
+  navigate('/umpire', {
+    replace: true,
+    state: {
+      activeTab: 'Finished',
+    },
+  });
+};
 
   if (loading) {
     return (
@@ -244,7 +252,7 @@ const mvpScore = read(matchState, 'mvpScore', 'MVPScore');
           <button
             type="button"
             className="match-result-dashboard-button"
-            onClick={goToDashboard}
+            onClick={handleConfirm}
           >
             Back to Dashboard
           </button>
@@ -257,13 +265,6 @@ const mvpScore = read(matchState, 'mvpScore', 'MVPScore');
     <main className="match-result-page">
       <div className="match-result-container">
         <header className="match-result-header">
-          <button
-            type="button"
-            className="match-result-back-button"
-            onClick={goToDashboard}
-          >
-            <span aria-hidden="true">←</span> Back to Dashboard
-          </button>
 
           <span className="match-result-brand">
             CRIC<span>PULSE</span>
@@ -481,7 +482,7 @@ const mvpScore = read(matchState, 'mvpScore', 'MVPScore');
           <button
             type="button"
             className="match-result-dashboard-button"
-            onClick={goToDashboard}
+            onClick={handleConfirm}
           >
             Back to Dashboard <span aria-hidden="true">→</span>
           </button>

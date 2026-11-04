@@ -1,3 +1,7 @@
+/* CricPulse — Start Match confirmation modal
+   Matches the umpire dashboard's cricket-green + warm-gold theme.
+   Keep this file separate from umpire-dashboard.css. */
+
 .start-match-modal-backdrop {
   position: fixed;
   inset: 0;
@@ -5,118 +9,250 @@
   display: grid;
   place-items: center;
   padding: 1rem;
-  background: rgb(15 23 42 / 58%);
-  backdrop-filter: blur(3px);
+  background: rgb(8 30 22 / 68%);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
 }
 
 .start-match-modal {
-  width: min(100%, 420px);
-  padding: 1.5rem;
-  border: 1px solid #e2e8f0;
+  position: relative;
+  width: min(100%, 440px);
+  max-height: min(90vh, 680px);
+  overflow-y: auto;
+  padding: 2rem 1.75rem 1.5rem;
+  border: 1px solid #e5d49a;
   border-radius: 18px;
+  color: #1b2b22;
   background: #fff;
-  color: #172033;
-  box-shadow: 0 24px 70px rgb(15 23 42 / 25%);
+  box-shadow: 0 24px 70px rgb(0 0 0 / 28%);
   text-align: center;
+  animation: start-match-modal-enter 180ms ease-out;
 }
 
-.start-match-modal-icon {
+@keyframes start-match-modal-enter {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.start-match-close {
+  position: absolute;
+  top: 12px;
+  right: 12px;
   display: grid;
   place-items: center;
-  width: 46px;
-  height: 46px;
-  margin: 0 auto 0.85rem;
-  border-radius: 14px;
-  background: #eaf2ff;
-  color: #2457a7;
-  font-size: 1.25rem;
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: 9px;
+  color: #6b786e;
+  background: transparent;
+  font: inherit;
+  font-size: 1.5rem;
+  line-height: 1;
+  cursor: pointer;
+  transition: background 150ms ease, color 150ms ease, border-color 150ms ease;
+}
+
+.start-match-close:hover:not(:disabled) {
+  border-color: #e1e8df;
+  color: #0b3d2e;
+  background: #f5f8f3;
+}
+
+.start-match-close:focus-visible,
+.start-match-actions button:focus-visible {
+  outline: 3px solid #e5be58;
+  outline-offset: 3px;
+}
+
+.start-match-close:disabled {
+  cursor: wait;
+  opacity: 0.6;
+}
+
+.start-match-eyebrow {
+  display: inline-block;
+  margin: 0 2rem 0.8rem;
+  color: #8c6815;
+  font-size: 0.68rem;
+  font-weight: 900;
+  letter-spacing: 0.14em;
 }
 
 .start-match-modal h2 {
   margin: 0;
-  color: #172033;
-  font-size: 1.25rem;
-  font-weight: 750;
+  color: #0b3d2e;
+  font-size: clamp(1.35rem, 4vw, 1.6rem);
+  font-weight: 900;
+  line-height: 1.2;
+  letter-spacing: -0.025em;
 }
 
-.start-match-modal > p {
-  margin: 0.65rem 0 0;
-  color: #334155;
-  font-size: 0.98rem;
+.start-match-description {
+  margin: 0.65rem 0 1.1rem;
+  color: #6b786e;
+  font-size: 0.92rem;
 }
 
-.start-match-modal .start-match-modal-hint {
-  margin-top: 0.45rem;
-  color: #64748b;
-  font-size: 0.84rem;
-  line-height: 1.5;
-}
-
-.start-match-modal .start-match-modal-error {
-  margin-top: 1rem;
-  padding: 0.65rem 0.75rem;
-  border: 1px solid #fecaca;
-  border-radius: 9px;
-  background: #fef2f2;
-  color: #b91c1c;
-  font-size: 0.875rem;
-  text-align: left;
-}
-
-.start-match-modal-actions {
+.start-match-details {
   display: flex;
-  justify-content: flex-end;
-  gap: 0.65rem;
-  margin-top: 1.4rem;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.7rem;
+  padding: 1.05rem 1rem;
+  border: 1px solid #e1e8df;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #f5f8f3 55%, #fff9e8);
 }
 
-.start-match-modal-actions button {
-  min-height: 40px;
-  padding: 0.65rem 1.1rem;
+.start-match-details strong {
+  color: #0b3d2e;
+  font-size: 1rem;
+  font-weight: 800;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+
+.start-match-details span {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  color: #6b786e;
+  font-size: 0.8rem;
+  line-height: 1.45;
+}
+
+.start-match-details span svg {
+  flex: 0 0 auto;
+  color: #8c6815;
+}
+
+.start-match-error {
+  margin: 1rem 0 0;
+  padding: 0.7rem 0.8rem;
+  border: 1px solid #f0d3d0;
+  border-radius: 9px;
+  color: #a63d35;
+  background: #fff0ee;
+  font-size: 0.84rem;
+  line-height: 1.45;
+  text-align: left;
+  overflow-wrap: anywhere;
+}
+
+.start-match-actions {
+  display: flex;
+  justify-content: center;
+  gap: 0.7rem;
+  margin-top: 1.35rem;
+}
+
+.start-match-actions button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  min-height: 42px;
+  padding: 0.7rem 1.15rem;
   border: 1px solid transparent;
   border-radius: 9px;
   font: inherit;
-  font-size: 0.9rem;
-  font-weight: 650;
+  font-size: 0.86rem;
+  font-weight: 800;
+  line-height: 1.2;
   cursor: pointer;
-  transition: background 150ms ease, border-color 150ms ease, transform 150ms ease;
+  transition: background 160ms ease, border-color 160ms ease,
+    color 160ms ease, transform 160ms ease, box-shadow 160ms ease;
 }
 
-.start-match-modal-actions button:focus-visible {
-  outline: 3px solid #93c5fd;
-  outline-offset: 2px;
+.start-match-actions button:hover:not(:disabled) {
+  transform: translateY(-1px);
 }
 
-.start-match-modal-actions button:disabled {
+.start-match-actions button:disabled {
   cursor: wait;
-  opacity: 0.65;
+  opacity: 0.62;
+  transform: none;
 }
 
-.start-match-cancel-button {
-  border-color: #cbd5e1 !important;
+.start-match-cancel {
+  border-color: #d9e3d7 !important;
+  color: #0b3d2e;
   background: #fff;
-  color: #334155;
 }
 
-.start-match-cancel-button:hover:not(:disabled) {
-  background: #f8fafc;
+.start-match-cancel:hover:not(:disabled) {
+  border-color: #c9b66e !important;
+  background: #fff9e8;
 }
 
-.start-match-confirm-button {
-  background: #2563eb;
+.start-match-confirm {
+  border-color: #0b3d2e !important;
   color: #fff;
+  background: #0b3d2e;
+  box-shadow: 0 4px 10px rgb(11 61 46 / 14%);
 }
 
-.start-match-confirm-button:hover:not(:disabled) {
-  background: #1d4ed8;
+.start-match-confirm:hover:not(:disabled) {
+  border-color: #15533e !important;
+  background: #15533e;
+  box-shadow: 0 6px 14px rgb(11 61 46 / 18%);
 }
 
-@media (max-width: 420px) {
-  .start-match-modal {
-    padding: 1.25rem;
+.start-match-footnote {
+  margin: 1rem 0 0;
+  color: #89948b;
+  font-size: 0.74rem;
+  line-height: 1.5;
+}
+
+.start-match-modal .umpire-spin {
+  display: inline-block;
+  animation: start-match-spinner 0.9s linear infinite;
+}
+
+@keyframes start-match-spinner {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (max-width: 480px) {
+  .start-match-modal-backdrop {
+    padding: 0.75rem;
   }
 
-  .start-match-modal-actions button {
-    flex: 1;
+  .start-match-modal {
+    width: 100%;
+    padding: 1.8rem 1.15rem 1.25rem;
+    border-radius: 15px;
+  }
+
+  .start-match-actions {
+    flex-direction: column-reverse;
+  }
+
+  .start-match-actions button {
+    width: 100%;
+    min-height: 44px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .start-match-modal,
+  .start-match-modal *,
+  .start-match-modal *::before,
+  .start-match-modal *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
   }
 }

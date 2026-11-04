@@ -266,4 +266,81 @@ public sealed class UserAccountProfileService : IUserAccountProfileService
 
         return url;
     }
+
+    public async Task<PublicPlayerProfileResponseDto> GetPublicProfileAsync(
+    Guid userId)
+    {
+        if (userId == Guid.Empty)
+            throw new ArgumentException("User ID is required.");
+
+        var user = await _userRepository.GetByIdAsync(userId);
+
+        if (user is null || !user.IsActive)
+            throw new KeyNotFoundException("Active player profile was not found.");
+
+        var age = CalculateAge(user.DateOfBirth);
+
+        var profile = new PublicPlayerProfileResponseDto
+        {
+            UserId = user.Id,
+            FirstName = user.FirstName,
+            LastName = user.LastName,
+            ProfileImageUrl = user.ProfileImageUrl,
+            Age = age,
+            Gender = user.Gender,
+            State = user.State,
+            BattingStyle = user.BattingStyle,
+            BowlingStyle = user.BowlingStyle,
+            PlayerRole = user.PlayerRole
+        };
+
+        var stats = await _playerStatisticsRepository.GetByUserIdAsync(userId);
+
+        if (stats is not null)
+        {
+            profile.Statistics = new PlayerStatisticsResponseDto
+            {
+                Matches = stats.Matches,
+                Innings = stats.Innings,
+                Runs = stats.Runs,
+                BallsFaced = stats.BallsFaced,
+                HighestScore = stats.HighestScore,
+                NotOuts = stats.NotOuts,
+                Fours = stats.Fours,
+                Sixes = stats.Sixes,
+                Fifties = stats.Fifties,
+                Hundreds = stats.Hundreds,
+                BowlingInnings = stats.BowlingInnings,
+                BallsBowled = stats.BallsBowled,
+                RunsConceded = stats.RunsConceded,
+                Wickets = stats.Wickets,
+                Maidens = stats.Maidens,
+                ThreeWicketHauls = stats.ThreeWicketHauls,
+                FiveWicketHauls = stats.FiveWicketHauls,
+                BestBowling = stats.BestBowling,
+                Catches = stats.Catches,
+                RunOuts = stats.RunOuts,
+                Stumpings = stats.Stumpings,
+                MVPCount = stats.MVPCount
+            };
+        }
+
+        return profile;
+    }
+
+    private static int? CalculateAge(DateTime? dateOfBirth)
+    {
+        if (!dateOfBirth.HasValue)
+            return null;
+
+        var today = DateTime.UtcNow.Date;
+        var birthDate = dateOfBirth.Value.Date;
+
+        var age = today.Year - birthDate.Year;
+
+        if (birthDate > today.AddYears(-age))
+            age--;
+
+        return age >= 0 ? age : null;
+    }
 }

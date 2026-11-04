@@ -119,13 +119,13 @@ public class MatchRepository : RepositoryBase<Match>, IMatchRepository
             .ToListAsync();
     }
 
-
     public async Task<IReadOnlyList<Match>> GetByCreatorAsync(
-        Guid createdByUserId,
-        string? status)
+    Guid createdByUserId,
+    string? status)
     {
         IQueryable<Match> query = DbSet
             .AsNoTracking()
+            .Include(x => x.Innings)
             .Where(x => x.CreatedByUserId == createdByUserId);
 
         if (!string.IsNullOrWhiteSpace(status))

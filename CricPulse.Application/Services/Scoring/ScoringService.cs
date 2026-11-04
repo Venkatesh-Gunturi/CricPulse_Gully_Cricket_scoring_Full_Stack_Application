@@ -1795,13 +1795,16 @@ public class ScoringService : IScoringService
         match.FinishedAt = DateTime.UtcNow;
 
         if (secondInnings.TotalRuns >
-            firstInnings.TotalRuns)
+    firstInnings.TotalRuns)
         {
             match.WinnerTeam =
                 secondInnings.BattingTeam;
 
+            var wicketsRemaining =
+                Math.Max(0, (match.PlayersPerTeam - 1) - secondInnings.Wickets);
+
             match.ResultText =
-                $"{GetTeamDisplayName(match, secondInnings.BattingTeam)} won by {secondInnings.Wickets} wickets.";
+                $"{GetTeamDisplayName(match, secondInnings.BattingTeam)} won by {wicketsRemaining} wickets.";
         }
         else if (secondInnings.TotalRuns <
                  firstInnings.TotalRuns)

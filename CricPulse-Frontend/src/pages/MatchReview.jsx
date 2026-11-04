@@ -140,6 +140,7 @@ const backToAudienceMatches = () => {
 
       setMatch(matchResult);
 
+  
       try {
         const stateResult = await getMatchState(matchId);
         setMatchState(stateResult);
@@ -276,6 +277,98 @@ const backToAudienceMatches = () => {
   };
 
 
+const getPlayerUserId = (player) => {
+  if (!player) return null;
+
+  // Check whether the player object already contains the UserId.
+  if (typeof player === 'object') {
+    const directUserId = getValue(
+      player,
+      'userId',
+      'UserId',
+      'playerUserId',
+      'PlayerUserId'
+    );
+
+    if (directUserId) return directUserId;
+
+    // Resolve using MatchPlayerId when available.
+    const matchPlayerId = getValue(
+      player,
+      'matchPlayerId',
+      'MatchPlayerId'
+    );
+
+    if (matchPlayerId) {
+      const rosterPlayer = players.find((roster) => {
+        const rosterMatchPlayerId = getValue(
+          roster,
+          'matchPlayerId',
+          'MatchPlayerId'
+        );
+
+        return String(rosterMatchPlayerId) === String(matchPlayerId);
+      });
+
+      const rosterUserId = getValue(
+        rosterPlayer,
+        'userId',
+        'UserId',
+        'playerUserId',
+        'PlayerUserId'
+      );
+
+      if (rosterUserId) return rosterUserId;
+    }
+  }
+
+  // Resolve by name only when exactly one roster player matches.
+  const playerName = (
+    typeof player === 'string' ? player : getPlayerName(player)
+  ).trim().toLowerCase();
+
+  if (!playerName || playerName === 'player') return null;
+
+  const matchingPlayers = players.filter(
+    (roster) =>
+      getPlayerName(roster).trim().toLowerCase() === playerName
+  );
+
+  if (matchingPlayers.length === 1) {
+    return getValue(
+      matchingPlayers[0],
+      'userId',
+      'UserId',
+      'playerUserId',
+      'PlayerUserId'
+    );
+  }
+
+  return null;
+};
+
+
+const renderPlayerName = (player) => {
+  const playerName =
+    typeof player === 'string' ? player : getPlayerName(player);
+
+  const playerUserId = getPlayerUserId(player);
+
+  if (!playerUserId) {
+    return playerName;
+  }
+
+  return (
+    <button
+      type="button"
+      className="match-review-player-link"
+      onClick={() => navigate(`/players/${playerUserId}`)}
+    >
+      {playerName}
+    </button>
+  );
+};
+
   const firstBattingTeam = getValue(
     firstInnings,
     'battingTeam',
@@ -339,8 +432,20 @@ const cancellationReason = getValue(
     return !best || wickets > best.wickets || (wickets === best.wickets && runs < best.runs)
       ? { record, wickets, runs } : best;
   }, null);
-  const playerOfTheMatch = getValue(match, 'playerOfTheMatch', 'PlayerOfTheMatch', 'pom', 'POM') ??
-    getValue(matchState, 'playerOfTheMatch', 'PlayerOfTheMatch', 'pom', 'POM');
+  const mvpUserId =
+  getValue(match, 'mvpUserId', 'MvpUserId', 'MVPUserId') ??
+  getValue(matchState, 'mvpUserId', 'MvpUserId', 'MVPUserId');
+
+const mvpPlayerName =
+  getValue(match, 'mvpPlayerName', 'MvpPlayerName', 'MVPPlayerName') ??
+  getValue(matchState, 'mvpPlayerName', 'MvpPlayerName', 'MVPPlayerName');
+
+const playerOfTheMatch = mvpPlayerName
+  ? {
+      playerName: mvpPlayerName,
+      playerUserId: mvpUserId,
+    }
+  : null;
   const resultText = getValue(match, 'resultText', 'ResultText') ??
     getValue(matchState, 'resultText', 'ResultText');
 
@@ -398,7 +503,11 @@ const cancellationReason = getValue(
   !scoringStarted &&
   !overallMatchFinished;
 
-  const backToDashboard = () => navigate('/umpire');
+  const backToDashboard = () => {
+  navigate(location.state?.returnTo || '/umpire', {
+    state: location.state?.returnState || null,
+  });
+};
 
   const backToScoring = () => {
     navigate(`/umpire/matches/${matchId}/live-scoring`);
@@ -439,9 +548,7 @@ const cancellationReason = getValue(
                     `${getPlayerName(record)}-${index}`
                   }
                 >
-                  <td>
-                    {getPlayerName(record)}
-                  </td>
+                  <td>{renderPlayerName(record)}</td>
                   <td>{getText(getValue(record, 'runs', 'Runs'), '0')}</td>
                   <td>{getText(getValue(record, 'balls', 'Balls'), '0')}</td>
                   <td>{getText(getValue(record, 'fours', 'Fours'), '0')}</td>
@@ -497,7 +604,7 @@ const cancellationReason = getValue(
                     `${getPlayerName(record)}-${index}`
                   }
                 >
-                  <td>{getPlayerName(record)}</td>
+                  <td>{renderPlayerName(record)}</td>
                   <td>
                     {getText(
                       getValue(record, 'overs', 'Overs'),
@@ -706,9 +813,9 @@ const cancellationReason = getValue(
               return `${displayTeam(winner)} won`;
             })())}</p>
           <div className="match-review-awards">
-            <article className="match-review-award-card"><FaTrophy /><span>Top Run Scorer</span><strong>{topRunScorer ? getPlayerName(topRunScorer.record) : 'Not available'}</strong><small>{topRunScorer ? `${topRunScorer.runs} runs` : 'No batting records'}</small></article>
-            <article className="match-review-award-card"><FaBullseye /><span>Top Bowler</span><strong>{topBowler ? getPlayerName(topBowler.record) : 'Not available'}</strong><small>{topBowler ? `${topBowler.wickets} wickets · ${topBowler.runs} runs` : 'No bowling records'}</small></article>
-            <article className="match-review-award-card"><FaAward /><span>Player of the Match</span><strong>{playerOfTheMatch ? (typeof playerOfTheMatch === 'string' ? playerOfTheMatch : getPlayerName(playerOfTheMatch)) : 'Not recorded'}</strong><small>Official award</small></article>
+            <article className="match-review-award-card"><FaTrophy /><span>Top Run Scorer</span><strong>{topRunScorer ? renderPlayerName(topRunScorer.record) : 'Not available'}</strong><small>{topRunScorer ? `${topRunScorer.runs} runs` : 'No batting records'}</small></article>
+            <article className="match-review-award-card"><FaBullseye /><span>Top Bowler</span><strong>{topBowler ? renderPlayerName(topBowler.record) : 'Not available'}</strong><small>{topBowler ? `${topBowler.wickets} wickets · ${topBowler.runs} runs` : 'No bowling records'}</small></article>
+            <article className="match-review-award-card"><FaAward /><span>Player of the Match</span><strong>{playerOfTheMatch ? renderPlayerName(playerOfTheMatch) : 'Not recorded'}</strong><small>Official award</small></article>
           </div>
         </section>
       )}
@@ -868,7 +975,7 @@ const cancellationReason = getValue(
                   <li
                     key={playerId ?? `${getPlayerName(player)}-${index}`}
                   >
-                    <span>{getPlayerName(player)}</span>
+                    {renderPlayerName(player)}
                     {isCaptain && (
                       <span className="match-review-captain">
                         Captain
@@ -896,23 +1003,23 @@ const cancellationReason = getValue(
             </div>
           </div>
 
-          {!firstInnings ? (
+          {stateError ? (
+            <div className="match-review-history-placeholder">
+              <p role="alert">{stateError}</p>
+            </div>
+          ) : !firstInnings && firstInningsCompleted ? (
+            <div className="match-review-history-placeholder">
+              <p>
+                The first innings has been marked as complete, but its
+                history has not been returned by the scoring API.
+              </p>
+            </div>
+          ) : !firstInnings ? (
             <div className="match-review-history-placeholder">
               <FaHistory />
               <h3>First innings history is not available yet</h3>
               <p>
                 First innings history will appear here after the second innings starts.
-              </p>
-            </div>
-          ) : stateError ? (
-            <div className="match-review-history-placeholder">
-              <p role="alert">{stateError}</p>
-            </div>
-          ) : !firstInnings ? (
-            <div className="match-review-history-placeholder">
-              <p>
-                The first innings has been marked as complete, but its
-                history has not been returned by the scoring API.
               </p>
             </div>
           ) : (
@@ -981,10 +1088,11 @@ const cancellationReason = getValue(
           ) : (
             <div className="match-review-history-grid">
               <div className="match-review-history-card"><h3>{displayTeam(secondBattingTeam)} — Batting</h3>
-                {secondBattingRecords.length ? <div className="match-review-table-wrap"><table className="match-review-table"><thead><tr><th>Player</th><th>R</th><th>B</th><th>4s</th><th>6s</th><th>SR</th><th>Dismissal</th></tr></thead><tbody>{secondBattingRecords.map((record, index) => <tr key={getValue(record, 'matchPlayerId', 'MatchPlayerId') ?? `${getPlayerName(record)}-${index}`}><td>{getPlayerName(record)}</td><td>{getText(getValue(record, 'runs', 'Runs'), '0')}</td><td>{getText(getValue(record, 'balls', 'Balls'), '0')}</td><td>{getText(getValue(record, 'fours', 'Fours'), '0')}</td><td>{getText(getValue(record, 'sixes', 'Sixes'), '0')}</td><td>{getText(getValue(record, 'strikeRate', 'StrikeRate'), '0.00')}</td><td>{getText(getValue(record, 'dismissal', 'Dismissal'), 'Not out')}</td></tr>)}</tbody></table></div> : <p className="match-review-empty">No batting records available.</p>}
+                {secondBattingRecords.length ? <div className="match-review-table-wrap"><table className="match-review-table"><thead><tr><th>Player</th><th>R</th><th>B</th><th>4s</th><th>6s</th><th>SR</th><th>Dismissal</th></tr></thead><tbody>{secondBattingRecords.map((record, index) => <tr key={getValue(record, 'matchPlayerId', 'MatchPlayerId') ?? `${getPlayerName(record)}-${index}`}><td>{renderPlayerName(record)}</td><td>{getText(getValue(record, 'runs', 'Runs'), '0')}</td><td>{getText(getValue(record, 'balls', 'Balls'), '0')}</td><td>{getText(getValue(record, 'fours', 'Fours'), '0')}</td><td>{getText(getValue(record, 'sixes', 'Sixes'), '0')}</td><td>{getText(getValue(record, 'strikeRate', 'StrikeRate'), '0.00')}</td><td>{getText(getValue(record, 'dismissal', 'Dismissal'), 'Not out')}</td></tr>)}</tbody></table></div> : <p className="match-review-empty">No batting records available.</p>}
               </div>
               <div className="match-review-history-card"><h3>{displayTeam(secondBowlingTeam)} — Bowling</h3>
-                {secondBowlingRecords.length ? <div className="match-review-table-wrap"><table className="match-review-table"><thead><tr><th>Bowler</th><th>Overs</th><th>M</th><th>Runs</th><th>Wickets</th><th>Economy</th></tr></thead><tbody>{secondBowlingRecords.map((record, index) => <tr key={getValue(record, 'matchPlayerId', 'MatchPlayerId') ?? `${getPlayerName(record)}-${index}`}><td>{getPlayerName(record)}</td><td>{getText(getValue(record, 'overs', 'Overs'), '0')}</td><td>{getText(getValue(record, 'maidens', 'Maidens'), '0')}</td><td>{getText(getValue(record, 'runsConceded', 'RunsConceded'), '0')}</td><td>{getText(getValue(record, 'wickets', 'Wickets'), '0')}</td><td>{getText(getValue(record, 'economy', 'Economy'), '0.00')}</td></tr>)}</tbody></table></div> : <p className="match-review-empty">No bowling records available.</p>}
+                {secondBowlingRecords.length ? <div className="match-review-table-wrap"><table className="match-review-table"><thead><tr><th>Bowler</th><th>Overs</th><th>M</th><th>Runs</th><th>Wickets</th><th>Economy</th></tr></thead><tbody>{secondBowlingRecords.map((record, index) => <tr key={getValue(record, 'matchPlayerId', 'MatchPlayerId') ?? `${getPlayerName(record)}-${index}`}>
+                  <td>{renderPlayerName(record)}</td><td>{getText(getValue(record, 'overs', 'Overs'), '0')}</td><td>{getText(getValue(record, 'maidens', 'Maidens'), '0')}</td><td>{getText(getValue(record, 'runsConceded', 'RunsConceded'), '0')}</td><td>{getText(getValue(record, 'wickets', 'Wickets'), '0')}</td><td>{getText(getValue(record, 'economy', 'Economy'), '0.00')}</td></tr>)}</tbody></table></div> : <p className="match-review-empty">No bowling records available.</p>}
               </div>
             </div>
           )}
@@ -1022,5 +1130,4 @@ onClick={
 }        </button>
       </footer>
     </main>
-  );
-}
+  )};

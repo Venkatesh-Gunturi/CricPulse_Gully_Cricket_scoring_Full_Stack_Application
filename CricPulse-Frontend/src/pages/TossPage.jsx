@@ -1,7 +1,6 @@
 
 import { useEffect, useRef, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
-import { getMatchById } from '../services/matchService';
+import { useLocation, useNavigate, useParams } from 'react-router-dom';import { getMatchById } from '../services/matchService';
 import apiClient from '../services/apiClient';
 import { useAuth } from '../context/AuthContext';
 import '../styles/toss-page.css';
@@ -24,6 +23,10 @@ const getErrorMessage = (error) =>
 function TossPage() {
   const { matchId } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
+
+const dashboardPath = location.state?.returnTo || '/umpire';
+const dashboardState = location.state?.returnState || { activeTab: 'Live' };
   const { user } = useAuth();
 
   const umpireUserId = getValue(
@@ -79,6 +82,7 @@ const tossAlreadyCollected =
 if (tossAlreadyCollected) {
   navigate(`/umpire/matches/${matchId}/innings-setup`, {
     replace: true,
+    state: location.state,
   });
   return;
 }
@@ -202,7 +206,9 @@ if (tossAlreadyCollected) {
           <button
             type="button"
             className="toss-button toss-button-secondary"
-            onClick={() => navigate('/umpire')}
+            onClick={() => navigate(dashboardPath, {
+  state: dashboardState,
+})}
           >
             Back to dashboard
           </button>
@@ -217,7 +223,9 @@ if (tossAlreadyCollected) {
         <button
           type="button"
           className="toss-back-button"
-          onClick={() => navigate('/umpire')}
+          onClick={() => navigate(dashboardPath, {
+          state: dashboardState,
+        })}
         >
           ← Dashboard
         </button>
@@ -313,8 +321,10 @@ if (tossAlreadyCollected) {
               type="button"
               className="toss-button toss-button-primary"
               onClick={() =>
-                navigate(`/umpire/matches/${matchId}/innings-setup`)
-              }
+  navigate(`/umpire/matches/${matchId}/innings-setup`, {
+    state: location.state,
+  })
+}
             >
               Set Up Innings →
             </button>

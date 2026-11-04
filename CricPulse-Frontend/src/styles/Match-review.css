@@ -2111,3 +2111,43 @@
   color: #382727;
   font-size: 14px;
 }
+.match-review-player-link {
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: #2563eb;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  text-align: left;
+}
+
+.match-review-player-link:hover {
+  color: #1d4ed8;
+  text-decoration: underline;
+}
+.match-review-player-link {
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  text-align: left;
+  text-decoration: none;
+  transition: color 0.2s ease, text-decoration 0.2s ease;
+}
+
+.match-review-player-link:hover {
+  color: #2563eb;
+  text-decoration: underline;
+}
+
+.match-review-player-link:focus-visible {
+  color: #2563eb;
+  text-decoration: underline;
+  outline: 2px solid #2563eb;
+  outline-offset: 3px;
+  border-radius: 2px;
+}

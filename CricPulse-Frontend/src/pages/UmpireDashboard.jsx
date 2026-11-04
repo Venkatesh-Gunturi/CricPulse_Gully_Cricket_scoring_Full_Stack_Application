@@ -39,7 +39,7 @@ import { useAuth } from '../context/AuthContext';
 import apiClient from '../services/apiClient';
 
 import '../styles/umpire-dashboard.css';
-
+import '../styles/match-start-modal.css';
 const matchTabs = ['Upcoming', 'Live', 'Finished', 'Cancelled'];
 
 
@@ -76,7 +76,6 @@ function MatchCardTitle({ name }) {
     </div>
   );
 }
-
 
 
 const umpireStatistics = [
@@ -143,6 +142,91 @@ function getTeamScore(innings, teamKey) {
     return battingTeam === teamKey.toLowerCase();
   });
 }
+function getLiveMatchUpdate(match, innings, teamA, teamB, totalOvers) {
+  const tossAgreed = getValue(match, 'tossAgreed', 'TossAgreed');
+  const tossWinner = getValue(match, 'tossWinnerTeam', 'TossWinnerTeam');
+  const tossDecision = String(
+    getValue(match, 'tossDecision', 'TossDecision') || ''
+  ).toLowerCase();
+
+  const firstInnings = Array.isArray(innings)
+    ? innings.find(
+        (item) =>
+          Number(getValue(item, 'inningsNumber', 'InningsNumber')) === 1
+      ) || innings[0]
+    : null;
+
+  const secondInnings = Array.isArray(innings)
+    ? innings.find(
+        (item) =>
+          Number(getValue(item, 'inningsNumber', 'InningsNumber')) === 2
+      )
+    : null;
+
+  const firstInningsStatus = String(
+    getValue(firstInnings, 'status', 'Status') || ''
+  ).toLowerCase();
+
+  const firstInningsFinished =
+    ['completed', 'complete', 'finished'].includes(firstInningsStatus) ||
+    Boolean(secondInnings);
+
+  if (!tossAgreed) {
+    return 'Match has started';
+  }
+
+  if (!firstInningsFinished) {
+    if (!tossWinner || !tossDecision) {
+      return 'Match has started';
+    }
+
+    const winner = String(tossWinner).toLowerCase();
+    const winnerName =
+      ['teama', 'team a', 'a'].includes(winner) ? teamA :
+      ['teamb', 'team b', 'b'].includes(winner) ? teamB :
+      tossWinner;
+
+    const decision = tossDecision.includes('bat')
+      ? 'bat first'
+      : 'bowl first';
+
+    return `${winnerName} won the toss and chose to ${decision}`;
+  }
+
+  const firstRuns = Number(
+    getValue(firstInnings, 'totalRuns', 'TotalRuns') ?? 0
+  );
+
+  const target = firstRuns + 1;
+
+  const secondRuns = Number(
+    getValue(secondInnings, 'totalRuns', 'TotalRuns') ?? 0
+  );
+
+  const runsNeeded = Math.max(target - secondRuns, 0);
+
+  const legalBalls = Number(
+    getValue(secondInnings, 'legalBalls', 'LegalBalls') ?? 0
+  );
+
+  const configuredOvers = Number(totalOvers) || 0;
+ const remainingBalls = Math.max(
+  configuredOvers * 6 - legalBalls,
+  0
+);
+
+const chasingTeam =
+  getValue(secondInnings, 'battingTeam', 'BattingTeam') ||
+  getValue(firstInnings, 'bowlingTeam', 'BowlingTeam');
+
+const chasingName =
+  String(chasingTeam).toLowerCase() === 'teama' ? teamA :
+  String(chasingTeam).toLowerCase() === 'teamb' ? teamB :
+  chasingTeam || 'Chasing team';
+
+return `${chasingName} need ${runsNeeded} runs in ${remainingBalls} balls to win`;
+}
+
 
 function formatDate(value) {
   if (!value) return 'Date not available';
@@ -219,7 +303,9 @@ useEffect(() => {
 
 
 
-  const [activeTab, setActiveTab] = useState('Upcoming');
+  const [activeTab, setActiveTab] = useState(
+  () => location.state?.activeTab || 'Upcoming'
+);
 
   const [matches, setMatches] = useState([]);
 
@@ -246,8 +332,6 @@ const organizerUserId = getValue(
 
     : '';
 
-
-
   const loadMatches = useCallback(async () => {
 
     if (!organizerUserId) {
@@ -265,14 +349,9 @@ const organizerUserId = getValue(
       return;
 
     }
-
-
-
     setMatchesLoading(true);
 
     setMatchesError('');
-
-
 
     try {
 
@@ -345,20 +424,25 @@ const organizerUserId = getValue(
 
 
   const visibleMatches = useMemo(
-
-    () =>
-
-      matches.filter((match) => {
-
+  () =>
+    matches
+      .filter((match) => {
         const status = getValue(match, 'status', 'Status');
-
         return String(status || '').toLowerCase() === activeTab.toLowerCase();
+      })
+      .sort((a, b) => {
+        const dateA = new Date(
+          getValue(a, 'scheduledAt', 'ScheduledAt') || 0
+        ).getTime();
 
+        const dateB = new Date(
+          getValue(b, 'scheduledAt', 'ScheduledAt') || 0
+        ).getTime();
+
+        return dateB - dateA;
       }),
-
-    [matches, activeTab]
-
-  );
+  [matches, activeTab]
+);
 
 
   const counts = useMemo(() => {
@@ -400,10 +484,25 @@ const organizerUserId = getValue(
 
   if (!matchId) return;
 
-  if (status?.toLowerCase() === 'live') {
-    navigate(`/umpire/matches/${matchId}/toss`);
+  // Keep the existing Live → Toss/scoring navigation unchanged.
+if (status?.toLowerCase() === 'live') {
+  navigate(`/umpire/matches/${matchId}/toss`, {
+    state: {
+      returnTo: '/umpire',
+      returnState: {
+        activeTab: 'Live',
+      },
+    },
+  });
   } else {
-    navigate(`/umpire/matches/${matchId}`);
+    navigate(`/umpire/matches/${matchId}`, {
+      state: {
+        returnTo: '/umpire',
+        returnState: {
+          activeTab,
+        },
+      },
+    });
   }
 };
 
@@ -940,6 +1039,7 @@ const handleConfirmCancellation = async (cancellationData) => {
                 const status = getValue(match, 'status', 'Status') || activeTab;
                 const statusKey = String(status).toLowerCase();
                 const innings = getValue(match, 'innings', 'Innings') || [];
+                const hasInnings = Array.isArray(innings) && innings.length > 0;
                 const teamAInnings = getTeamScore(innings, 'TeamA');
                 const teamBInnings = getTeamScore(innings, 'TeamB');
                 const currentInnings = Array.isArray(innings)
@@ -955,23 +1055,58 @@ const handleConfirmCancellation = async (cancellationData) => {
                   ? getValue(currentInnings, 'battingTeamName', 'BattingTeamName') ||
                     getValue(currentInnings, 'battingTeam', 'BattingTeam')
                   : null;
+
+                  const tossWinnerTeam = getValue(match, 'tossWinnerTeam', 'TossWinnerTeam');
+                  const tossDecision = String(
+                    getValue(match, 'tossDecision', 'TossDecision') || ''
+                  ).toUpperCase();
+
+                  const tossWinnerName =
+                    tossWinnerTeam === 'TeamA'
+                      ? teamA
+                      : tossWinnerTeam === 'TeamB'
+                        ? teamB
+                        : null;
+
+                  const tossUpdate =
+                    tossWinnerName && ['BAT', 'BOWL'].includes(tossDecision)
+                      ? `${tossWinnerName} won the toss and elected to ${
+                          tossDecision === 'BAT' ? 'bat' : 'bowl'
+                        }.`
+                      : null;
                 const winner = getValue(match, 'winnerTeam', 'WinnerTeam');
                 const resultText = getValue(match, 'resultText', 'ResultText');
                 const cancellationReason =
                   getValue(match, 'cancellationReason', 'CancellationReason') ||
                   getValue(match, 'cancellationReasonType', 'CancellationReasonType');
 
+                  const liveMatchUpdate =
+  statusKey === 'live'
+    ? getLiveMatchUpdate(match, innings, teamA, teamB, overs)
+    : '';
+
                 const renderScore = (inning) => {
-                  if (!inning) return '—';
-                  const runs = getValue(inning, 'totalRuns', 'TotalRuns') ?? 0;
-                  const wickets = getValue(inning, 'wickets', 'Wickets') ?? 0;
-                  return `${runs}/${wickets}`;
-                };
+  if (!inning) return null;
+
+  const runs = getValue(inning, 'totalRuns', 'TotalRuns');
+  const wickets = getValue(inning, 'wickets', 'Wickets');
+
+  if (runs == null && wickets == null) return null;
+
+  return `${runs ?? 0}/${wickets ?? 0}`;
+};
 
                 const renderOvers = (inning) => {
-                  if (!inning) return '';
-                  return `${getValue(inning, 'totalOvers', 'TotalOvers') ?? 0} overs`;
-                };
+    if (!inning) return '';
+
+    const legalBalls =
+        getValue(inning, 'legalBalls', 'LegalBalls') ?? 0;
+
+    const completedOvers = Math.floor(legalBalls / 6);
+    const remainingBalls = legalBalls % 6;
+
+    return `${completedOvers}.${remainingBalls}`;
+};
 
                 return (
                   <article
@@ -1007,42 +1142,42 @@ const handleConfirmCancellation = async (cancellationData) => {
                     <div className="audience-scoreboard">
                       <div className="audience-team-column">
                         <strong className="audience-team-name">{teamA}</strong>
-                        {(statusKey === 'live' || statusKey === 'finished') && (
-                          <>
-                            <strong className="audience-team-runs">
-                              {renderScore(teamAInnings)}
-                            </strong>
-                            <span className="audience-team-overs">
-                              {renderOvers(teamAInnings)}
-                            </span>
-                          </>
-                        )}
+                        {teamAInnings && (
+    <>
+      <strong className="audience-team-runs">
+        {renderScore(teamAInnings)}
+      </strong>
+      <span className="audience-team-overs">
+        {renderOvers(teamAInnings)}
+      </span>
+    </>
+  )}
                       </div>
 
                       <span className="audience-score-vs">VS</span>
 
                       <div className="audience-team-column">
                         <strong className="audience-team-name">{teamB}</strong>
-                        {(statusKey === 'live' || statusKey === 'finished') && (
-                          <>
-                            <strong className="audience-team-runs">
-                              {renderScore(teamBInnings)}
-                            </strong>
-                            <span className="audience-team-overs">
-                              {renderOvers(teamBInnings)}
-                            </span>
-                          </>
-                        )}
+                       {teamBInnings && (
+    <>
+      <strong className="audience-team-runs">
+        {renderScore(teamBInnings)}
+      </strong>
+      <span className="audience-team-overs">
+        {renderOvers(teamBInnings)}
+      </span>
+    </>
+  )}
                       </div>
                     </div>
 
                     <div className="audience-match-result audience-result-location-box">
                       {statusKey === 'live' && (
-                        <div className="audience-result-text">
-                          <strong>LIVE MATCH</strong>
-                          <span>{liveBattingTeam || 'Current innings in progress'}</span>
-                        </div>
-                      )}
+  <div className="audience-result-text audience-live-update">
+    <strong>LIVE MATCH</strong>
+    <span>{liveMatchUpdate}</span>
+  </div>
+)}
                       {statusKey === 'finished' && (
                         <div className="audience-result-text">
                           {resultText || (winner ? `${winner} won` : 'Match completed')}

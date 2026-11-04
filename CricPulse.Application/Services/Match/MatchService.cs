@@ -1160,7 +1160,8 @@ public class MatchService : IMatchService
 
             CancellationReasonType = match.CancellationReasonType,
             CancellationReason = match.CancellationReason,
-
+            MvpUserId = match.MVPUserId,
+            MvpPlayerName = match.MVPPlayerName,
             WinnerTeam = match.WinnerTeam,
             ResultText = match.ResultText,
 
@@ -1169,6 +1170,7 @@ public class MatchService : IMatchService
                 .ThenBy(p => p.CreatedAt)
                 .Select(p => new PublicMatchPlayerDto
                 {
+                    UserId = p.UserId,
                     PlayerName = BuildPlayerName(p.User),
                     Team = p.Team,
                     IsCaptain = p.IsCaptain
@@ -1407,7 +1409,7 @@ public class MatchService : IMatchService
             throw new ArgumentException("Invalid coordinates.");
     }
 
-    public async Task CancelMatchAsync(
+     public async Task CancelMatchAsync(
     Guid matchId,
     Guid createdByUserId,
     CancelMatchDto dto)
@@ -1446,12 +1448,16 @@ public class MatchService : IMatchService
         }
 
 
+        var cancelledAt = DateTime.UtcNow;
+
         match.Status = "Cancelled";
         match.CancellationReasonType = dto.CancellationReasonType.Trim();
         match.CancellationReason = string.IsNullOrWhiteSpace(dto.CancellationReason)
             ? null
             : dto.CancellationReason.Trim();
-        match.UpdatedAt = DateTime.UtcNow;
+
+        match.CancelledAt = cancelledAt;
+        match.UpdatedAt = cancelledAt;
 
         // Update the organizer's lifetime cancellation statistics.
         var organizerStatistics =

@@ -34,6 +34,24 @@ public class AccountProfileController : ControllerBase
         }
     }
 
+    [HttpGet("public/{userId:guid}")]
+    public async Task<IActionResult> GetPublicProfile(Guid userId)
+    {
+        try
+        {
+            var result = await _profileService.GetPublicProfileAsync(userId);
+            return Ok(result);
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+        catch (KeyNotFoundException ex)
+        {
+            return NotFound(new { message = ex.Message });
+        }
+    }
+
     [HttpPut("{userId:guid}")]
     public async Task<IActionResult> UpdateProfile(
         Guid userId,

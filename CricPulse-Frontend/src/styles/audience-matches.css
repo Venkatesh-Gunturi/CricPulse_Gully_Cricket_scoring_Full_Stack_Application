@@ -349,3 +349,36 @@
     font-size: 0.7rem;
     font-weight: 500;
 }
+
+/* Audience match card — distance capsule */
+.audience-matches-page .my-match-distance-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  min-height: 27px;
+  padding: 5px 10px;
+  border: 1px solid #ead89d;
+  border-radius: 999px;
+  color: #806019;
+  background: linear-gradient(135deg, #fff9e8, #fff1c7);
+  font-size: 0.68rem;
+  font-weight: 750;
+  line-height: 1;
+  white-space: nowrap;
+  box-shadow: 0 1px 3px rgb(140 104 21 / 8%);
+}
+
+.audience-matches-page .my-match-distance-pill svg {
+  font-size: 0.72rem;
+  flex-shrink: 0;
+}
+
+@media (max-width: 420px) {
+  .audience-matches-page .my-match-distance-pill {
+    min-height: 25px;
+    padding: 5px 7px;
+    gap: 4px;
+    font-size: 0.62rem;
+  }
+}

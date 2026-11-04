@@ -35,6 +35,7 @@ public class MatchLifecycleService : IMatchLifecycleService
     {
         await CancelUnstartedUpcomingMatchesAsync();
         await FinalizeUnfinalizedFinishedMatchesAsync();
+        await DeleteExpiredMatchesAsync();
     }
 
     private async Task CancelUnstartedUpcomingMatchesAsync()
@@ -149,37 +150,107 @@ public class MatchLifecycleService : IMatchLifecycleService
         var now = DateTime.UtcNow;
         var expiry = now.AddDays(-7);
 
+        _logger.LogInformation(
+            "Starting expired match deletion. Current UTC: {NowUtc}, Expiry cutoff: {ExpiryUtc}",
+            now,
+            expiry);
+
+        // -----------------------------------------
+        // 1. Delete Finished matches
+        // -----------------------------------------
+
         var finishedMatches =
             await _matchRepository.GetByStatusAsync("Finished");
+
+        _logger.LogInformation(
+            "Found {Count} Finished matches.",
+            finishedMatches.Count);
 
         foreach (var match in finishedMatches)
         {
             if (!match.PlayerStatisticsFinalized)
+            {
+                _logger.LogWarning(
+                    "Skipping Finished match {MatchId}: Player statistics are not finalized.",
+                    match.Id);
+
                 continue;
+            }
 
             if (!match.FinishedAt.HasValue)
+            {
+                _logger.LogWarning(
+                    "Skipping Finished match {MatchId}: FinishedAt is null.",
+                    match.Id);
+
                 continue;
+            }
 
             if (match.FinishedAt.Value > expiry)
+            {
+                _logger.LogInformation(
+                    "Skipping Finished match {MatchId}: FinishedAt {FinishedAt} is not yet 7 days old.",
+                    match.Id,
+                    match.FinishedAt.Value);
+
                 continue;
+            }
+
+            _logger.LogInformation(
+                "Deleting Finished match {MatchId}. FinishedAt: {FinishedAt}",
+                match.Id,
+                match.FinishedAt.Value);
 
             await _matchRepository.DeleteAsync(match);
         }
+
+        // -----------------------------------------
+        // 2. Delete Cancelled matches
+        // -----------------------------------------
 
         var cancelledMatches =
             await _matchRepository.GetByStatusAsync("Cancelled");
 
+        _logger.LogInformation(
+            "Found {Count} Cancelled matches.",
+            cancelledMatches.Count);
+
         foreach (var match in cancelledMatches)
         {
             if (!match.CancelledAt.HasValue)
+            {
+                _logger.LogWarning(
+                    "Skipping Cancelled match {MatchId}: CancelledAt is null.",
+                    match.Id);
+
                 continue;
+            }
 
             if (match.CancelledAt.Value > expiry)
+            {
+                _logger.LogInformation(
+                    "Skipping Cancelled match {MatchId}: CancelledAt {CancelledAt} is not yet 7 days old.",
+                    match.Id,
+                    match.CancelledAt.Value);
+
                 continue;
+            }
+
+            _logger.LogInformation(
+                "Deleting Cancelled match {MatchId}. CancelledAt: {CancelledAt}",
+                match.Id,
+                match.CancelledAt.Value);
 
             await _matchRepository.DeleteAsync(match);
         }
 
+        // -----------------------------------------
+        // 3. Save all deletions
+        // -----------------------------------------
+
         await _unitOfWork.SaveChangesAsync();
+
+        _logger.LogInformation(
+            "Expired match deletion processing completed successfully.");
     }
 }

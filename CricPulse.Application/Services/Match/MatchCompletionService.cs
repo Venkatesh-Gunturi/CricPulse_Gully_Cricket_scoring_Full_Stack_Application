@@ -125,7 +125,7 @@ public class MatchCompletionService : IMatchCompletionService
             else
                 await _organizerStatisticsRepository.UpdateAsync(organizerStatistics);
 
-            if (mvpWinner is not null)
+            if (mvpWinner is not null && mvpWinner.Score > 0)
             {
                 var mvpUser = await _playerStatisticsRepository
                     .GetByUserIdAsync(mvpWinner.Player.UserId);

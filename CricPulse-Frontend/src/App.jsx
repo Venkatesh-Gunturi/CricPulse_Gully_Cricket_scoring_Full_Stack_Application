@@ -13,6 +13,7 @@ import InningsSetup from './pages/InningsSetup';
 import LiveScoring from './pages/LiveScoring';
 import MatchResult from './pages/MatchResult';
 import PlayerProfile from './pages/PlayerProfile';
+import AudiencePlayerProfile from './pages/AudiencePlayerProfile';
 
 function App() {
   return (
@@ -57,6 +58,11 @@ function App() {
           <Route
             path="/umpire/matches/:matchId/result"
             element={<MatchResult />}
+          />
+
+          <Route
+            path="/players/:userId"
+            element={<AudiencePlayerProfile />}
           />
 
           <Route path="/player/profile" element={<PlayerProfile />}/>

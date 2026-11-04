@@ -10,4 +10,6 @@ public interface IUserAccountProfileService
     Task<UserProfileResponseDto> UpdateProfileAsync(
         Guid userId,
         UpdateUserProfileDto dto);
+
+    Task<PublicPlayerProfileResponseDto> GetPublicProfileAsync(Guid userId);
 }

@@ -86,7 +86,8 @@ public class PublicMatchDetailsDto
 
     public string? CancellationReasonType { get; set; }
     public string? CancellationReason { get; set; }
-
+    public Guid? MvpUserId { get; set; }
+    public string? MvpPlayerName { get; set; }
     public string? WinnerTeam { get; set; }
     public string? ResultText { get; set; }
 
@@ -95,6 +96,7 @@ public class PublicMatchDetailsDto
 
 public class PublicMatchPlayerDto
 {
+    public Guid UserId { get; set; }
     public string PlayerName { get; set; } = string.Empty;
 
     public string Team { get; set; } = string.Empty;

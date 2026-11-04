@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import {
   FaMapMarkerAlt,
   FaRedo,
@@ -114,19 +114,22 @@ function getTeamScore(innings, teamKey) {
   });
 }
 
-function getLiveMatchUpdate(match, innings, teamA, teamB, totalOvers) {
-  const tossAgreed = getValue(match, 'tossAgreed', 'TossAgreed');
-  const tossWinner = getValue(match, 'tossWinnerTeam', 'TossWinnerTeam');
-  const tossDecision = String(
-    getValue(match, 'tossDecision', 'TossDecision') || ''
-  ).toLowerCase();
 
+function getLiveMatchUpdate(match, innings, teamA, teamB, totalOvers) {
   const firstInnings = Array.isArray(innings)
     ? innings.find(
         (item) =>
           Number(getValue(item, 'inningsNumber', 'InningsNumber')) === 1
-      ) || innings[0]
+      )
     : null;
+
+  if (!firstInnings) {
+    return 'Match has started';
+  }
+
+  const firstStatus = String(
+    getValue(firstInnings, 'status', 'Status') || ''
+  ).toLowerCase();
 
   const secondInnings = Array.isArray(innings)
     ? innings.find(
@@ -135,27 +138,27 @@ function getLiveMatchUpdate(match, innings, teamA, teamB, totalOvers) {
       )
     : null;
 
-  const firstInningsStatus = String(
-    getValue(firstInnings, 'status', 'Status') || ''
-  ).toLowerCase();
-
   const firstInningsFinished =
-    ['completed', 'complete', 'finished'].includes(firstInningsStatus) ||
+    ['completed', 'complete', 'finished'].includes(firstStatus) ||
     Boolean(secondInnings);
 
-  if (!tossAgreed) {
-    return 'Match has started';
-  }
-
   if (!firstInningsFinished) {
+    const tossWinner = getValue(match, 'tossWinnerTeam', 'TossWinnerTeam');
+    const tossDecision = String(
+      getValue(match, 'tossDecision', 'TossDecision') || ''
+    ).toLowerCase();
+
     if (!tossWinner || !tossDecision) {
       return 'Match has started';
     }
 
-    const winner = String(tossWinner).toLowerCase();
+    const winnerKey = String(tossWinner)
+      .toLowerCase()
+      .replace(/[\s_-]/g, '');
+
     const winnerName =
-      ['teama', 'team a', 'a'].includes(winner) ? teamA :
-      ['teamb', 'team b', 'b'].includes(winner) ? teamB :
+      winnerKey === 'teama' || winnerKey === 'a' ? teamA :
+      winnerKey === 'teamb' || winnerKey === 'b' ? teamB :
       tossWinner;
 
     const decision = tossDecision.includes('bat')
@@ -177,35 +180,42 @@ function getLiveMatchUpdate(match, innings, teamA, teamB, totalOvers) {
 
   const runsNeeded = Math.max(target - secondRuns, 0);
 
+  const firstBattingTeam = String(
+    getValue(firstInnings, 'battingTeam', 'BattingTeam') || ''
+  ).toLowerCase().replace(/[\s_-]/g, '');
+
+  const secondBattingTeam = String(
+    getValue(secondInnings, 'battingTeam', 'BattingTeam') || ''
+  ).toLowerCase().replace(/[\s_-]/g, '');
+
+  const chasingTeamKey = secondBattingTeam ||
+    (firstBattingTeam === 'teama' || firstBattingTeam === 'a'
+      ? 'teamb'
+      : 'teama');
+
+  const chasingTeamName =
+    chasingTeamKey === 'teama' || chasingTeamKey === 'a'
+      ? teamA
+      : chasingTeamKey === 'teamb' || chasingTeamKey === 'b'
+        ? teamB
+        : teamA;
+
   const legalBalls = Number(
     getValue(secondInnings, 'legalBalls', 'LegalBalls') ?? 0
   );
 
-  const configuredOvers = Number(totalOvers) || 0;
   const remainingBalls = Math.max(
-    configuredOvers * 6 - legalBalls,
+    (Number(totalOvers) || 0) * 6 - legalBalls,
     0
   );
 
-  const remainingOvers =
-    `${Math.floor(remainingBalls / 6)}.${remainingBalls % 6}`;
+  if (runsNeeded === 0) {
+    return `${chasingTeamName} won the match`;
+  }
 
-  const chasingTeam =
-    getValue(secondInnings, 'battingTeam', 'BattingTeam') ||
-    getValue(firstInnings, 'bowlingTeam', 'BowlingTeam') ||
-    (String(getValue(firstInnings, 'battingTeam', 'BattingTeam') || '')
-      .toLowerCase()
-      .includes('a')
-      ? teamB
-      : teamA);
-
-  const chasingName =
-    String(chasingTeam).toLowerCase() === 'teama' ? teamA :
-    String(chasingTeam).toLowerCase() === 'teamb' ? teamB :
-    chasingTeam;
-
-  return `${chasingName} need ${runsNeeded} runs in ${remainingOvers} overs to win`;
+  return `${chasingTeamName} requires ${runsNeeded} runs in ${remainingBalls} balls to win`;
 }
+
 
 function MatchCardTitle({ name }) {
   return (
@@ -217,6 +227,7 @@ function MatchCardTitle({ name }) {
 
 function Matches() {
   const navigate = useNavigate();
+const location = useLocation();
 
   const [nearbyMatches, setNearbyMatches] = useState([]);
   const [nearbyLoading, setNearbyLoading] = useState(true);
@@ -227,7 +238,9 @@ function Matches() {
   const [statesLoading, setStatesLoading] = useState(true);
   const [statesError, setStatesError] = useState('');
 
-  const [selectedStatus, setSelectedStatus] = useState('Upcoming');
+  const [selectedStatus, setSelectedStatus] = useState(
+  () => location.state?.selectedStatus || 'Upcoming'
+);
   const [selectedState, setSelectedState] = useState('');
   const [stateMatches, setStateMatches] = useState([]);
   const [stateMatchesLoading, setStateMatchesLoading] = useState(false);
@@ -380,24 +393,27 @@ function Matches() {
   }, [loadStateMatches]);
 
   // Navigate to the existing public Match Review page.
-  const handleMatchClick = (match) => {
-    const matchId = getValue(
-      match,
-      'matchId',
-      'MatchId',
-      'id',
-      'Id'
-    );
+const handleMatchClick = (match) => {
+  const matchId = getValue(
+    match,
+    'matchId',
+    'MatchId',
+    'id',
+    'Id'
+  );
 
-    if (!matchId) return;
+  if (!matchId) return;
 
-    navigate(`/umpire/matches/${matchId}`, {
-      state: {
-        viewMode: 'audience',
-        returnTo: '/matches',
+  navigate(`/umpire/matches/${matchId}`, {
+    state: {
+      viewMode: 'audience',
+      returnTo: '/matches',
+      returnState: {
+        selectedStatus,
       },
-    });
-  };
+    },
+  });
+};
 
     const renderMatchCard = (match, index, sectionType) => {
     const id = getValue(match, 'matchId', 'MatchId', 'id', 'Id');
@@ -457,10 +473,16 @@ const liveBattingTeam = currentInnings
     };
 
     const renderOvers = (inning) => {
-      if (!inning) return '';
+    if (!inning) return '';
 
-      return `${getValue(inning, 'totalOvers', 'TotalOvers') ?? 0} overs`;
-    };
+    const legalBalls =
+        getValue(inning, 'legalBalls', 'LegalBalls') ?? 0;
+
+    const completedOvers = Math.floor(legalBalls / 6);
+    const remainingBalls = legalBalls % 6;
+
+    return `${completedOvers}.${remainingBalls}`;
+};
 
 
     const liveMatchUpdate =
@@ -511,7 +533,7 @@ const liveBattingTeam = currentInnings
         <div className="audience-scoreboard">
           <div className="audience-team-column">
             <strong className="audience-team-name">{teamA}</strong>
-            {(statusKey === 'live' || statusKey === 'finished') && (
+            {teamAInnings && (
               <>
                 <strong className="audience-team-runs">
                   {renderScore(teamAInnings)}
@@ -527,7 +549,7 @@ const liveBattingTeam = currentInnings
 
           <div className="audience-team-column">
             <strong className="audience-team-name">{teamB}</strong>
-            {(statusKey === 'live' || statusKey === 'finished') && (
+            {teamBInnings && (
               <>
                 <strong className="audience-team-runs">
                   {renderScore(teamBInnings)}
@@ -542,11 +564,11 @@ const liveBattingTeam = currentInnings
 
         <div className="audience-match-result audience-result-location-box">
   {statusKey === 'live' && (
-    <div className="audience-result-text audience-live-update">
-      <strong>LIVE MATCH</strong>
-      <span>{liveMatchUpdate}</span>
-    </div>
-  )}
+  <div className="audience-result-text audience-live-update">
+    <strong>LIVE MATCH</strong>
+    <span>{liveMatchUpdate}</span>
+  </div>
+)}
 
   {statusKey === 'finished' && (
     <div className="audience-result-text">

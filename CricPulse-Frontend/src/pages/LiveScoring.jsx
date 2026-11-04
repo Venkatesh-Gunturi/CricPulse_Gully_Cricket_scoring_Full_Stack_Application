@@ -1,6 +1,6 @@
 
 import { useEffect, useRef, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useLocation,useNavigate, useParams } from 'react-router-dom';
 import ScoringControls from '../components/ScoringControls';
 import { useAuth } from '../context/AuthContext';
 import {
@@ -22,6 +22,10 @@ import CancelMatchModal from '../components/CancelMatchModal';
 export default function LiveScoring() {
   const { matchId } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
+
+const dashboardPath = location.state?.returnTo || '/umpire';
+const dashboardState = location.state?.returnState || { activeTab: 'Live' };
   const { user } = useAuth();
 
   const [activeTab, setActiveTab] = useState('yetToPlay');
@@ -439,8 +443,11 @@ async function handleConfirmFirstInnings() {
     );
     setMatchState(updatedState);
     navigate(`/umpire/matches/${matchId}/innings-setup`, {
-      state: { inningsNumber: 2 },
-    });
+  state: {
+    ...location.state,
+    inningsNumber: 2,
+  },
+});
   } catch (error) {
     setCompletionError(
       error.response?.data?.message ||
@@ -473,9 +480,10 @@ async function handleConfirmSecondInnings() {
 
     setMatchState(updatedState);
 
-    navigate(`/umpire/matches/${matchId}/result`, {
-      replace: true,
-    });
+   navigate(`/umpire/matches/${matchId}/result`, {
+  replace: true,
+  state: location.state,
+});
   } catch (error) {
     setCompletionError(
       error.response?.data?.message ||
@@ -593,7 +601,11 @@ async function handleConfirmCancellation(cancellationData) {
         <button
           type="button"
           className="live-dashboard-button"
-          onClick={() => navigate('/umpire')}
+          onClick={() =>
+  navigate(dashboardPath, {
+    state: dashboardState,
+  })
+}
         >
           ← Back to Dashboard
         </button>
@@ -623,7 +635,9 @@ async function handleConfirmCancellation(cancellationData) {
                 type="button"
                 onClick={() => {
                   setMenuOpen(false);
-                  navigate(`/umpire/matches/${matchId}`);
+                  navigate(`/umpire/matches/${matchId}`, {
+  state: location.state,
+});
                 }}
               >
                 Match Info
