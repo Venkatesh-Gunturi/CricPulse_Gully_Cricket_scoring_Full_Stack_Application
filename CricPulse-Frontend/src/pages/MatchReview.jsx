@@ -1,11 +1,17 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { FaArrowLeft, FaInfoCircle, FaHistory, FaTrophy, FaBullseye, FaAward } from 'react-icons/fa';
 
 import { getMatchById,getPublicMatchById} from '../services/matchService';
 import { getMatchState } from '../services/scoringService';
 import { useAuth } from '../context/AuthContext';
-
+import { createMatchHubConnection } from '../services/matchHub';
 import '../styles/match-review.css';
 
 const getValue = (object, ...keys) => {
@@ -65,6 +71,8 @@ const getTeamCode = (team) => {
   return team ?? '';
 };
 
+
+
 const getInningsNumber = (innings) =>
   Number(getValue(innings, 'inningsNumber', 'InningsNumber') ?? 0);
 
@@ -113,10 +121,13 @@ const backToAudienceMatches = () => {
     'userID'
   );
 
+const stateUpdateSequenceRef = useRef(0);
   const [match, setMatch] = useState(null);
   const [matchState, setMatchState] = useState(null);
   const [activeTeam, setActiveTeam] = useState('TeamA');
   const [activeTab, setActiveTab] = useState('match-info');
+
+  
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -142,8 +153,13 @@ const backToAudienceMatches = () => {
 
   
       try {
-        const stateResult = await getMatchState(matchId);
-        setMatchState(stateResult);
+        const sequenceBeforeRequest = stateUpdateSequenceRef.current;
+
+const stateResult = await getMatchState(matchId);
+
+if (stateUpdateSequenceRef.current === sequenceBeforeRequest) {
+  setMatchState(stateResult);
+}
       } catch (stateRequestError) {
         setMatchState(null);
         setStateError(
@@ -167,6 +183,108 @@ const backToAudienceMatches = () => {
     loadMatchReview();
   }, [loadMatchReview]);
 
+  
+useEffect(() => {
+  if (!isAudienceView || !matchId) {
+    return;
+  }
+
+  let isActive = true;
+
+  const connection = createMatchHubConnection();
+
+  const refreshMatchState = async () => {
+    const sequenceBeforeRequest = stateUpdateSequenceRef.current;
+
+    try {
+      const latestState = await getMatchState(matchId);
+
+      if (
+        isActive &&
+        stateUpdateSequenceRef.current === sequenceBeforeRequest
+      ) {
+        setMatchState(latestState);
+      }
+    } catch (error) {
+      console.error('Failed to refresh match state:', error);
+    }
+  };
+
+  const handleMatchStateUpdated = (updatedState) => {
+    if (!isActive) return;
+
+    stateUpdateSequenceRef.current += 1;
+    setMatchState(updatedState);
+  };
+
+  connection.on('MatchStateUpdated', handleMatchStateUpdated);
+
+  const startConnection = async () => {
+    try {
+      await connection.start();
+
+      if (!isActive) return;
+
+      await connection.invoke('JoinMatch', matchId);
+
+      if (!isActive) return;
+
+      // Fetch the latest state after joining the group.
+      await refreshMatchState();
+
+      console.log('Connected to match updates:', matchId);
+    } catch (error) {
+      if (isActive) {
+        console.error('SignalR connection failed:', error);
+      }
+    }
+  };
+
+  connection.onreconnected(async () => {
+    if (!isActive) return;
+
+    try {
+      // SignalR groups are connection-specific.
+      // Rejoin the match group after reconnecting.
+      await connection.invoke('JoinMatch', matchId);
+
+      if (!isActive) return;
+
+      await refreshMatchState();
+
+      console.log('Rejoined match updates:', matchId);
+    } catch (error) {
+      console.error('Failed to rejoin match group:', error);
+    }
+  });
+
+  startConnection();
+
+  return () => {
+    isActive = false;
+
+    connection.off(
+      'MatchStateUpdated',
+      handleMatchStateUpdated
+    );
+
+    const stopConnection = async () => {
+      try {
+        if (connection.state === 'Connected') {
+          await connection.invoke('LeaveMatch', matchId);
+        }
+      } catch (error) {
+        console.error('Error leaving match group:', error);
+      } finally {
+        await connection.stop();
+      }
+    };
+
+    stopConnection();
+  };
+}, [matchId, isAudienceView]);
+
+
   // All hooks stay above the conditional returns.
   const teamAName =
     getValue(match, 'teamAName', 'TeamAName', 'team1Name', 'Team1Name') ||
@@ -181,6 +299,8 @@ const backToAudienceMatches = () => {
     'matchStatus',
     'MatchStatus'
   ) ?? getValue(match, 'status', 'Status', 'matchStatus', 'MatchStatus');
+
+
 
   const innings = useMemo(() => {
     const result = getValue(matchState, 'innings', 'Innings');
@@ -198,12 +318,42 @@ const backToAudienceMatches = () => {
     [innings]
   );
 
+  const currentInnings = useMemo(() => {
+  if (!innings.length) return null;
+
+  return (
+    innings.find((item) =>
+      isLiveStatus(getInningsStatus(item))
+    ) ??
+    (secondInnings &&
+    !isCompletedStatus(getInningsStatus(secondInnings))
+      ? secondInnings
+      : null)
+  );
+}, [innings, firstInnings, secondInnings]);
+
   const firstInningsStatus = getInningsStatus(firstInnings);
   const secondInningsStatus = getInningsStatus(secondInnings);
 
+  // Treat a completed second innings as the end of the match too.
+  // The public match endpoint may not refresh the overall match status immediately.
   const overallMatchFinished =
     isCompletedStatus(matchStatus) ||
-    isCompletedStatus(getValue(match, 'status', 'Status'));
+    isCompletedStatus(getValue(match, 'status', 'Status')) ||
+    isCompletedStatus(secondInningsStatus);
+
+     useEffect(() => {
+  setActiveTab((currentTab) => {
+    if (
+      isAudienceView &&
+      (isLiveStatus(matchStatus) || overallMatchFinished)
+    ) {
+      return 'live';
+    }
+
+    return currentTab === 'live' ? 'match-info' : currentTab;
+  });
+}, [isAudienceView, matchStatus, overallMatchFinished]);
 
   const firstInningsCompleted =
     isCompletedStatus(firstInningsStatus) ||
@@ -256,16 +406,24 @@ const backToAudienceMatches = () => {
     activeTeam === 'TeamA' ? teamAPlayers : teamBPlayers;
 
   const tossWinner = getValue(
-    match,
-    'tossWinnerTeam',
-    'TossWinnerTeam'
-  );
+  matchState,
+  'tossWinnerTeam',
+  'TossWinnerTeam'
+) ?? getValue(
+  match,
+  'tossWinnerTeam',
+  'TossWinnerTeam'
+);
 
-  const tossDecision = getValue(
-    match,
-    'tossDecision',
-    'TossDecision'
-  );
+const tossDecision = getValue(
+  matchState,
+  'tossDecision',
+  'TossDecision'
+) ?? getValue(
+  match,
+  'tossDecision',
+  'TossDecision'
+);
 
   const displayTeam = (team) => {
     const code = getTeamCode(team);
@@ -399,15 +557,24 @@ const cancellationReason = getValue(
   const secondBowlingRecords = getRecords(secondInnings, 'bowlingRecords', 'BowlingRecords');
 
   const firstTeamScore = firstInnings ? {
-    team: displayTeam(firstBattingTeam),
-    runs: Number(getValue(firstInnings, 'totalRuns', 'TotalRuns') ?? 0),
-    wickets: Number(getValue(firstInnings, 'wickets', 'Wickets') ?? 0),
-  } : null;
-  const secondTeamScore = secondInnings ? {
-    team: displayTeam(secondBattingTeam),
-    runs: Number(secondInningsRuns ?? 0),
-    wickets: Number(secondInningsWickets ?? 0),
-  } : null;
+  team: displayTeam(firstBattingTeam),
+  runs: Number(getValue(firstInnings, 'totalRuns', 'TotalRuns') ?? 0),
+  wickets: Number(getValue(firstInnings, 'wickets', 'Wickets') ?? 0),
+  overs: formatOvers(
+    getValue(firstInnings, 'legalBalls', 'LegalBalls'),
+    getValue(firstInnings, 'totalOvers', 'TotalOvers')
+  ),
+} : null;
+
+const secondTeamScore = secondInnings ? {
+  team: displayTeam(secondBattingTeam),
+  runs: Number(secondInningsRuns ?? 0),
+  wickets: Number(secondInningsWickets ?? 0),
+  overs: formatOvers(
+    secondInningsBalls,
+    secondInningsOvers
+  ),
+} : null;
   const teamAScore = [firstTeamScore, secondTeamScore].find((score) =>
     String(score?.team).toLowerCase() === String(teamAName).toLowerCase()
   );
@@ -686,51 +853,36 @@ const playerOfTheMatch = mvpPlayerName
   return (
     <main className="match-review-page">
       <header className="match-review-topbar">
-       <button
-  type="button"
-  className="match-review-back"
-  onClick={
-    isAudienceView
-      ? backToAudienceMatches
-      : scoringStarted && !overallMatchFinished && !isCancelled
-        ? backToScoring
-        : backToDashboard
-  }
->
-  <FaArrowLeft />
-  {
-    isAudienceView
-      ? 'Back to Matches'
-      : scoringStarted && !overallMatchFinished && !isCancelled
-        ? 'Back to Scoring'
-        : 'Back to Dashboard'
-  }
-</button>
+  <button
+    type="button"
+    className="match-review-back"
+    onClick={
+      isAudienceView
+        ? backToAudienceMatches
+        : scoringStarted && !overallMatchFinished && !isCancelled
+          ? backToScoring
+          : backToDashboard
+    }
+  >
+    <FaArrowLeft />
+    {
+      isAudienceView
+        ? 'Back to Matches'
+        : scoringStarted && !overallMatchFinished && !isCancelled
+          ? 'Back to Scoring'
+          : 'Back to Dashboard'
+    }
+  </button>
 
-        <div className="match-review-heading">
-<p className="match-review-eyebrow">
-  {isAudienceView ? 'CRICPULSE · MATCH CENTER' : 'CRICPULSE · UMPIRE'}
-</p>
-          <h1>Match Review</h1>
-        </div>
-      </header>
+  <div className="match-review-heading">
+    <h1>{teamAName} vs {teamBName}</h1>
+  </div>
 
-      <section className="match-review-summary">
-        <div>
-          <p className="match-review-label">MATCH</p>
-          <h2>
-            {getText(
-              getValue(match, 'name', 'Name', 'matchName', 'MatchName'),
-              `${teamAName} vs ${teamBName}`
-            )}
-          </h2>
-          <p>{teamAName} vs {teamBName}</p>
-        </div>
+  <span className="match-review-status">
+    {getText(matchStatus, 'Upcoming')}
+  </span>
+</header>
 
-        <span className="match-review-status">
-          {getText(matchStatus, 'Upcoming')}
-        </span>
-      </section>
 {isCancelled && (
   <section className="match-review-cancellation">
     <div className="match-review-cancellation-heading">
@@ -758,44 +910,9 @@ const playerOfTheMatch = mvpPlayerName
     </div>
   </section>
 )}
-      {showTossDetails && (
-        <section className="match-review-details match-review-toss">
-          <div className="match-review-section-heading">
-            <FaInfoCircle />
-            <div>
-              <h2>Toss Details</h2>
-              <p>Information recorded before the innings started.</p>
-            </div>
-          </div>
-
-          <div className="match-review-detail-grid">
-            <div className="match-review-detail">
-              <span>Toss Winner</span>
-              <strong>{displayTeam(tossWinner)}</strong>
-            </div>
-
-            <div className="match-review-detail">
-              <span>Decision</span>
-              <strong>
-                {getText(tossDecision).toUpperCase()}
-              </strong>
-            </div>
-
-            <div className="match-review-detail">
-              <span>Batting First</span>
-              <strong>{displayTeam(firstBattingTeam)}</strong>
-            </div>
-
-            <div className="match-review-detail">
-              <span>Bowling First</span>
-              <strong>{displayTeam(firstBowlingTeam)}</strong>
-            </div>
-          </div>
-        </section>
-      )}
 
 
-      {overallMatchFinished && (
+      {overallMatchFinished && !isAudienceView && (
         <section className="match-review-result">
           <div className="match-review-section-heading"><FaTrophy /><div><h2>Match Result</h2><p>Final score and match highlights.</p></div></div>
           <div className="match-review-scoreline">
@@ -804,8 +921,22 @@ const playerOfTheMatch = mvpPlayerName
             <div className="match-review-score-team"><span>{teamBName}</span><strong>{teamBScore ? `${teamBScore.runs}/${teamBScore.wickets}` : '—'}</strong></div>
           </div>
           <p className="match-review-result-text">{getText(resultText, (() => {
-              const winner = getValue(match, 'winnerTeam', 'WinnerTeam', 'winner', 'Winner');
-              if (!winner) return 'Match completed';
+const winner =
+  getValue(
+    match,
+    'winnerTeam',
+    'WinnerTeam',
+    'winner',
+    'Winner'
+  ) ??
+  getValue(
+    matchState,
+    'winnerTeam',
+    'WinnerTeam',
+    'winner',
+    'Winner'
+  );
+                if (!winner) return 'Match completed';
               const winningScore = [teamAScore, teamBScore].find((score) => String(score?.team).toLowerCase() === String(displayTeam(winner)).toLowerCase());
               const losingScore = [teamAScore, teamBScore].find((score) => score && score !== winningScore);
               if (winningScore && losingScore && winningScore.runs > losingScore.runs) return `${displayTeam(winner)} won by ${winningScore.runs - losingScore.runs} runs`;
@@ -820,21 +951,67 @@ const playerOfTheMatch = mvpPlayerName
         </section>
       )}
 
-      {scoringStarted && (
-        <nav className="match-review-tabs" aria-label="Match review sections">
-          <button type="button" className={activeTab === 'match-info' ? 'active' : ''} aria-pressed={activeTab === 'match-info'} onClick={() => setActiveTab('match-info')}>
-            <FaInfoCircle /> Match Info
-          </button>
-          <button type="button" className={activeTab === 'first-innings' ? 'active' : ''} aria-pressed={activeTab === 'first-innings'} onClick={() => setActiveTab('first-innings')}>
-            <FaHistory /> First Innings
-          </button>
-          {secondInnings && (
-            <button type="button" className={activeTab === 'second-innings' ? 'active' : ''} aria-pressed={activeTab === 'second-innings'} onClick={() => setActiveTab('second-innings')}>
-              <FaHistory /> Second Innings
-            </button>
-          )}
-        </nav>
+      {isAudienceView ? (
+  scoringStarted && (
+    <nav className="match-review-tabs" aria-label="Match review sections">
+
+      <button
+        type="button"
+        className={activeTab === 'match-info' ? 'active' : ''}
+        aria-pressed={activeTab === 'match-info'}
+        onClick={() => setActiveTab('match-info')}
+      >
+        <FaInfoCircle /> Match Details
+      </button>
+
+      {(isLiveStatus(matchStatus) || overallMatchFinished) && (
+        <button
+          type="button"
+          className={activeTab === 'live' ? 'active' : ''}
+          aria-pressed={activeTab === 'live'}
+          onClick={() => setActiveTab('live')}
+        >
+          <FaHistory /> Live
+        </button>
       )}
+
+      <button
+        type="button"
+        className={activeTab === 'first-innings' ? 'active' : ''}
+        aria-pressed={activeTab === 'first-innings'}
+        onClick={() => setActiveTab('first-innings')}
+      >
+        <FaHistory /> First Innings
+      </button>
+
+      <button
+        type="button"
+        className={activeTab === 'second-innings' ? 'active' : ''}
+        aria-pressed={activeTab === 'second-innings'}
+        onClick={() => setActiveTab('second-innings')}
+      >
+        <FaHistory /> Second Innings
+      </button>
+
+    </nav>
+  )
+) : (
+  scoringStarted && (
+    <nav className="match-review-tabs" aria-label="Match review sections">
+      <button type="button" className={activeTab === 'match-info' ? 'active' : ''} aria-pressed={activeTab === 'match-info'} onClick={() => setActiveTab('match-info')}>
+        <FaInfoCircle /> Match Info
+      </button>
+      <button type="button" className={activeTab === 'first-innings' ? 'active' : ''} aria-pressed={activeTab === 'first-innings'} onClick={() => setActiveTab('first-innings')}>
+        <FaHistory /> First Innings
+      </button>
+      {secondInnings && (
+        <button type="button" className={activeTab === 'second-innings' ? 'active' : ''} aria-pressed={activeTab === 'second-innings'} onClick={() => setActiveTab('second-innings')}>
+          <FaHistory /> Second Innings
+        </button>
+      )}
+    </nav>
+  )
+)}
 
       {(!scoringStarted || activeTab === 'match-info') && (
         <>
@@ -915,7 +1092,39 @@ const playerOfTheMatch = mvpPlayerName
           </div>
         </div>
       </section>
+{showTossDetails && (
+  <section className="match-review-details match-review-toss">
+    <div className="match-review-section-heading">
+      <FaInfoCircle />
+      <div>
+        <h2>Toss Details</h2>
+        <p>Information recorded before the innings started.</p>
+      </div>
+    </div>
 
+    <div className="match-review-detail-grid">
+      <div className="match-review-detail">
+        <span>Toss Winner</span>
+        <strong>{displayTeam(tossWinner)}</strong>
+      </div>
+
+      <div className="match-review-detail">
+        <span>Decision</span>
+        <strong>{getText(tossDecision).toUpperCase()}</strong>
+      </div>
+
+      <div className="match-review-detail">
+        <span>Batting First</span>
+        <strong>{displayTeam(firstBattingTeam)}</strong>
+      </div>
+
+      <div className="match-review-detail">
+        <span>Bowling First</span>
+        <strong>{displayTeam(firstBowlingTeam)}</strong>
+      </div>
+    </div>
+  </section>
+)}
       <section className="match-review-rosters">
         <div className="match-review-section-heading">
           <FaInfoCircle />
@@ -992,7 +1201,378 @@ const playerOfTheMatch = mvpPlayerName
 
         </>
       )}
+{isAudienceView && activeTab === 'live' && (
+  <section className="match-review-live">
+    {overallMatchFinished ? (
+      <section className="match-review-result">
+        <div className="match-review-section-heading">
+          <FaTrophy />
+          <div>
+            <h2>Match Result</h2>
+            <p>Final scores and match highlights.</p>
+          </div>
+        </div>
 
+        <div className="match-review-scoreline">
+          <div className="match-review-score-team">
+            <span>{teamAName}</span>
+            <strong>
+              {teamAScore
+                ? `${teamAScore.runs}/${teamAScore.wickets}`
+                : '—'}
+            </strong>
+            <small>
+              {teamAScore ? `${teamAScore.overs} Overs` : '—'}
+            </small>
+          </div>
+
+          <span className="match-review-versus">VS</span>
+
+          <div className="match-review-score-team">
+            <span>{teamBName}</span>
+            <strong>
+              {teamBScore
+                ? `${teamBScore.runs}/${teamBScore.wickets}`
+                : '—'}
+            </strong>
+            <small>
+              {teamBScore ? `${teamBScore.overs} Overs` : '—'}
+            </small>
+          </div>
+        </div>
+
+        <p className="match-review-result-text">
+          {getText(resultText, (() => {
+            const winner =
+  getValue(
+    match,
+    'winnerTeam',
+    'WinnerTeam',
+    'winner',
+    'Winner'
+  ) ??
+  getValue(
+    matchState,
+    'winnerTeam',
+    'WinnerTeam',
+    'winner',
+    'Winner'
+  );
+
+            if (!winner) return 'Match completed';
+
+            return `${displayTeam(winner)} won the match!`;
+          })())}
+        </p>
+
+        <div className="match-review-awards">
+          <article className="match-review-award-card">
+            <FaTrophy />
+            <span>Most Runs</span>
+            <strong>
+              {topRunScorer
+                ? renderPlayerName(topRunScorer.record)
+                : 'Not available'}
+            </strong>
+            <small>
+              {topRunScorer
+                ? `${topRunScorer.runs} runs`
+                : 'No batting records'}
+            </small>
+          </article>
+
+          <article className="match-review-award-card">
+            <FaBullseye />
+            <span>Best Bowler</span>
+            <strong>
+              {topBowler
+                ? renderPlayerName(topBowler.record)
+                : 'Not available'}
+            </strong>
+            <small>
+              {topBowler
+                ? `${topBowler.wickets} wickets · ${topBowler.runs} runs`
+                : 'No bowling records'}
+            </small>
+          </article>
+
+          <article className="match-review-award-card">
+            <FaAward />
+            <span>MVP Player</span>
+            <strong>
+              {playerOfTheMatch
+                ? renderPlayerName(playerOfTheMatch)
+                : 'Not recorded'}
+            </strong>
+            <small>Official award</small>
+          </article>
+        </div>
+      </section>
+    ) : (
+      <>
+        {!secondInnings && isCompletedStatus(firstInningsStatus) ? (
+          <div className="match-review-live-message">
+            <h2>First Innings Completed</h2>
+            <p>
+              {displayTeam(firstBattingTeam)} scored {getText(firstInningsRuns, '0')}/
+              {getText(firstInningsWickets, '0')} in {formatOvers(firstInningsBalls, firstInningsOvers)} overs.
+            </p>
+            <p>
+              {displayTeam(firstBowlingTeam)} need {Number(firstInningsRuns ?? 0) + 1} runs to win
+              {(() => {
+                const configuredOvers = Number(
+                  getValue(match, 'overs', 'Overs', 'totalOvers', 'TotalOvers')
+                );
+                return Number.isFinite(configuredOvers) && configuredOvers > 0
+                  ? ` in ${configuredOvers * 6} balls.`
+                  : '.';
+              })()}
+            </p>
+            <p>Get ready for the second innings!</p>
+          </div>
+        ) : !currentInnings ? (
+          <p className="match-review-empty">
+            Live scoring details are not available yet.
+          </p>
+        ) : (
+          <>
+            {/* Current innings score */}
+            <div className="match-review-live-score">
+              <div>
+                <span>
+                  {getText(
+                    getValue(currentInnings, 'battingTeam', 'BattingTeam')
+                  )}
+                </span>
+
+                <h2>
+                  {getValue(currentInnings, 'totalRuns', 'TotalRuns') ?? 0}/
+                  {getValue(currentInnings, 'wickets', 'Wickets') ?? 0}
+                </h2>
+
+                <p>
+                  Overs: {formatOvers(
+                    getValue(currentInnings, 'legalBalls', 'LegalBalls'),
+                    '0'
+                  )}
+                </p>
+              </div>
+            </div>
+
+            {/* First innings: toss message */}
+            {getInningsNumber(currentInnings) === 1 && (
+              <div className="match-review-live-message">
+                <p>
+                  {getText(tossWinner, 'The toss details are not available')}
+                  {' '}won the toss and elected to{' '}
+                  {getText(tossDecision, '—').toLowerCase()}.
+                </p>
+              </div>
+            )}
+
+            {/* Second innings: chase information */}
+            {getInningsNumber(currentInnings) === 2 && (
+              <div className="match-review-live-chase">
+                <div>
+                  <span>Target</span>
+                  <strong>
+                    {getText(
+                      getValue(currentInnings, 'targetRuns', 'TargetRuns')
+                    )}
+                  </strong>
+                </div>
+
+                <div>
+                  <span>Runs Required</span>
+                  <strong>
+                    {getText(
+                      getValue(currentInnings, 'runsRequired', 'RunsRequired')
+                    )}
+                  </strong>
+                </div>
+
+                <div>
+                  <span>Balls Remaining</span>
+                  <strong>
+                    {getText(
+                      getValue(currentInnings, 'ballsRemaining', 'BallsRemaining')
+                    )}
+                  </strong>
+                </div>
+
+                <div>
+                  <span>Required Run Rate</span>
+                  <strong>
+                    {getText(
+                      getValue(currentInnings, 'requiredRunRate', 'RequiredRunRate')
+                    )}
+                  </strong>
+                </div>
+              </div>
+            )}
+
+            {/* Current batters */}
+            {(() => {
+              const battingRecords = getRecords(
+                currentInnings,
+                'battingRecords',
+                'BattingRecords'
+              );
+
+              const strikerId = getValue(
+                currentInnings,
+                'strikerMatchPlayerId',
+                'StrikerMatchPlayerId'
+              );
+
+              const nonStrikerId = getValue(
+                currentInnings,
+                'nonStrikerMatchPlayerId',
+                'NonStrikerMatchPlayerId'
+              );
+
+              const striker = battingRecords.find(
+                (record) =>
+                  getValue(record, 'matchPlayerId', 'MatchPlayerId') === strikerId
+              );
+
+              const nonStriker = battingRecords.find(
+                (record) =>
+                  getValue(record, 'matchPlayerId', 'MatchPlayerId') === nonStrikerId
+              );
+
+              const batters = [
+                { record: striker, label: 'Striker', isStriker: true },
+                { record: nonStriker, label: 'Non-Striker', isStriker: false },
+              ];
+
+              return (
+                <div className="match-review-live-section">
+                  <h3>Batting</h3>
+
+                  <div className="match-review-live-table">
+                    <div className="match-review-live-table-header">
+                      <span>Batter</span>
+                      <span>R</span>
+                      <span>B</span>
+                      <span>4s</span>
+                      <span>6s</span>
+                      <span>SR</span>
+                    </div>
+
+                    {batters.map(({ record, label, isStriker }) => (
+                      <div
+                        className="match-review-live-table-row"
+                        key={label}
+                      >
+                        <strong>
+                          {renderPlayerName(
+                            record ||
+                              getValue(
+                                currentInnings,
+                                isStriker ? 'strikerName' : 'nonStrikerName',
+                                isStriker ? 'StrikerName' : 'NonStrikerName'
+                              )
+                          )}
+                          {isStriker ? ' *' : ''}
+                        </strong>
+
+                        <span>{getValue(record, 'runs', 'Runs') ?? 0}</span>
+                        <span>{getValue(record, 'balls', 'Balls') ?? 0}</span>
+                        <span>{getValue(record, 'fours', 'Fours') ?? 0}</span>
+                        <span>{getValue(record, 'sixes', 'Sixes') ?? 0}</span>
+                        <span>{getValue(record, 'strikeRate', 'StrikeRate') ?? '0.00'}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              );
+            })()}
+
+            {/* Current bowler */}
+            {(() => {
+              const bowlingRecords = getRecords(
+                currentInnings,
+                'bowlingRecords',
+                'BowlingRecords'
+              );
+
+              const bowlerId = getValue(
+                currentInnings,
+                'bowlerMatchPlayerId',
+                'BowlerMatchPlayerId'
+              );
+
+              const bowler = bowlingRecords.find(
+                (record) =>
+                  getValue(record, 'matchPlayerId', 'MatchPlayerId') === bowlerId
+              );
+
+              return (
+                <div className="match-review-live-section">
+                  <h3>Bowling</h3>
+
+                  {bowler ? (
+                    <div className="match-review-live-table">
+                      <div className="match-review-live-table-header">
+                        <span>Bowler</span>
+                        <span>O</span>
+                        <span>M</span>
+                        <span>R</span>
+                        <span>W</span>
+                        <span>Econ</span>
+                      </div>
+
+                      <div className="match-review-live-table-row">
+                        <strong>{renderPlayerName(bowler)}</strong>
+                        <span>{getValue(bowler, 'overs', 'Overs') ?? 0}</span>
+                        <span>{getValue(bowler, 'maidens', 'Maidens') ?? 0}</span>
+                        <span>{getValue(bowler, 'runsConceded', 'RunsConceded') ?? 0}</span>
+                        <span>{getValue(bowler, 'wickets', 'Wickets') ?? 0}</span>
+                        <span>{getValue(bowler, 'economy', 'Economy') ?? '0.00'}</span>
+                      </div>
+                    </div>
+                  ) : (
+                    <p className="match-review-empty">
+                      Current bowler is not available.
+                    </p>
+                  )}
+                </div>
+              );
+            })()}
+
+            {/* Yet to bat */}
+            <div className="match-review-live-section">
+              <h3>Yet to Bat</h3>
+
+              {(() => {
+                const yetToBat = getRecords(
+                  currentInnings,
+                  'yetToBat',
+                  'YetToBat'
+                );
+
+                return yetToBat.length > 0 ? (
+                  <div className="match-review-live-yet-to-bat">
+                    {yetToBat.map((player, index) => (
+                      <span key={index}>
+                        {renderPlayerName(player)}
+                      </span>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="match-review-empty">
+                    No players remaining to bat.
+                  </p>
+                );
+              })()}
+            </div>
+          </>
+        )}
+      </>
+    )}
+  </section>
+)}
       {scoringStarted && activeTab === 'first-innings' && (
         <section className="match-review-first-innings">
           <div className="match-review-section-heading">

@@ -10,12 +10,16 @@ using CricPulse.Infrastructure.Repositories;
 using CricPulse.Infrastructure.Security;
 using CricPulse.Infrastructure.Services.Location;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.SignalR;
+using CricPulse.API.Hubs;
+using CricPulse.API.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 
 builder.Services.AddControllers();
+builder.Services.AddSignalR();
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
@@ -46,6 +50,11 @@ builder.Services.AddScoped<IMatchCompletionService, MatchCompletionService>();
 builder.Services.AddScoped<IMatchLifecycleService, MatchLifecycleService>();
 
 builder.Services.AddHostedService<MatchLifecycleWorker>();
+builder.Services.AddSingleton<IMatchUpdateNotifier, SignalRMatchNotifier>();
+builder.Services.AddScoped<
+    IMatchStateUpdateService,
+    MatchStateUpdateService>();
+
 
 builder.Services.AddMemoryCache();
 
@@ -79,7 +88,8 @@ builder.Services.AddCors(options =>
         policy
             .WithOrigins("http://localhost:5173")
             .AllowAnyHeader()
-            .AllowAnyMethod();
+            .AllowAnyMethod()
+            .AllowCredentials();
     });
 });
 
@@ -100,7 +110,7 @@ app.UseCors("AllowCricPulseFrontend");
 
 
 
-
+app.MapHub<MatchHub>("/hubs/match");
 
 app.MapControllers();
 

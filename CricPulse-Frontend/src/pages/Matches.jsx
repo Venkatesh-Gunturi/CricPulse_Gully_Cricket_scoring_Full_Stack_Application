@@ -1,10 +1,17 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import {
   FaMapMarkerAlt,
   FaRedo,
   FaSpinner,
 } from 'react-icons/fa';
+
+import {
+  startMatchHubConnection,
+  onMatchStateUpdated,
+  joinMatchGroup,
+  leaveMatchGroup,
+} from '../services/matchHub';
 
 import {
   getMatches,
@@ -114,7 +121,6 @@ function getTeamScore(innings, teamKey) {
   });
 }
 
-
 function getLiveMatchUpdate(match, innings, teamA, teamB, totalOvers) {
   const firstInnings = Array.isArray(innings)
     ? innings.find(
@@ -123,14 +129,6 @@ function getLiveMatchUpdate(match, innings, teamA, teamB, totalOvers) {
       )
     : null;
 
-  if (!firstInnings) {
-    return 'Match has started';
-  }
-
-  const firstStatus = String(
-    getValue(firstInnings, 'status', 'Status') || ''
-  ).toLowerCase();
-
   const secondInnings = Array.isArray(innings)
     ? innings.find(
         (item) =>
@@ -138,12 +136,25 @@ function getLiveMatchUpdate(match, innings, teamA, teamB, totalOvers) {
       )
     : null;
 
-  const firstInningsFinished =
-    ['completed', 'complete', 'finished'].includes(firstStatus) ||
-    Boolean(secondInnings);
+  const firstStatus = String(
+    getValue(firstInnings, 'status', 'Status') || ''
+  ).toLowerCase();
 
+  const firstInningsFinished =
+    Boolean(firstInnings) &&
+    (
+      ['completed', 'complete', 'finished'].includes(firstStatus) ||
+      Boolean(secondInnings)
+    );
+
+  // Show toss details until the first innings is completed.
   if (!firstInningsFinished) {
-    const tossWinner = getValue(match, 'tossWinnerTeam', 'TossWinnerTeam');
+    const tossWinner = getValue(
+      match,
+      'tossWinnerTeam',
+      'TossWinnerTeam'
+    );
+
     const tossDecision = String(
       getValue(match, 'tossDecision', 'TossDecision') || ''
     ).toLowerCase();
@@ -216,7 +227,6 @@ function getLiveMatchUpdate(match, innings, teamA, teamB, totalOvers) {
   return `${chasingTeamName} requires ${runsNeeded} runs in ${remainingBalls} balls to win`;
 }
 
-
 function MatchCardTitle({ name }) {
   return (
     <h3 className="my-match-title audience-match-title" title={name}>
@@ -233,8 +243,55 @@ const location = useLocation();
   const [nearbyLoading, setNearbyLoading] = useState(true);
   const [nearbyError, setNearbyError] = useState('');
   const [locationBlocked, setLocationBlocked] = useState(false);
+  const nearbyCoordinatesRef = useRef(null);
 
   const [states, setStates] = useState([]);
+  useEffect(() => {
+  const handleMatchStateUpdated = (updatedMatch) => {
+    const updatedMatchId = getValue(
+      updatedMatch,
+      'matchId',
+      'MatchId'
+    );
+
+    if (!updatedMatchId) return;
+
+    const mergeUpdatedMatch = (matches) =>
+      matches.map((match) => {
+        const existingMatchId = getValue(
+          match,
+          'matchId',
+          'MatchId',
+          'id',
+          'Id'
+        );
+
+        if (String(existingMatchId) !== String(updatedMatchId)) {
+          return match;
+        }
+
+        return {
+          ...match,
+          ...updatedMatch,
+        };
+      });
+
+    setNearbyMatches(mergeUpdatedMatch);
+    setStateMatches(mergeUpdatedMatch);
+  };
+
+  const unsubscribe = onMatchStateUpdated(
+    handleMatchStateUpdated
+  );
+
+  startMatchHubConnection().catch((error) => {
+    console.error('SignalR connection failed:', error);
+  });
+
+  return () => {
+    unsubscribe();
+  };
+}, []);
   const [statesLoading, setStatesLoading] = useState(true);
   const [statesError, setStatesError] = useState('');
 
@@ -245,6 +302,7 @@ const location = useLocation();
   const [stateMatches, setStateMatches] = useState([]);
   const [stateMatchesLoading, setStateMatchesLoading] = useState(false);
   const [stateMatchesError, setStateMatchesError] = useState('');
+const subscribedMatchIdsRef = useRef(new Set());
 
   const filteredNearbyMatches = useMemo(() => {
   return nearbyMatches
@@ -265,41 +323,59 @@ const location = useLocation();
     });
 }, [nearbyMatches, selectedStatus]);
 
-  const loadNearbyMatches = useCallback(() => {
-    if (!navigator.geolocation) {
-      setNearbyError('Your browser does not support location access.');
-      setNearbyLoading(false);
+  const loadNearbyMatches = useCallback(({ silent = false } = {}) => {
+    const fetchNearbyMatches = async (coordinates) => {
+      if (!silent) setNearbyLoading(true);
+      setNearbyError('');
+      setLocationBlocked(false);
+
+      try {
+        const response = await getMatches({
+          latitude: coordinates.latitude,
+          longitude: coordinates.longitude,
+          radiusKm: 30,
+        });
+
+        setNearbyMatches(
+          unwrapList(response, ['matches', 'Matches', 'items', 'Items'])
+        );
+      } catch (err) {
+        setNearbyError(
+          err.response?.data?.message || 'Unable to load nearby matches.'
+        );
+      } finally {
+        if (!silent) setNearbyLoading(false);
+      }
+    };
+
+    // Reuse the location obtained on the first load; don't request it every 5 seconds.
+    if (nearbyCoordinatesRef.current) {
+      fetchNearbyMatches(nearbyCoordinatesRef.current);
       return;
     }
 
-    setNearbyLoading(true);
+    if (!navigator.geolocation) {
+      setNearbyError('Your browser does not support location access.');
+      if (!silent) setNearbyLoading(false);
+      return;
+    }
+
+    if (!silent) setNearbyLoading(true);
     setNearbyError('');
     setLocationBlocked(false);
 
     navigator.geolocation.getCurrentPosition(
-      async (position) => {
-        try {
-          const { latitude, longitude } = position.coords;
-          const response = await getMatches({
-            latitude,
-            longitude,
-            radiusKm: 30,
-          });
-
-          setNearbyMatches(
-            unwrapList(response, ['matches', 'Matches', 'items', 'Items'])
-          );
-        } catch (err) {
-          setNearbyError(
-            err.response?.data?.message || 'Unable to load nearby matches.'
-          );
-        } finally {
-          setNearbyLoading(false);
-        }
+      (position) => {
+        const coordinates = {
+          latitude: position.coords.latitude,
+          longitude: position.coords.longitude,
+        };
+        nearbyCoordinatesRef.current = coordinates;
+        fetchNearbyMatches(coordinates);
       },
       (error) => {
+        if (!silent) setNearbyLoading(false);
         setLocationBlocked(true);
-        setNearbyLoading(false);
 
         if (error.code === error.PERMISSION_DENIED) {
           setNearbyError(
@@ -331,6 +407,60 @@ const location = useLocation();
   });
 }, [stateMatches]);
 
+useEffect(() => {
+  const currentMatchIds = new Set(
+    [...filteredNearbyMatches, ...sortedStateMatches]
+      .map((match) =>
+        getValue(match, 'matchId', 'MatchId', 'id', 'Id')
+      )
+      .filter(Boolean)
+      .map(String)
+  );
+
+  const previousMatchIds = subscribedMatchIdsRef.current;
+
+  // Subscribe to newly displayed matches.
+  currentMatchIds.forEach((matchId) => {
+    if (!previousMatchIds.has(matchId)) {
+      joinMatchGroup(matchId).catch((error) => {
+        console.error(
+          `Failed to subscribe to match ${matchId}:`,
+          error
+        );
+      });
+    }
+  });
+
+  // Unsubscribe from matches no longer displayed.
+  previousMatchIds.forEach((matchId) => {
+    if (!currentMatchIds.has(matchId)) {
+      leaveMatchGroup(matchId).catch((error) => {
+        console.error(
+          `Failed to unsubscribe from match ${matchId}:`,
+          error
+        );
+      });
+    }
+  });
+
+  subscribedMatchIdsRef.current = currentMatchIds;
+}, [filteredNearbyMatches, sortedStateMatches]);
+
+useEffect(() => {
+  return () => {
+    subscribedMatchIdsRef.current.forEach((matchId) => {
+      leaveMatchGroup(matchId).catch((error) => {
+        console.error(
+          `Failed to leave match ${matchId}:`,
+          error
+        );
+      });
+    });
+
+    subscribedMatchIdsRef.current.clear();
+  };
+}, []);
+
   const loadStates = useCallback(async () => {
     setStatesLoading(true);
     setStatesError('');
@@ -354,7 +484,7 @@ const location = useLocation();
   }, [loadNearbyMatches, loadStates]);
 
   // Load state-wise matches whenever status or state changes.
-  const loadStateMatches = useCallback(async () => {
+  const loadStateMatches = useCallback(async ({ silent = false } = {}) => {
     if (!selectedState) {
       setStateMatches([]);
       setStateMatchesError('');
@@ -362,7 +492,7 @@ const location = useLocation();
       return;
     }
 
-    setStateMatchesLoading(true);
+    if (!silent) setStateMatchesLoading(true);
     setStateMatchesError('');
 
     try {
@@ -375,22 +505,37 @@ const location = useLocation();
         unwrapList(response, ['matches', 'Matches', 'items', 'Items'])
       );
     } catch (err) {
-      console.error('State matches API error:', err);
+  console.error('State matches API error:', err);
 
-      setStateMatchesError(
-        err.response?.data?.message ||
-        'Unable to load matches for this state.'
-      );
+  setStateMatchesError(
+    err.response?.data?.message ||
+    'Unable to load matches for this state.'
+  );
 
-      setStateMatches([]);
-    } finally {
-      setStateMatchesLoading(false);
+  if (!silent) {
+    setStateMatches([]);
+  }
+}finally {
+      if (!silent) setStateMatchesLoading(false);
     }
   }, [selectedState, selectedStatus]);
 
   useEffect(() => {
     loadStateMatches();
   }, [loadStateMatches]);
+
+  // Keep audience match statuses fresh while the page stays open.
+  // Silent refreshes preserve the currently displayed cards and avoid loading flicker.
+  useEffect(() => {
+    const refreshInterval = window.setInterval(() => {
+      loadNearbyMatches({ silent: true });
+      if (selectedState) {
+        loadStateMatches({ silent: true });
+      }
+    }, 5000);
+
+    return () => window.clearInterval(refreshInterval);
+  }, [loadNearbyMatches, loadStateMatches, selectedState]);
 
   // Navigate to the existing public Match Review page.
 const handleMatchClick = (match) => {

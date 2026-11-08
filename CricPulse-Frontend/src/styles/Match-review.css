@@ -206,23 +206,9 @@
 
 .match-review-eyebrow,
 
-.match-review-label {
-
-  margin: 0;
-
-  color: var(--mr-gold-dark);
-
-  font-size: 0.72rem;
-
-  font-weight: 900;
-
-  letter-spacing: 0.14em;
-
-  text-transform: uppercase;
-
+.match-review-topbar .match-review-label {
+  display: none;
 }
-
-
 
 .match-review-heading h1 {
 
@@ -2150,4 +2136,415 @@
   outline: 2px solid #2563eb;
   outline-offset: 3px;
   border-radius: 2px;
+}
+
+/* ==========================================
+   CRICPULSE — COMPACT LIVE SCORE DASHBOARD
+   ========================================== */
+
+.match-review-live {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  width: 100%;
+  margin-top: 12px;
+  color: #172d25;
+}
+
+/* Score header — full width */
+
+.match-review-live > :nth-child(1) {
+  grid-column: 1 / -1;
+}
+
+.match-review-live-score {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 13px 17px;
+  border: 1px solid #28614b;
+  border-radius: 11px;
+  color: #fff;
+  background: linear-gradient(115deg, #0b3d2e, #18563f);
+}
+
+.match-review-live-score span {
+  color: #e7cb82;
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.match-review-live-score h2 {
+  margin: 3px 0;
+  color: #fff;
+  font-size: 1.8rem;
+  font-weight: 850;
+  line-height: 1.15;
+}
+
+.match-review-live-score p {
+  margin: 3px 0 0;
+  color: #d4e4da;
+  font-size: 0.76rem;
+}
+
+/* Toss message / chase metrics */
+
+.match-review-live > :nth-child(2) {
+  grid-column: 1 / -1;
+}
+
+.match-review-live-message {
+  padding: 9px 12px;
+  border-left: 3px solid #d5ad4e;
+  border-radius: 5px;
+  color: #65501d;
+  background: #fff8e7;
+  font-size: 0.78rem;
+}
+
+.match-review-live-message p {
+  margin: 0;
+}
+
+.match-review-live-chase {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 1px;
+  overflow: hidden;
+  border: 1px solid #e9dfbf;
+  border-radius: 9px;
+  background: #e9dfbf;
+}
+
+.match-review-live-chase > div {
+  min-width: 0;
+  padding: 10px 8px;
+  background: #fffdf7;
+}
+
+.match-review-live-chase span {
+  display: block;
+  color: #778174;
+  font-size: 0.67rem;
+  font-weight: 650;
+}
+
+.match-review-live-chase strong {
+  display: block;
+  margin-top: 3px;
+  color: #0b3d2e;
+  font-size: 1rem;
+  font-weight: 850;
+  overflow-wrap: anywhere;
+}
+
+/* Batting and bowling — side by side */
+
+.match-review-live > :nth-child(3),
+.match-review-live > :nth-child(4) {
+  grid-column: span 1;
+  min-width: 0;
+}
+
+.match-review-live-section {
+  min-width: 0;
+  padding: 12px;
+  border: 1px solid #e1e9e2;
+  border-radius: 9px;
+  background: #fff;
+}
+
+.match-review-live-section h3 {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin: 0 0 8px;
+  color: #0b3d2e;
+  font-size: 0.86rem;
+  font-weight: 800;
+}
+
+.match-review-live-section h3::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: #e8eee8;
+}
+
+/* Compact score tables */
+
+.match-review-live-table {
+  width: 100%;
+  overflow-x: auto;
+  scrollbar-width: thin;
+}
+
+.match-review-live-table-header,
+.match-review-live-table-row {
+  display: grid;
+  grid-template-columns: minmax(75px, 1.7fr) repeat(5, minmax(25px, 1fr));
+  align-items: center;
+  gap: 3px;
+  min-width: 290px;
+  padding: 8px 3px;
+  text-align: center;
+}
+
+.match-review-live-table-header {
+  border-bottom: 1px solid #e8eee8;
+  color: #778174;
+  font-size: 0.65rem;
+  font-weight: 750;
+}
+
+.match-review-live-table-row {
+  border-bottom: 1px solid #f0f2ef;
+  color: #263b31;
+  font-size: 0.7rem;
+}
+
+.match-review-live-table-row:last-child {
+  border-bottom: 0;
+}
+
+.match-review-live-table-row strong {
+  color: #0b3d2e;
+  font-size: 0.7rem;
+  font-weight: 800;
+  text-align: left;
+  overflow-wrap: anywhere;
+}
+
+/* Yet to bat — full width */
+
+.match-review-live > :nth-child(5) {
+  grid-column: 1 / -1;
+}
+
+.match-review-live-yet-to-bat {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.match-review-live-yet-to-bat span {
+  padding: 5px 9px;
+  border: 1px solid #e0e9df;
+  border-radius: 6px;
+  color: #315440;
+  background: #f3f7f2;
+  font-size: 0.72rem;
+  font-weight: 650;
+}
+
+/* Empty messages */
+
+.match-review-empty {
+  margin: 5px 0;
+  color: #788579;
+  font-size: 0.75rem;
+}
+
+/* ==========================================
+   TABLET
+   ========================================== */
+
+@media (max-width: 768px) {
+  .match-review-live {
+    gap: 8px;
+  }
+
+  .match-review-live > :nth-child(3),
+  .match-review-live > :nth-child(4) {
+    grid-column: 1 / -1;
+  }
+
+  .match-review-live-section {
+    padding: 10px 12px;
+  }
+}
+
+/* ==========================================
+   MOBILE
+   ========================================== */
+
+@media (max-width: 520px) {
+  .match-review-live {
+    gap: 8px;
+    margin-top: 9px;
+  }
+
+  .match-review-live-score {
+    padding: 11px 13px;
+  }
+
+  .match-review-live-score h2 {
+    font-size: 1.55rem;
+  }
+
+  .match-review-live-chase > div {
+    padding: 8px 6px;
+  }
+
+  .match-review-live-chase span {
+    font-size: 0.61rem;
+  }
+
+  .match-review-live-chase strong {
+    font-size: 0.88rem;
+  }
+
+  .match-review-live-section {
+    padding: 9px;
+  }
+
+  .match-review-live-section h3 {
+    margin-bottom: 6px;
+    font-size: 0.8rem;
+  }
+
+  .match-review-live-table-header,
+  .match-review-live-table-row {
+    padding: 7px 2px;
+  }
+
+  .match-review-live-table-header {
+    font-size: 0.61rem;
+  }
+
+  .match-review-live-table-row,
+  .match-review-live-table-row strong {
+    font-size: 0.67rem;
+  }
+
+  .match-review-live-yet-to-bat {
+    gap: 5px;
+  }
+
+  .match-review-live-yet-to-bat span {
+    padding: 4px 7px;
+    font-size: 0.67rem;
+  }
+}
+.match-review-topbar {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  margin-bottom: 14px;
+}
+
+.match-review-back {
+  min-width: 0;
+  white-space: nowrap;
+}
+
+.match-review-heading {
+  min-width: 0;
+  margin: 0;
+  text-align: center;
+}
+
+.match-review-heading h1 {
+  margin: 0;
+  color: var(--mr-green);
+  font-size: clamp(0.85rem, 2.5vw, 1.2rem);
+  font-weight: 850;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
+.match-review-topbar .match-review-label,
+.match-review-eyebrow {
+  display: none;
+}
+
+.match-review-status {
+  justify-self: end;
+  white-space: nowrap;
+  padding: 5px 9px;
+  border-radius: 20px;
+  font-size: 0.68rem;
+  font-weight: 850;
+}
+
+@media (max-width: 480px) {
+  .match-review-topbar {
+    gap: 5px;
+    margin-bottom: 10px;
+  }
+
+  .match-review-back {
+    min-height: 34px;
+    padding: 6px 8px;
+    font-size: 0.68rem;
+  }
+
+  .match-review-heading h1 {
+    font-size: 0.82rem;
+  }
+
+  .match-review-status {
+    padding: 4px 6px;
+    font-size: 0.6rem;
+  }
+}
+.match-review-topbar {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  margin-bottom: 18px;
+}
+
+.match-review-back {
+  white-space: nowrap;
+}
+
+.match-review-heading {
+  min-width: 0;
+  margin: 0;
+  text-align: center;
+}
+
+.match-review-heading h1 {
+  margin: 0;
+  color: var(--mr-green);
+  font-size: clamp(0.9rem, 2.5vw, 1.25rem);
+  font-weight: 850;
+  white-space: nowrap;
+}
+
+.match-review-topbar .match-review-eyebrow,
+.match-review-topbar .match-review-label {
+  display: none;
+}
+
+.match-review-status {
+  justify-self: end;
+  white-space: nowrap;
+}
+
+@media (max-width: 480px) {
+  .match-review-topbar {
+    gap: 5px;
+  }
+
+  .match-review-back {
+    padding: 6px 8px;
+    font-size: 0.68rem;
+  }
+
+  .match-review-heading h1 {
+    font-size: 0.78rem;
+  }
+
+  .match-review-status {
+    padding: 4px 6px;
+    font-size: 0.6rem;
+  }
 }

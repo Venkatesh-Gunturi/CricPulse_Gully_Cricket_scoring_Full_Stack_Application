@@ -12,19 +12,22 @@ public class MatchCompletionService : IMatchCompletionService
     private readonly IOrganizerStatisticsRepository _organizerStatisticsRepository;
     private readonly ITransactionManager _transactionManager;
     private readonly IUnitOfWork _unitOfWork;
+    private readonly IMatchStateUpdateService _matchStateUpdateService;
 
     public MatchCompletionService(
         IMatchRepository matchRepository,
         IPlayerStatisticsRepository playerStatisticsRepository,
         IOrganizerStatisticsRepository organizerStatisticsRepository,
         ITransactionManager transactionManager,
-        IUnitOfWork unitOfWork)
+        IUnitOfWork unitOfWork,
+        IMatchStateUpdateService matchStateUpdateService)
     {
         _matchRepository = matchRepository;
         _playerStatisticsRepository = playerStatisticsRepository;
         _organizerStatisticsRepository = organizerStatisticsRepository;
         _transactionManager = transactionManager;
         _unitOfWork = unitOfWork;
+        _matchStateUpdateService = matchStateUpdateService;
     }
 
     public async Task FinalizeCompletedMatchAsync(Guid matchId)
@@ -166,6 +169,8 @@ public class MatchCompletionService : IMatchCompletionService
             await _transactionManager.RollbackTransactionAsync();
             throw;
         }
+        await _matchStateUpdateService.GetAndBroadcastMatchStateAsync(matchId);
+
     }
 
     private static List<PlayerMatchStatistics> BuildPlayerStatistics(

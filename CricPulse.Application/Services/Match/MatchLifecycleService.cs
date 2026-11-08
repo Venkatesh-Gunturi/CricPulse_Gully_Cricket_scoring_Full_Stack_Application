@@ -1,6 +1,7 @@
 ﻿
 using CricPulse.Application.Interfaces.Repositories;
 using CricPulse.Application.Interfaces.Services;
+using CricPulse.Application.Services;
 using CricPulse.Domain.Entities;
 using Microsoft.Extensions.Logging;
 
@@ -14,6 +15,7 @@ public class MatchLifecycleService : IMatchLifecycleService
     private readonly IUnitOfWork _unitOfWork;
     private readonly ITransactionManager _transactionManager;
     private readonly ILogger<MatchLifecycleService> _logger;
+    private readonly IMatchStateUpdateService _matchStateUpdateService;
 
     public MatchLifecycleService(
         IMatchRepository matchRepository,
@@ -21,7 +23,8 @@ public class MatchLifecycleService : IMatchLifecycleService
         IMatchCompletionService matchCompletionService,
         IUnitOfWork unitOfWork,
         ITransactionManager transactionManager,
-        ILogger<MatchLifecycleService> logger)
+        ILogger<MatchLifecycleService> logger,
+        IMatchStateUpdateService matchStateUpdateService)
     {
         _matchRepository = matchRepository;
         _organizerStatisticsRepository = organizerStatisticsRepository;
@@ -29,6 +32,8 @@ public class MatchLifecycleService : IMatchLifecycleService
         _unitOfWork = unitOfWork;
         _transactionManager = transactionManager;
         _logger = logger;
+        _matchStateUpdateService = matchStateUpdateService;
+
     }
 
     public async Task ProcessLifecycleAsync()
@@ -109,6 +114,8 @@ public class MatchLifecycleService : IMatchLifecycleService
                 await _unitOfWork.SaveChangesAsync();
 
                 await _transactionManager.CommitTransactionAsync();
+                await _matchStateUpdateService.GetAndBroadcastMatchStateAsync(match.Id);
+
 
                 _logger.LogInformation(
                     "Match {MatchId} automatically cancelled. " +
