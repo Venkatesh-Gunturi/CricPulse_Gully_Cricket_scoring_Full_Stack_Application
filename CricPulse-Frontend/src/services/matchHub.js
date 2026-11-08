@@ -21,9 +21,40 @@ export const createMatchHubConnection = () => {
 
   connection = new HubConnectionBuilder()
     .withUrl(HUB_URL)
-    .withAutomaticReconnect()
+    .withAutomaticReconnect({
+  nextRetryDelayInMilliseconds: (retryContext) => {
+    return Math.min(
+      1000 * Math.pow(2, retryContext.previousRetryCount),
+      10000
+    );
+  },
+})
     .configureLogging(LogLevel.Information)
     .build();
+
+    connection.onreconnecting((error) => {
+  console.warn('[SignalR] Reconnecting...', error);
+});
+
+connection.onreconnected(async (connectionId) => {
+  console.log('[SignalR] Reconnected:', connectionId);
+
+  for (const matchId of joinedMatchIds) {
+    try {
+      await connection.invoke('JoinMatch', matchId);
+      console.log('[SignalR] Rejoined match:', matchId);
+    } catch (error) {
+      console.error(
+        `[SignalR] Failed to rejoin match ${matchId}:`,
+        error
+      );
+    }
+  }
+});
+
+connection.onclose((error) => {
+  console.error('[SignalR] Connection closed:', error);
+});
 
   connection.onreconnected(async () => {
     for (const matchId of joinedMatchIds) {

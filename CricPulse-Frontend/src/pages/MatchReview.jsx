@@ -11,7 +11,12 @@ import { FaArrowLeft, FaInfoCircle, FaHistory, FaTrophy, FaBullseye, FaAward } f
 import { getMatchById,getPublicMatchById} from '../services/matchService';
 import { getMatchState } from '../services/scoringService';
 import { useAuth } from '../context/AuthContext';
-import { createMatchHubConnection } from '../services/matchHub';
+import {
+  startMatchHubConnection,
+  onMatchStateUpdated,
+  joinMatchGroup,
+  leaveMatchGroup,
+} from '../services/matchHub';
 import '../styles/match-review.css';
 
 const getValue = (object, ...keys) => {
@@ -191,8 +196,6 @@ useEffect(() => {
 
   let isActive = true;
 
-  const connection = createMatchHubConnection();
-
   const refreshMatchState = async () => {
     const sequenceBeforeRequest = stateUpdateSequenceRef.current;
 
@@ -217,19 +220,23 @@ useEffect(() => {
     setMatchState(updatedState);
   };
 
-  connection.on('MatchStateUpdated', handleMatchStateUpdated);
+  const unsubscribe = onMatchStateUpdated(
+    handleMatchStateUpdated
+  );
 
-  const startConnection = async () => {
+  const connectToMatch = async () => {
     try {
-      await connection.start();
+      await startMatchHubConnection();
 
       if (!isActive) return;
 
-      await connection.invoke('JoinMatch', matchId);
+      await joinMatchGroup(matchId);
 
-      if (!isActive) return;
+      if (!isActive) {
+        await leaveMatchGroup(matchId);
+        return;
+      }
 
-      // Fetch the latest state after joining the group.
       await refreshMatchState();
 
       console.log('Connected to match updates:', matchId);
@@ -240,47 +247,16 @@ useEffect(() => {
     }
   };
 
-  connection.onreconnected(async () => {
-    if (!isActive) return;
-
-    try {
-      // SignalR groups are connection-specific.
-      // Rejoin the match group after reconnecting.
-      await connection.invoke('JoinMatch', matchId);
-
-      if (!isActive) return;
-
-      await refreshMatchState();
-
-      console.log('Rejoined match updates:', matchId);
-    } catch (error) {
-      console.error('Failed to rejoin match group:', error);
-    }
-  });
-
-  startConnection();
+  connectToMatch();
 
   return () => {
     isActive = false;
 
-    connection.off(
-      'MatchStateUpdated',
-      handleMatchStateUpdated
-    );
+    unsubscribe();
 
-    const stopConnection = async () => {
-      try {
-        if (connection.state === 'Connected') {
-          await connection.invoke('LeaveMatch', matchId);
-        }
-      } catch (error) {
-        console.error('Error leaving match group:', error);
-      } finally {
-        await connection.stop();
-      }
-    };
-
-    stopConnection();
+    leaveMatchGroup(matchId).catch((error) => {
+      console.error('Error leaving match group:', error);
+    });
   };
 }, [matchId, isAudienceView]);
 
