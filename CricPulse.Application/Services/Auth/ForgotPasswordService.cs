@@ -4,7 +4,7 @@ using CricPulse.Application.Interfaces.Repositories;
 using CricPulse.Application.Interfaces.Services;
 
 namespace CricPulse.Application.Services.Auth;
-
+// Handles password reset requests by validating user details and updating password credentials.
 public class ForgotPasswordService : IForgotPasswordService
 {
     private readonly IUserRepository _userRepository;
@@ -20,17 +20,18 @@ public class ForgotPasswordService : IForgotPasswordService
         _unitOfWork = unitOfWork;
         _passwordHasher = passwordHasher;
     }
-
+    // Validates the reset request, verifies the user's identity, and updates their password.
     public async Task RequestPasswordResetAsync(ForgotPasswordDto dto)
     {
+        // Validate the supplied mobile number, email, and new password.
         ValidateRequest(dto);
-
+        // Normalize the mobile number and email before performing the user lookup.
         var mobileNumber = NormalizeMobileNumber(dto.MobileNumber);
         var email = NormalizeEmail(dto.Email);
-
+        // Find the account associated with the supplied mobile number.
         var user = await _userRepository.GetByMobileNumberAsync(
             mobileNumber);
-
+        // Ensure the account exists, is active, and the supplied email matches the account.
         if (user is null ||
             !user.IsActive ||
             !string.Equals(
@@ -41,18 +42,19 @@ public class ForgotPasswordService : IForgotPasswordService
             throw new InvalidOperationException(
                 "The provided mobile number and email do not match our records.");
         }
-
+        // Hash the new password before storing it in the user record.
         user.PasswordHash = _passwordHasher.Hash(dto.NewPassword);
         user.UpdatedAt = DateTime.UtcNow;
 
         await _userRepository.UpdateAsync(user);
+        // Persist the updated password and timestamp.
         await _unitOfWork.SaveChangesAsync();
     }
-
+    // Validates the mobile number, email address, new password, and password confirmation.
     private static void ValidateRequest(ForgotPasswordDto dto)
     {
         NormalizeMobileNumber(dto.MobileNumber);
-
+        // Validate the email format and enforce the maximum supported length.
         if (string.IsNullOrWhiteSpace(dto.Email))
         {
             throw new ArgumentException("Email is required.");
@@ -73,7 +75,7 @@ public class ForgotPasswordService : IForgotPasswordService
             throw new ArgumentException(
                 "Please provide a valid email address.");
         }
-
+        // Enforce the application's password complexity requirements.
         ValidatePassword(dto.NewPassword);
 
         if (string.IsNullOrWhiteSpace(dto.ConfirmPassword))
@@ -88,7 +90,7 @@ public class ForgotPasswordService : IForgotPasswordService
                 "Password and confirm password do not match.");
         }
     }
-
+    // Trims and validates an Indian mobile number against the expected 10-digit format.
     private static string NormalizeMobileNumber(string mobileNumber)
     {
         if (string.IsNullOrWhiteSpace(mobileNumber))
@@ -107,12 +109,12 @@ public class ForgotPasswordService : IForgotPasswordService
 
         return normalized;
     }
-
+    // Removes surrounding whitespace and converts the email address to lowercase.
     private static string NormalizeEmail(string email)
     {
         return email.Trim().ToLowerInvariant();
     }
-
+    // Enforces password length and complexity requirements.
     private static void ValidatePassword(string password)
     {
         if (string.IsNullOrWhiteSpace(password))

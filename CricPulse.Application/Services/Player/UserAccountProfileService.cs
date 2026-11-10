@@ -7,7 +7,9 @@ using CricPulse.Application.Interfaces.Services;
 using CricPulse.Domain.Entities;
 
 namespace CricPulse.Application.Services.Player;
-
+/// <summary>
+/// Manages user profile retrieval, profile updates, and public player profiles.
+/// </summary>
 public sealed class UserAccountProfileService : IUserAccountProfileService
 {
     private readonly IUserRepository _userRepository;
@@ -24,6 +26,7 @@ public sealed class UserAccountProfileService : IUserAccountProfileService
         _playerStatisticsRepository = playerStatisticsRepository;
     }
 
+    // Retrieves an active user's profile along with their player statistics.
     public async Task<UserProfileResponseDto> GetProfileAsync(Guid userId)
     {
         if (userId == Guid.Empty)
@@ -35,7 +38,7 @@ public sealed class UserAccountProfileService : IUserAccountProfileService
             throw new KeyNotFoundException("Active user account was not found.");
 
         var profile = MapProfile(user);
-
+        // Retrieve player statistics separately and attach them when available.
         var stats = await _playerStatisticsRepository
             .GetByUserIdAsync(userId);
 
@@ -71,12 +74,14 @@ public sealed class UserAccountProfileService : IUserAccountProfileService
         return profile;
     }
 
-    public async Task<UserProfileResponseDto> UpdateProfileAsync(
-        Guid userId,
-        UpdateUserProfileDto dto)
+    // Updates a user's personal and cricket-related profile details
+    // after validating the supplied information.
+    public async Task<UserProfileResponseDto> UpdateProfileAsync(Guid userId, UpdateUserProfileDto dto)
     {
         ArgumentNullException.ThrowIfNull(dto);
-
+        if (userId == Guid.Empty)
+            throw new ArgumentException("User ID is required.");
+        // Normalize user-provided values before validation and database updates.
         var firstName = NormalizeName(dto.FirstName, "First name", required: true)!;
         var lastName = NormalizeName(dto.LastName, "Last name", required: false);
         var mobileNumber = (dto.MobileNumber ?? string.Empty).Trim();
@@ -92,7 +97,7 @@ public sealed class UserAccountProfileService : IUserAccountProfileService
         {
             throw new KeyNotFoundException("Active user account was not found.");
         }
-
+        // Ensure the updated contact details are not already owned by another user.
         var mobileOwner =
             await _userRepository.GetByMobileNumberAsync(mobileNumber);
 
@@ -115,6 +120,7 @@ public sealed class UserAccountProfileService : IUserAccountProfileService
         user.MobileNumber = mobileNumber;
         user.Email = email;
         user.ProfileImageUrl = profileImageUrl;
+        // Validate optional cricket profile fields against the supported values.
         ValidateCricketDetails(dto);
         user.DateOfBirth = dto.DateOfBirth;
         user.Gender = NormalizeOptional(dto.Gender);
@@ -131,10 +137,7 @@ public sealed class UserAccountProfileService : IUserAccountProfileService
         return MapProfile(user);
     }
 
-    private static string? NormalizeName(
-        string? value,
-        string fieldName,
-        bool required)
+    private static string? NormalizeName(string? value, string fieldName, bool required)
     {
         var name = value?.Trim();
 
@@ -266,9 +269,10 @@ public sealed class UserAccountProfileService : IUserAccountProfileService
 
         return url;
     }
-
-    public async Task<PublicPlayerProfileResponseDto> GetPublicProfileAsync(
-    Guid userId)
+ 
+    // Retrieves an active player's public profile and statistics
+    // without exposing private account contact information.
+    public async Task<PublicPlayerProfileResponseDto> GetPublicProfileAsync(Guid userId)
     {
         if (userId == Guid.Empty)
             throw new ArgumentException("User ID is required.");
@@ -279,7 +283,7 @@ public sealed class UserAccountProfileService : IUserAccountProfileService
             throw new KeyNotFoundException("Active player profile was not found.");
 
         var age = CalculateAge(user.DateOfBirth);
-
+        // Expose public profile information without including private contact details.
         var profile = new PublicPlayerProfileResponseDto
         {
             UserId = user.Id,
@@ -293,7 +297,7 @@ public sealed class UserAccountProfileService : IUserAccountProfileService
             BowlingStyle = user.BowlingStyle,
             PlayerRole = user.PlayerRole
         };
-
+        // Attach career statistics when a statistics record exists.
         var stats = await _playerStatisticsRepository.GetByUserIdAsync(userId);
 
         if (stats is not null)
@@ -328,6 +332,8 @@ public sealed class UserAccountProfileService : IUserAccountProfileService
         return profile;
     }
 
+    // Calculates a person's age using their date of birth.
+    // Returns null when the date of birth is unavailable or invalid.
     private static int? CalculateAge(DateTime? dateOfBirth)
     {
         if (!dateOfBirth.HasValue)
@@ -335,7 +341,7 @@ public sealed class UserAccountProfileService : IUserAccountProfileService
 
         var today = DateTime.UtcNow.Date;
         var birthDate = dateOfBirth.Value.Date;
-
+        // Adjust the year difference if the birthday has not occurred yet this year.
         var age = today.Year - birthDate.Year;
 
         if (birthDate > today.AddYears(-age))

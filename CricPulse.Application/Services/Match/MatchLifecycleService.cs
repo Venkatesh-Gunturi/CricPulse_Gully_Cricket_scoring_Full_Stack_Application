@@ -6,7 +6,8 @@ using CricPulse.Domain.Entities;
 using Microsoft.Extensions.Logging;
 
 namespace CricPulse.Application.Services.Match;
-
+// Manages automatic match cancellation, completion finalization,
+// and deletion based on the match lifecycle and retention rules.
 public class MatchLifecycleService : IMatchLifecycleService
 {
     private readonly IMatchRepository _matchRepository;
@@ -33,9 +34,11 @@ public class MatchLifecycleService : IMatchLifecycleService
         _transactionManager = transactionManager;
         _logger = logger;
         _matchStateUpdateService = matchStateUpdateService;
-
     }
 
+    // Runs all scheduled match lifecycle operations in sequence:
+    // cancels unstarted matches, finalizes finished matches,
+    // and removes matches that have exceeded the retention period.
     public async Task ProcessLifecycleAsync()
     {
         await CancelUnstartedUpcomingMatchesAsync();
@@ -43,6 +46,10 @@ public class MatchLifecycleService : IMatchLifecycleService
         await DeleteExpiredMatchesAsync();
     }
 
+    // Automatically cancels Upcoming matches that were never started
+    // within 24 hours of their scheduled start time.
+    // Updates the organizer's cancellation statistics and broadcasts
+    // the updated match state after the transaction is committed.
     private async Task CancelUnstartedUpcomingMatchesAsync()
     {
         var matches =
@@ -68,7 +75,7 @@ public class MatchLifecycleService : IMatchLifecycleService
                 continue;
             }
 
-            // Allow the umpire 24 hours after the scheduled time.
+            // Calculate the cancellation deadline using the scheduled match time.
             var cancellationDeadline = match.ScheduledAt.AddHours(24);
 
             if (cancellationDeadline > now)
@@ -93,7 +100,8 @@ public class MatchLifecycleService : IMatchLifecycleService
             match.CancellationReason = "Umpire unavailable";
             match.CancelledAt = now;
             match.UpdatedAt = now;
-
+            // Save the match cancellation and organizer statistics together
+            // so both changes succeed or roll back as one operation.
             await _transactionManager.BeginTransactionAsync();
 
             try
@@ -114,6 +122,7 @@ public class MatchLifecycleService : IMatchLifecycleService
                 await _unitOfWork.SaveChangesAsync();
 
                 await _transactionManager.CommitTransactionAsync();
+                // Notify connected clients only after the database transaction succeeds.
                 await _matchStateUpdateService.GetAndBroadcastMatchStateAsync(match.Id);
 
 
@@ -137,6 +146,8 @@ public class MatchLifecycleService : IMatchLifecycleService
         }
     }
 
+    // Ensures player statistics are finalized for every Finished match
+    // before the match becomes eligible for automatic deletion.
     private async Task FinalizeUnfinalizedFinishedMatchesAsync()
     {
         var matches =
@@ -144,6 +155,7 @@ public class MatchLifecycleService : IMatchLifecycleService
 
         foreach (var match in matches)
         {
+            // Skip matches whose player statistics have already been finalized.
             if (match.PlayerStatisticsFinalized)
                 continue;
 
@@ -152,6 +164,9 @@ public class MatchLifecycleService : IMatchLifecycleService
         }
     }
 
+    // Deletes Finished and Cancelled matches once they are at least
+    // seven days old, based on their actual completion or cancellation time.
+    // Finished matches are deleted only after player statistics are finalized.
     private async Task DeleteExpiredMatchesAsync()
     {
         var now = DateTime.UtcNow;
@@ -162,9 +177,8 @@ public class MatchLifecycleService : IMatchLifecycleService
             now,
             expiry);
 
-        // -----------------------------------------
-        // 1. Delete Finished matches
-        // -----------------------------------------
+        // Delete Finished matches after verifying that statistics are finalized
+        // and the match has been finished for at least seven days.
 
         var finishedMatches =
             await _matchRepository.GetByStatusAsync("Finished");
@@ -211,9 +225,7 @@ public class MatchLifecycleService : IMatchLifecycleService
             await _matchRepository.DeleteAsync(match);
         }
 
-        // -----------------------------------------
-        // 2. Delete Cancelled matches
-        // -----------------------------------------
+        // Delete Cancelled matches that have remained cancelled for at least seven days.
 
         var cancelledMatches =
             await _matchRepository.GetByStatusAsync("Cancelled");
@@ -251,9 +263,7 @@ public class MatchLifecycleService : IMatchLifecycleService
             await _matchRepository.DeleteAsync(match);
         }
 
-        // -----------------------------------------
-        // 3. Save all deletions
-        // -----------------------------------------
+        // Persist all eligible match deletions in a single save operation.
 
         await _unitOfWork.SaveChangesAsync();
 

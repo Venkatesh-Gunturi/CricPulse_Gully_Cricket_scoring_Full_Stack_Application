@@ -7,7 +7,10 @@ using CricPulse.Application.Interfaces.Services;
 using CricPulse.Domain.Entities;
 
 namespace CricPulse.Application.Services.Player;
-
+/// <summary>
+/// Handles player lookup, onboarding, and roster-player validation
+/// using mobile numbers and email addresses.
+/// </summary>
 public class PlayerLookupService
 {
     private readonly IUserRepository _userRepository;
@@ -30,9 +33,11 @@ public class PlayerLookupService
         _transactionManager = transactionManager;
     }
 
-    public async Task<PlayerLookupDto?> FindByIdentifierAsync(
-        string? mobileNumber,
-        string? email)
+    /// <summary>
+    /// Finds an existing player using a mobile number, email address, or both.
+    /// If both identifiers are supplied, they must belong to the same account.
+    /// </summary>
+    public async Task<PlayerLookupDto?> FindByIdentifierAsync(string? mobileNumber, string? email)
     {
         var mobile = NormalizeMobile(mobileNumber);
         var normalizedEmail = NormalizeEmail(email);
@@ -68,8 +73,11 @@ public class PlayerLookupService
         return MapPlayer(user);
     }
 
-    public async Task<PlayerLookupDto> OnboardAsync(
-        OnboardPlayerDto dto)
+    /// <summary>
+    /// Creates a new player account and its statistics record after validating
+    /// the player's contact details and ensuring they are not already registered.
+    /// </summary>
+    public async Task<PlayerLookupDto> OnboardAsync(OnboardPlayerDto dto)
     {
         ArgumentNullException.ThrowIfNull(dto);
 
@@ -80,9 +88,7 @@ public class PlayerLookupService
             ?? throw new ArgumentException("Email is required.");
 
         var firstName = dto.FirstName.Trim();
-        var lastName = string.IsNullOrWhiteSpace(dto.LastName)
-            ? null
-            : dto.LastName.Trim();
+        var lastName = string.IsNullOrWhiteSpace(dto.LastName) ? null : dto.LastName.Trim();
 
         if (firstName.Length == 0)
             throw new ArgumentException("First name is required.");
@@ -114,18 +120,20 @@ public class PlayerLookupService
             LastName = lastName is null ? null : Capitalize(lastName),
             MobileNumber = mobile,
             Email = email,
+            // Generate a random password because umpire-onboarded players
+            // will set their own password later through Forgot Password.
             PasswordHash = _passwordHasher.Hash(
                 Convert.ToBase64String(RandomNumberGenerator.GetBytes(32))),
             IsActive = true,
             CreatedAt = now,
             UpdatedAt = now
         };
-
+        // Create the player's statistics record along with their account.
         var statistics = new PlayerStatistics
         {
             UserId = user.Id
         };
-
+        // Keep account creation and statistics creation in a single transaction.
         await _transactionManager.BeginTransactionAsync();
 
         try
@@ -145,6 +153,9 @@ public class PlayerLookupService
         }
     }
 
+    /// <summary>
+    /// Converts a User entity into the player lookup response DTO.
+    /// </summary>
     private static PlayerLookupDto MapPlayer(User user)
     {
         return new PlayerLookupDto
@@ -157,6 +168,10 @@ public class PlayerLookupService
         };
     }
 
+    /// <summary>
+    /// Trims and validates an Indian 10-digit mobile number.
+    /// Returns null when no mobile number is supplied.
+    /// </summary>
     private static string? NormalizeMobile(string? value)
     {
         if (string.IsNullOrWhiteSpace(value))
@@ -171,6 +186,10 @@ public class PlayerLookupService
         return mobile;
     }
 
+    /// <summary>
+    /// Trims and converts an email address to lowercase before validating it.
+    /// Returns null when no email address is supplied.
+    /// </summary>
     private static string? NormalizeEmail(string? value)
     {
         if (string.IsNullOrWhiteSpace(value))
@@ -187,6 +206,9 @@ public class PlayerLookupService
         return email;
     }
 
+    /// <summary>
+    /// Capitalizes the first character of a name while preserving the remaining characters.
+    /// </summary>
     private static string Capitalize(string value)
     {
         return value.Length == 1
@@ -194,10 +216,13 @@ public class PlayerLookupService
             : char.ToUpperInvariant(value[0]) + value[1..];
     }
 
-
-    public async Task<PlayerLookupDto?> ValidateRosterPlayerAsync(
-        ValidateRosterPlayerDto dto,
-        Guid createdByUserId)
+    /// <summary>
+    /// Validates a player identifier before adding the player to a match roster.
+    /// Checks account status, organizer identity, and duplicates across both teams.
+    /// Returns null when the identifier does not belong to a registered user,
+    /// allowing the frontend to offer player onboarding.
+    /// </summary>
+    public async Task<PlayerLookupDto?> ValidateRosterPlayerAsync(ValidateRosterPlayerDto dto, Guid createdByUserId)
     {
         ArgumentNullException.ThrowIfNull(dto);
 

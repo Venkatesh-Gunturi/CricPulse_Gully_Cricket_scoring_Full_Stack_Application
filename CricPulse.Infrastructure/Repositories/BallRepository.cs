@@ -4,21 +4,21 @@ using CricPulse.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 
 namespace CricPulse.Infrastructure.Repositories;
-
+// Handles database operations for Ball entities.
 public class BallRepository : RepositoryBase<Ball>, IBallRepository
 {
-    public BallRepository(CricPulseDbContext context)
-        : base(context)
+    public BallRepository(CricPulseDbContext context) : base(context)
     {
     }
-
+    // Retrieves a ball by ID along with its associated wicket.
     public async Task<Ball?> GetByIdAsync(Guid ballId)
     {
         return await DbSet
             .Include(x => x.Wicket)
             .FirstOrDefaultAsync(x => x.Id == ballId);
     }
-
+    // Retrieves the most recently created ball in the specified innings,
+    // including its associated wicket.
     public async Task<Ball?> GetLastBallAsync(Guid inningsId)
     {
         return await DbSet
@@ -32,7 +32,7 @@ public class BallRepository : RepositoryBase<Ball>, IBallRepository
     {
         await AddEntityAsync(ball);
     }
-
+    // Marks the specified ball for deletion from the database.
     public Task DeleteAsync(Ball ball)
     {
         RemoveEntity(ball);

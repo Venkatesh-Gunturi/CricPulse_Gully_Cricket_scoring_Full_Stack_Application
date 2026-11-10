@@ -13,12 +13,12 @@ import {
 import { FaTelegramPlane } from 'react-icons/fa';
 
 const socialLinks = [
-  { label: 'Facebook', href: 'https://facebook.com/', Icon: FaFacebookF },
-  { label: 'Instagram', href: 'https://instagram.com/', Icon: FaInstagram },
-  { label: 'X', href: 'https://x.com/', Icon: FaXTwitter },
-  { label: 'LinkedIn', href: 'https://linkedin.com/', Icon: FaLinkedinIn },
-  { label: 'GitHub', href: 'https://github.com/', Icon: FaGithub },
-  { label: 'Email', href: 'mailto:hello@example.com', Icon: FaEnvelope },
+  { label: 'Facebook', href: 'https://www.facebook.com/nani.nanna.946', Icon: FaFacebookF },
+  { label: 'Instagram', href: 'https://www.instagram.com/nani_venky_404', Icon: FaInstagram },
+  { label: 'X', href: 'https://x.com/Nani66035', Icon: FaXTwitter },
+  { label: 'LinkedIn', href: 'https://www.linkedin.com/in/gunturi-venkatesh-82037b267', Icon: FaLinkedinIn },
+  { label: 'GitHub', href: 'https://github.com/Venkatesh-Gunturi', Icon: FaGithub },
+  { label: 'Email', href: 'mailto:nani66035@email.com', Icon: FaEnvelope },
   { label: 'Telegram', href: 'https://telegram.org/', Icon: FaTelegramPlane },
 ];
 

@@ -4,7 +4,8 @@ using CricPulse.Domain.Entities;
 using MatchEntity= CricPulse.Domain.Entities.Match;
 
 namespace CricPulse.Application.Services.Match;
-
+// Finalizes completed matches, updates player and organizer statistics,
+// calculates the MVP, and broadcasts the updated match state.
 public class MatchCompletionService : IMatchCompletionService
 {
     private readonly IMatchRepository _matchRepository;
@@ -30,10 +31,13 @@ public class MatchCompletionService : IMatchCompletionService
         _matchStateUpdateService = matchStateUpdateService;
     }
 
+    // Finalizes a completed match by calculating and saving statistics,
+    // determining the MVP, and broadcasting the updated match state.
     public async Task FinalizeCompletedMatchAsync(Guid matchId)
     {
+        // Retrieve the match and its related scoring information.
         var match = await _matchRepository.GetByIdAsync(matchId);
-
+        // Ensure the match exists, is finished, and has not already been finalized.
         if (match is null)
             throw new InvalidOperationException("Match was not found.");
 
@@ -43,7 +47,7 @@ public class MatchCompletionService : IMatchCompletionService
 
         if (match.PlayerStatisticsFinalized)
             return;
-
+        // A finished match must have a completion timestamp before finalization.
         if (match.FinishedAt is null)
             throw new InvalidOperationException(
                 "Finished match does not have a completion timestamp.");
@@ -70,10 +74,10 @@ public class MatchCompletionService : IMatchCompletionService
                 await _transactionManager.CommitTransactionAsync();
                 return;
             }
-
+            // Calculate individual batting, bowling, and fielding statistics for this match.
             var playerMatchStatistics =
                 BuildPlayerStatistics(match);
-
+            // Calculate MVP scores and apply tie-breakers to determine the winner.
             var mvpWinner = playerMatchStatistics
     .Select(player => new
     {
@@ -93,7 +97,7 @@ public class MatchCompletionService : IMatchCompletionService
     .ThenByDescending(x => x.Player.Runs)
     .ThenBy(x => x.Player.UserId)
     .FirstOrDefault();
-
+            // Update each player's career statistics using their performance in this match.
             foreach (var item in playerMatchStatistics)
             {
                 var statistics =
@@ -114,7 +118,7 @@ public class MatchCompletionService : IMatchCompletionService
                     statistics,
                     item);
             }
-
+            // Update the match creator's organizer statistics.
             var organizerStatistics =
                 await _organizerStatisticsRepository.GetByUserIdAsync(match.CreatedByUserId);
             var isNewOrganizerStatistics = organizerStatistics is null;
@@ -127,7 +131,7 @@ public class MatchCompletionService : IMatchCompletionService
                 await _organizerStatisticsRepository.AddAsync(organizerStatistics);
             else
                 await _organizerStatisticsRepository.UpdateAsync(organizerStatistics);
-
+            // Award the MVP only when a winner has a positive performance score.
             if (mvpWinner is not null && mvpWinner.Score > 0)
             {
                 var mvpUser = await _playerStatisticsRepository
@@ -154,28 +158,32 @@ public class MatchCompletionService : IMatchCompletionService
                     match.MVPScore = mvpWinner.Score;
                 }
             }
-
+            // Award the MVP only when a winner has a positive performance score.
             match.PlayerStatisticsFinalized = true;
             match.UpdatedAt = DateTime.UtcNow;
 
             await _matchRepository.UpdateAsync(match);
-
+            // Persist all player, organizer, and match updates before committing.
             await _unitOfWork.SaveChangesAsync();
-
+            // Commit the statistics and match updates together.
             await _transactionManager.CommitTransactionAsync();
         }
         catch
         {
+            // Roll back all changes if match finalization fails.
             await _transactionManager.RollbackTransactionAsync();
             throw;
         }
+        // Broadcast the updated match state after the transaction commits successfully.
         await _matchStateUpdateService.GetAndBroadcastMatchStateAsync(matchId);
 
     }
 
-    private static List<PlayerMatchStatistics> BuildPlayerStatistics(
-        MatchEntity match)
+    // Calculates batting, bowling, and fielding statistics for every player
+    // who participated in the match.
+    private static List<PlayerMatchStatistics> BuildPlayerStatistics(MatchEntity match)
     {
+        // Initialize a statistics record for every player in the match roster.
         var result = match.MatchPlayers
             .ToDictionary(
                 x => x.UserId,
@@ -196,9 +204,7 @@ public class MatchCompletionService : IMatchCompletionService
                 .Distinct()
                 .ToList();
 
-            /*
-             * Include players who participated but faced zero balls.
-             */
+            // Identify players who participated in batting, including both striker and non-striker.
             if (innings.CurrentStrikerMatchPlayerId.HasValue)
             {
                 battingPlayers.Add(
@@ -226,9 +232,9 @@ public class MatchCompletionService : IMatchCompletionService
                 {
                     continue;
                 }
-
+                // Count one batting innings for this player in the current innings.
                 playerStats.Innings++;
-
+                // Calculate runs, balls faced, boundaries, and individual innings milestones.
                 var playerBalls = innings.Balls
                     .Where(x =>
                         x.StrikerMatchPlayerId == matchPlayerId)
@@ -264,7 +270,7 @@ public class MatchCompletionService : IMatchCompletionService
                 {
                     playerStats.Hundreds++;
                 }
-
+                // Determine whether the player was dismissed in this innings.
                 var dismissed = innings.Balls
                     .Where(x => x.Wicket is not null)
                     .Any(x =>
@@ -277,9 +283,7 @@ public class MatchCompletionService : IMatchCompletionService
                 }
             }
 
-            /*
-             * Bowling statistics.
-             */
+            // Group deliveries by bowler to calculate each bowler's performance.
             var bowlingPlayers = innings.Balls
                 .GroupBy(x => x.BowlerMatchPlayerId);
 
@@ -306,7 +310,7 @@ public class MatchCompletionService : IMatchCompletionService
 
                 playerStats.RunsConceded += bowlingGroup.Sum(
                     GetBowlerRuns);
-
+                // Exclude run-outs because they are not credited to the bowler.
                 var wicketsInInnings =
                     bowlingGroup
                         .Where(x => x.Wicket is not null)
@@ -353,7 +357,7 @@ public class MatchCompletionService : IMatchCompletionService
                         }
                     }
                 }
-
+                // Record bowling milestones based on wickets taken in this innings.
                 if (wicketsInInnings >= 3)
                 {
                     playerStats.ThreeWicketHauls++;
@@ -363,7 +367,7 @@ public class MatchCompletionService : IMatchCompletionService
                 {
                     playerStats.FiveWicketHauls++;
                 }
-
+                // Format the bowling figures as wickets taken and runs conceded.
                 var bestBowling =
                     $"{wicketsInInnings}/{bowlingGroup.Sum(GetBowlerRuns)}";
 
@@ -387,6 +391,7 @@ public class MatchCompletionService : IMatchCompletionService
 
                 if (wicket.CaughtByMatchPlayerId.HasValue)
                 {
+                    // Credit the player responsible for taking the catch.
                     var catcher =
                         match.MatchPlayers.FirstOrDefault(
                             x =>
@@ -401,7 +406,7 @@ public class MatchCompletionService : IMatchCompletionService
                         catcherStats.Catches++;
                     }
                 }
-
+                // Credit the player responsible for the run-out.
                 if (wicket.RunOutByMatchPlayerId.HasValue)
                 {
                     var runOutPlayer =
@@ -418,7 +423,7 @@ public class MatchCompletionService : IMatchCompletionService
                         runOutStats.RunOuts++;
                     }
                 }
-
+                // Credit the wicketkeeper responsible for the stumping.
                 if (wicket.StumpedByMatchPlayerId.HasValue)
                 {
                     var keeper =
@@ -441,6 +446,7 @@ public class MatchCompletionService : IMatchCompletionService
         return result.Values.ToList();
     }
 
+    // Calculates the runs charged to the bowler, excluding byes and leg-byes.
     private static int GetBowlerRuns(Ball ball)
     {
         /*
@@ -453,9 +459,8 @@ public class MatchCompletionService : IMatchCompletionService
         return ball.Runs;
     }
 
-    private static bool IsBetterBowling(
-        string candidate,
-        string? existing)
+    // Compares two bowling figures, prioritizing more wickets and then fewer runs conceded.
+    private static bool IsBetterBowling(string candidate, string? existing)
     {
         if (existing is null)
             return true;
@@ -468,7 +473,7 @@ public class MatchCompletionService : IMatchCompletionService
         {
             return false;
         }
-
+        // Split and parse the bowling figures to compare wickets and runs numerically.
         if (!int.TryParse(candidateParts[0], out var candidateWickets) ||
             !int.TryParse(candidateParts[1], out var candidateRuns) ||
             !int.TryParse(existingParts[0], out var existingWickets) ||
@@ -485,9 +490,8 @@ public class MatchCompletionService : IMatchCompletionService
         return candidateRuns < existingRuns;
     }
 
-    private static void ApplyPlayerStatistics(
-        PlayerStatistics target,
-        PlayerMatchStatistics source)
+    // Adds the player's match performance to their existing career statistics.
+    private static void ApplyPlayerStatistics(PlayerStatistics target, PlayerMatchStatistics source)
     {
         target.Matches += 1;
         target.Innings += source.Innings;
@@ -497,7 +501,7 @@ public class MatchCompletionService : IMatchCompletionService
         target.Sixes += source.Sixes;
         target.Fifties += source.Fifties;
         target.Hundreds += source.Hundreds;
-
+        // Preserve the highest individual score recorded across all matches.
         if (source.HighestScore > target.HighestScore)
         {
             target.HighestScore = source.HighestScore;
@@ -516,7 +520,7 @@ public class MatchCompletionService : IMatchCompletionService
         target.Catches += source.Catches;
         target.RunOuts += source.RunOuts;
         target.Stumpings += source.Stumpings;
-
+        // Update the career best bowling figures when the current performance is better.
         if (IsBetterBowling(
                 source.BestBowling ?? "0/0",
                 target.BestBowling))
@@ -526,6 +530,10 @@ public class MatchCompletionService : IMatchCompletionService
         }
     }
 
+
+
+    // Holds temporary player statistics calculated from a single match before
+    // they are applied to the player's career record.
     private sealed class PlayerMatchStatistics
     {
         public Guid UserId { get; init; }

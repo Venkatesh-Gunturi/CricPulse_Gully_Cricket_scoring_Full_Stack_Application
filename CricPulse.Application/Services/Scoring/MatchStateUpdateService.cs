@@ -6,25 +6,25 @@ using CricPulse.Domain.Entities;
 using MatchEntity = CricPulse.Domain.Entities.Match;
 
 namespace CricPulse.Application.Services.Scoring;
-
+/// <summary>
+/// Builds the current match state, including innings scores,
+/// player statistics, and live scoring information.
+/// </summary>
 public class MatchStateUpdateService : IMatchStateUpdateService
 {
     private readonly IMatchRepository _matchRepository;
     private readonly IMatchUpdateNotifier _matchUpdateNotifier;
    
-
     public MatchStateUpdateService(
         IMatchRepository matchRepository,
-        IMatchUpdateNotifier matchUpdateNotifier
-        )
+        IMatchUpdateNotifier matchUpdateNotifier)
     {
         _matchRepository = matchRepository;
-        _matchUpdateNotifier = matchUpdateNotifier;
-        
+        _matchUpdateNotifier = matchUpdateNotifier;      
     }
 
-    public async Task<MatchStateDto> GetCurrentMatchStateAsync(
-        Guid matchId)
+    // Retrieves the latest match state and maps it into a response DTO.
+    public async Task<MatchStateDto> GetCurrentMatchStateAsync(Guid matchId)
     {
         var match = await _matchRepository.GetByIdAsync(matchId);
 
@@ -37,8 +37,8 @@ public class MatchStateUpdateService : IMatchStateUpdateService
         return MapState(match);
     }
 
-    public async Task<MatchStateDto> GetAndBroadcastMatchStateAsync(
-        Guid matchId)
+    // Retrieves the latest match state and broadcasts it to connected clients.
+    public async Task<MatchStateDto> GetAndBroadcastMatchStateAsync(Guid matchId)
     {
         var state = await GetCurrentMatchStateAsync(matchId);
 
@@ -49,6 +49,8 @@ public class MatchStateUpdateService : IMatchStateUpdateService
         return state;
     }
 
+    // Maps match and innings entities into a complete match-state response,
+    // including current player details and scorecard calculations.
     private static MatchStateDto MapState(MatchEntity match)
     {
         var players = match.MatchPlayers.ToList();
@@ -57,7 +59,7 @@ public class MatchStateUpdateService : IMatchStateUpdateService
         {
             if (!matchPlayerId.HasValue)
                 return "—";
-
+            // Resolve the match-player ID against the match roster.
             var player = players.FirstOrDefault(
                 p => p.Id == matchPlayerId.Value);
 
@@ -94,7 +96,7 @@ public class MatchStateUpdateService : IMatchStateUpdateService
                         .ThenBy(b => b.BallNumber)
                         .ThenBy(b => b.CreatedAt)
                         .ToList();
-
+                    // Calculate the remaining runs and legal balls needed to reach the target.
                     int? runsRequired = x.TargetRuns.HasValue
                         ? Math.Max(0, x.TargetRuns.Value - x.TotalRuns)
                         : null;
@@ -107,7 +109,7 @@ public class MatchStateUpdateService : IMatchStateUpdateService
                         ? Math.Round(
                             (decimal)x.TotalRuns / x.LegalBalls * 6, 2)
                         : null;
-
+                    // Calculate current and required run rates using legal deliveries only.
                     decimal? requiredRunRate =
                         runsRequired.HasValue &&
                         ballsRemaining.HasValue &&
@@ -395,12 +397,16 @@ public class MatchStateUpdateService : IMatchStateUpdateService
                         BowlingRecords = bowlingRecords,
 
                         StrikerRuns = strikerBalls.Sum(b => b.BatterRuns),
-                        StrikerBalls = strikerBalls.Count(b => b.IsLegalDelivery),
+                        StrikerBalls = strikerBalls.Count(b =>
+                        b.ExtraType != "WIDE" &&
+                        (b.IsLegalDelivery || b.ExtraType == "NO BALL")),
                         StrikerFours = strikerBalls.Count(b => b.BatterRuns == 4),
                         StrikerSixes = strikerBalls.Count(b => b.BatterRuns == 6),
 
                         NonStrikerRuns = nonStrikerBalls.Sum(b => b.BatterRuns),
-                        NonStrikerBalls = nonStrikerBalls.Count(b => b.IsLegalDelivery),
+                        NonStrikerBalls = nonStrikerBalls.Count(b =>
+                            b.ExtraType != "WIDE" &&
+                            (b.IsLegalDelivery || b.ExtraType == "NO BALL")),
                         NonStrikerFours = nonStrikerBalls.Count(b => b.BatterRuns == 4),
                         NonStrikerSixes = nonStrikerBalls.Count(b => b.BatterRuns == 6),
 

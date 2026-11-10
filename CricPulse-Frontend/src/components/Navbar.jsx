@@ -46,24 +46,16 @@ function Navbar() {
     setLoginMode('Player');
     setActiveModal('login');
   };
-
-  
-const handleLoginSuccess = (
-  authenticatedUser,
-  selectedMode,
-  rememberMe
-) => {
+ 
+const handleLoginSuccess = (authenticatedUser,selectedMode,rememberMe  ) => {
   const nextRole = selectedMode === 'Umpire' ? 'Umpire' : 'Player';
 
   setUser(authenticatedUser, rememberMe);
   setRole(nextRole, rememberMe);
-
   setActiveModal(null);
   closeMenu();
-
   navigate(nextRole === 'Umpire' ? '/umpire' : '/');
 };
-
 
   const handleLogout = () => {
     logout();
@@ -93,8 +85,8 @@ const handleLoginSuccess = (
   return (
     <>
       <header className="site-navbar sticky-top">
-        <nav className="container-fluid navbar-shell px-5">
-          <div className="navbar-left">
+        <nav className="container-fluid navbar-shell px-3">
+            <div className="navbar-left">
             <button
               className="mobile-menu-toggle"
               type="button"

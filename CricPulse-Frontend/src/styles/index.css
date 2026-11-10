@@ -75,7 +75,6 @@ input:focus-visible {
   flex: 1;
 }
 
-
 /* Navbar */
 
 .site-navbar {
@@ -202,10 +201,11 @@ input:focus-visible {
 
 @media (max-width: 767.98px) {
   .navbar-shell {
-    min-height: 68px;
-    gap: 0.5rem;
-  }
-
+  min-height: 68px;
+  gap: 0.5rem;
+  padding-left: 0.5rem;
+  padding-right: 0.5rem;
+}
   .navbar-left {
     gap: 0.55rem;
   }
@@ -295,12 +295,33 @@ input:focus-visible {
 
 .footer-compact {
   display: flex;
+  flex-direction: column;
   align-items: center;
-  justify-content: space-between;
-  gap: 1.5rem;
-  padding: 0.25rem 0 0.75rem;
+  justify-content: center;
+  gap: 1.25rem;
+  padding: 0.5rem 0 1rem;
+  text-align: center;
+}
+.footer-identity,
+.footer-community {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+  text-align: center;
 }
 
+.footer-love {
+  justify-content: center;
+}
+
+.footer-socials {
+  justify-content: center;
+}
+
+.footer-heading {
+  text-align: center;
+}
 .footer-brand {
   display: inline-flex;
   align-items: center;
@@ -352,8 +373,8 @@ input:focus-visible {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 34px;
-  height: 34px;
+  width: 42px;
+ height: 42px;
   border: 1px solid rgb(255 255 255 / 18%);
   border-radius: 9px;
   color: #ffffff;
@@ -374,13 +395,16 @@ input:focus-visible {
 .footer-bottom {
   display: flex;
   flex-wrap: wrap;
-  justify-content: space-between;
-  gap: 0.5rem;
-  padding-top: 0.65rem;
+  justify-content: center;
+  align-items: center;
+  gap: 0.5rem 1rem;
+  padding-top: 0.75rem;
   border-top: 1px solid rgb(255 255 255 / 18%);
   color: #c4d7cc;
   font-size: 0.75rem;
+  text-align: center;
 }
+
 
 @media (max-width: 575.98px) {
   .footer-compact {

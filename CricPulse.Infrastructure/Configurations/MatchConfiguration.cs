@@ -3,9 +3,10 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace CricPulse.Infrastructure.Configurations;
-
+// Defines database constraints, indexes, and relationships for Match entities.
 public class MatchConfiguration : IEntityTypeConfiguration<Match>
 {
+    // Configures match properties, creator relationship, and database indexes.
     public void Configure(EntityTypeBuilder<Match> builder)
     {
         builder.ToTable("Matches");
@@ -70,18 +71,18 @@ public class MatchConfiguration : IEntityTypeConfiguration<Match>
 
         builder.Property(x => x.CancellationReason)
             .HasMaxLength(500);
-
+        // Prevents deleting a user while matches created by that user still exist.
         builder.HasOne(x => x.CreatedByUser)
             .WithMany()
             .HasForeignKey(x => x.CreatedByUserId)
             .OnDelete(DeleteBehavior.Restrict);
-
+        // Supports geographic filtering when searching for nearby matches.
         builder.HasIndex(x => new
         {
             x.Latitude,
             x.Longitude
         });
-
+        // Improves filtering and sorting by state, status, and scheduled date.
         builder.HasIndex(x => x.State);
 
         builder.HasIndex(x => x.Status);

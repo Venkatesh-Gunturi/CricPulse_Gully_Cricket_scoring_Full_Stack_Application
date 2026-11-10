@@ -5,8 +5,12 @@ using CricPulse.Application.Interfaces.Repositories;
 using CricPulse.Application.Interfaces.Services;
 using CricPulse.Domain.Entities;
 using MatchEntity = CricPulse.Domain.Entities.Match;
-namespace CricPulse.Application.Services.Match;
 
+namespace CricPulse.Application.Services.Match;
+/// <summary>
+/// Handles match creation, updates, cancellation, discovery, and retrieval.
+/// Also resolves roster players and validates match-related business rules.
+/// </summary>
 public class MatchService : IMatchService
 {
     private readonly IUserRepository _userRepository;
@@ -38,7 +42,11 @@ public class MatchService : IMatchService
         _reverseGeocodingService = reverseGeocodingService;
     }
 
-
+    /// <summary>
+    /// Creates a match after validating its details, resolving its location,
+    /// and assigning registered or newly created users to the team rosters.
+    /// Match creation and related statistics updates are saved in one transaction.
+    /// </summary>
     public async Task<MatchCreatedDto> CreateMatchAsync(CreateMatchDto dto)
     {
         ValidateMatch(dto);
@@ -192,10 +200,11 @@ public class MatchService : IMatchService
         }
     }
 
-
-    private async Task<ResolvedPlayer> ResolvePlayerAsync(
-        Guid createdByUserId,
-        MatchPlayerInputDto dto)
+    /// <summary>
+    /// Resolves a roster entry to an existing user account or creates a new one.
+    /// When both mobile and email are supplied, they must identify the same account.
+    /// </summary>
+    private async Task<ResolvedPlayer> ResolvePlayerAsync(Guid createdByUserId, MatchPlayerInputDto dto)
     {
         var mobile =
             NormalizeMobile(dto.MobileNumber);
@@ -312,6 +321,10 @@ public class MatchService : IMatchService
         };
     }
 
+    /// <summary>
+    /// Validates the match details, including team names, schedule,
+    /// player count, venue, coordinates, and predefined team logos.
+    /// </summary>
     private static void ValidateMatch(CreateMatchDto dto)
     {
         if (dto.CreatedByUserId == Guid.Empty)
@@ -401,9 +414,11 @@ public class MatchService : IMatchService
         }
     }
 
-    private static void ValidateCreatorIsNotInRoster(
-        IEnumerable<MatchPlayerInputDto> players,
-        User organizer)
+    /// <summary>
+    /// Prevents the organizer from being added as a player by comparing
+    /// the supplied roster contact details with the organizer's stored details.
+    /// </summary>
+    private static void ValidateCreatorIsNotInRoster(IEnumerable<MatchPlayerInputDto> players, User organizer)
     {
         var organizerMobile = NormalizeStoredMobile(organizer.MobileNumber);
         var organizerEmail = string.IsNullOrWhiteSpace(organizer.Email)
@@ -433,6 +448,10 @@ public class MatchService : IMatchService
         }
     }
 
+    /// <summary>
+    /// Normalizes a stored Indian mobile number for comparison with
+    /// the application's 10-digit mobile number format.
+    /// </summary>
     private static string? NormalizeStoredMobile(string? mobile)
     {
         if (string.IsNullOrWhiteSpace(mobile))
@@ -448,6 +467,10 @@ public class MatchService : IMatchService
         return digits.Length == 10 ? digits : null;
     }
 
+    /// <summary>
+    /// Validates the submitted roster size, team distribution,
+    /// and duplicate mobile numbers or email addresses.
+    /// </summary>
     private static void ValidatePlayers(CreateMatchDto dto)
     {
         var expectedCount =
@@ -508,9 +531,11 @@ public class MatchService : IMatchService
         }
     }
 
-    private static void ValidateResolvedPlayers(
-        CreateMatchDto dto,
-        List<ResolvedPlayer> players)
+    /// <summary>
+    /// Validates the resolved roster to ensure each user appears only once
+    /// and both teams contain the required number of players.
+    /// </summary>
+    private static void ValidateResolvedPlayers(CreateMatchDto dto, List<ResolvedPlayer> players)
     {
         var duplicatePlayers = players
             .GroupBy(x => x.UserId)
@@ -696,9 +721,11 @@ public class MatchService : IMatchService
         public string Team { get; set; } = string.Empty;
     }
 
-    private static MatchCreatedDto MapToDto(
-    MatchEntity match,
-    List<ResolvedPlayer> players)
+    /// <summary>
+    /// Maps the newly created match and its resolved players
+    /// into the response DTO returned to the client.
+    /// </summary>
+    private static MatchCreatedDto MapToDto(MatchEntity match, List<ResolvedPlayer> players)
     {
         var playerLookup = players
             .ToDictionary(x => x.UserId);
@@ -783,14 +810,22 @@ public class MatchService : IMatchService
     "Puducherry"
 };
 
+    /// <summary>
+    /// Returns the predefined list of Indian states and Union Territories
+    /// used to validate and populate state selections.
+    /// </summary>
     public Task<IReadOnlyList<string>> GetIndianStatesAsync()
     {
         return Task.FromResult<IReadOnlyList<string>>(
             IndianStatesAndUnionTerritories);
     }
 
-    public async Task<IReadOnlyList<MatchDiscoveryDto>> GetMatchesAsync(
-        MatchDiscoveryQueryDto query)
+    /// <summary>
+    /// Retrieves matches using optional status, state, and nearby-location filters.
+    /// When coordinates are supplied, results are restricted to the requested radius
+    /// and ordered by distance.
+    /// </summary>
+    public async Task<IReadOnlyList<MatchDiscoveryDto>> GetMatchesAsync(MatchDiscoveryQueryDto query)
     {
         ArgumentNullException.ThrowIfNull(query);
 
@@ -826,7 +861,8 @@ public class MatchService : IMatchService
                 throw new ArgumentException(
                     "Select a valid Indian state or Union Territory.");
         }
-
+        // Calculate a bounding box first to narrow down nearby matches;
+        // the exact distance check below removes matches outside the radius.
         var hasLatitude = query.Latitude.HasValue;
         var hasLongitude = query.Longitude.HasValue;
 
@@ -952,11 +988,11 @@ public class MatchService : IMatchService
         return results;
     }
 
-    private static double CalculateDistanceKm(
-        double latitude1,
-        double longitude1,
-        double latitude2,
-        double longitude2)
+    /// <summary>
+    /// Calculates the great-circle distance between two geographic coordinates
+    /// using the Haversine formula.
+    /// </summary>
+    private static double CalculateDistanceKm(double latitude1, double longitude1, double latitude2, double longitude2)
     {
         const double earthRadiusKm = 6371.0088;
 
@@ -974,7 +1010,10 @@ public class MatchService : IMatchService
             2 * Math.Atan2(Math.Sqrt(a), Math.Sqrt(1 - a));
     }
 
-
+    /// <summary>
+    /// Retrieves matches created by the specified organizer,
+    /// optionally filtered by match status.
+    /// </summary>
     public async Task<IReadOnlyList<MatchDiscoveryDto>> GetMyMatchesAsync(
         Guid createdByUserId,
         string? status)
@@ -1061,8 +1100,10 @@ public class MatchService : IMatchService
         }).ToList();
     }
 
-
-
+    /// <summary>
+    /// Retrieves the full match details for its organizer.
+    /// Returns null when the match does not exist or belongs to another organizer.
+    /// </summary>
     public async Task<MatchCreatedDto?> GetMatchByIdAsync(
         Guid matchId,
         Guid createdByUserId)
@@ -1120,6 +1161,10 @@ public class MatchService : IMatchService
         };
     }
 
+    /// <summary>
+    /// Retrieves match details intended for public viewing,
+    /// without exposing private player contact information.
+    /// </summary>
     public async Task<PublicMatchDetailsDto?> GetPublicMatchByIdAsync(
     Guid matchId)
     {
@@ -1179,12 +1224,12 @@ public class MatchService : IMatchService
         };
     }
 
-
-
-    public async Task<MatchCreatedDto> UpdateMatchAsync(
-        Guid matchId,
-        Guid createdByUserId,
-        UpdateMatchDto dto)
+    /// <summary>
+    /// Updates an existing upcoming match and synchronizes its player roster.
+    /// Existing roster records are preserved where possible, while removed
+    /// and newly added players are handled accordingly.
+    /// </summary>
+    public async Task<MatchCreatedDto> UpdateMatchAsync(Guid matchId, Guid createdByUserId, UpdateMatchDto dto)
     {
         ArgumentNullException.ThrowIfNull(dto);
 
@@ -1243,7 +1288,7 @@ public class MatchService : IMatchService
 
             resolvedPlayers.Add(resolved);
         }
-
+        // Remove roster entries that are no longer included in the updated team selection.
         if (resolvedPlayers.Any(p => p.UserId == createdByUserId))
             throw new InvalidOperationException(
                 "The match organizer cannot be listed as a player.");
@@ -1360,8 +1405,9 @@ public class MatchService : IMatchService
         };
     }
 
-
-
+    /// <summary>
+    /// Validates the editable match details before applying an update.
+    /// </summary>
     private static void ValidateUpdateMatch(UpdateMatchDto dto)
     {
         if (string.IsNullOrWhiteSpace(dto.Name) ||
@@ -1409,10 +1455,11 @@ public class MatchService : IMatchService
             throw new ArgumentException("Invalid coordinates.");
     }
 
-     public async Task CancelMatchAsync(
-    Guid matchId,
-    Guid createdByUserId,
-    CancelMatchDto dto)
+    /// <summary>
+    /// Cancels an upcoming or live match after verifying that the requesting
+    /// user is its organizer. Also updates the organizer's cancellation statistics.
+    /// </summary>
+    public async Task CancelMatchAsync(Guid matchId, Guid createdByUserId, CancelMatchDto dto)
     {
         if (matchId == Guid.Empty)
             throw new ArgumentException("Invalid match ID.");

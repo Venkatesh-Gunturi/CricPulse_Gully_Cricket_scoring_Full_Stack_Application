@@ -55,7 +55,7 @@ const currentRole = !isLoggedIn
       if (event.key === 'Escape') setMenuOpen(false);
     };
 
-    document.addEventListener('mousedown', handleOutsideClick);
+    document.addEventListener('pointerdown', handleOutsideClick);
     document.addEventListener('keydown', handleEscape);
 
     return () => {

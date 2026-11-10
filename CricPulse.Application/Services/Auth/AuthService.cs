@@ -6,7 +6,7 @@ using CricPulse.Application.Interfaces.Services;
 using CricPulse.Domain.Entities;
 
 namespace CricPulse.Application.Services.Auth;
-
+// Handles user registration, login, input validation, and authentication response mapping.
 public class AuthService : IAuthService
 {
     private readonly IUserRepository _userRepository;
@@ -29,27 +29,30 @@ public class AuthService : IAuthService
         _transactionManager = transactionManager;
     }
 
+    // Validates registration details, creates the user and their initial player statistics,
+    // and saves both records within a single database transaction.
     public async Task<AuthResponseDto> RegisterAsync(RegisterDto dto)
     {
+        // Validate the supplied registration details before creating the account.
         ValidateRegistration(dto);
-
+        // Normalize user input to maintain consistent data formats in the database.
         var firstName = NormalizeName(dto.FirstName);
         var lastName = NormalizeOptionalName(dto.LastName);
         var mobileNumber = NormalizeMobileNumber(dto.MobileNumber);
         var email = NormalizeEmail(dto.Email);
-
+        // Prevent registration with a mobile number that is already in use.
         if (await _userRepository.ExistsByMobileNumberAsync(mobileNumber))
         {
             throw new InvalidOperationException(
                 "An account with this mobile number already exists.");
         }
-
+        // Prevent registration with an email address that is already in use.
         if (await _userRepository.ExistsByEmailAsync(email))
         {
             throw new InvalidOperationException(
                 "An account with this email already exists.");
         }
-
+        // Create the user entity with normalized details and a securely hashed password.
         var user = new User
         {
             Id = Guid.NewGuid(),
@@ -71,21 +74,22 @@ public class AuthService : IAuthService
             UserId = user.Id
         };
 
-        
+        // Keep user creation and initial statistics creation in the same transaction.
         await _transactionManager.BeginTransactionAsync();
-
+        // Add both entities before committing them together.
         try
         {
             await _userRepository.AddAsync(user);
             await _playerStatisticsRepository.AddAsync(playerStatistics);
-            
 
+            // Persist the pending changes before committing the transaction.
             await _unitOfWork.SaveChangesAsync();
-
+            // Commit only after both records have been saved successfully.
             await _transactionManager.CommitTransactionAsync();
         }
         catch
         {
+            // Roll back the transaction if any registration operation fails.
             await _transactionManager.RollbackTransactionAsync();
             throw;
         }
@@ -93,21 +97,23 @@ public class AuthService : IAuthService
         return MapToResponse(user);
     }
 
+    // Authenticates a user using their registered mobile number or email and password.
     public async Task<AuthResponseDto> LoginAsync(LoginDto dto)
     {
+        // Ensure the login identifier is provided.
         if (string.IsNullOrWhiteSpace(dto.LoginIdentifier))
         {
             throw new ArgumentException(
                 "Mobile number or email is required.");
         }
-
+        // Ensure a password is provided before attempting authentication.
         if (string.IsNullOrWhiteSpace(dto.Password))
         {
             throw new ArgumentException("Password is required.");
         }
-
+        // Trim whitespace and normalize email casing before looking up the user.
         var loginIdentifier = dto.LoginIdentifier.Trim();
-
+        // Reject inactive users, unknown accounts, and incorrect passwords.
         if (loginIdentifier.Contains('@'))
         {
             loginIdentifier = loginIdentifier.ToLowerInvariant();
@@ -126,9 +132,10 @@ public class AuthService : IAuthService
 
         return MapToResponse(user);
     }
-
+    // Validates registration fields, including names, mobile number, email, and optional password.
     private static void ValidateRegistration(RegisterDto dto)
     {
+        // Validates a name field and enforces whether it is required and its maximum length.
         ValidateName(
             dto.FirstName,
             "First name",
@@ -145,7 +152,7 @@ public class AuthService : IAuthService
         {
             throw new ArgumentException("Email is required.");
         }
-
+        // Validate the email format and enforce the database length constraint.
         var email = dto.Email.Trim();
 
         if (email.Length > 255)
@@ -178,11 +185,8 @@ public class AuthService : IAuthService
             throw new ArgumentException("Enter a password before confirming it.");
         }
     }
-
-    private static void ValidateName(
-        string? value,
-        string fieldName,
-        bool required)
+    // Validates a name field and enforces whether it is required and its maximum length.
+    private static void ValidateName(string? value, string fieldName, bool required)
     {
         if (string.IsNullOrWhiteSpace(value))
         {
@@ -203,7 +207,7 @@ public class AuthService : IAuthService
                 $"{fieldName} cannot exceed 15 characters.");
         }
     }
-
+    // Trims the name and capitalizes its first alphabetic character.
     private static string NormalizeName(string name)
     {
         var normalized = name.Trim();
@@ -215,7 +219,7 @@ public class AuthService : IAuthService
 
         return CapitalizeFirstLetter(normalized);
     }
-
+    // Normalizes an optional name, returning null when no value is provided.
     private static string? NormalizeOptionalName(string? name)
     {
         if (string.IsNullOrWhiteSpace(name))
@@ -225,7 +229,7 @@ public class AuthService : IAuthService
 
         return CapitalizeFirstLetter(name.Trim());
     }
-
+    // Capitalizes the first alphabetic character without changing the remaining characters.
     private static string CapitalizeFirstLetter(string value)
     {
         for (var i = 0; i < value.Length; i++)
@@ -242,7 +246,7 @@ public class AuthService : IAuthService
 
         return value;
     }
-
+    // Trims and validates an Indian mobile number against the expected 10-digit format.
     private static string NormalizeMobileNumber(string mobileNumber)
     {
         if (string.IsNullOrWhiteSpace(mobileNumber))
@@ -261,12 +265,12 @@ public class AuthService : IAuthService
 
         return normalized;
     }
-
+    // Removes surrounding whitespace and converts the email address to lowercase.
     private static string NormalizeEmail(string email)
     {
         return email.Trim().ToLowerInvariant();
     }
-
+    // Enforces password length and complexity requirements.
     private static void ValidatePassword(string password)
     {
         if (string.IsNullOrWhiteSpace(password))
@@ -310,7 +314,7 @@ public class AuthService : IAuthService
                 "Password must contain at least one special character.");
         }
     }
-
+    // Maps the user entity to the authentication response DTO without exposing sensitive fields.
     private static AuthResponseDto MapToResponse(User user)
     {
         return new AuthResponseDto

@@ -12,6 +12,8 @@ public class MatchRepository : RepositoryBase<Match>, IMatchRepository
     {
     }
 
+    // Retrieves a match with its creator, players, innings, balls,
+    // and wicket details required for match-related operations.
     public async Task<Match?> GetByIdAsync(Guid matchId)
     {
         return await DbSet
@@ -35,6 +37,8 @@ public class MatchRepository : RepositoryBase<Match>, IMatchRepository
         return Task.CompletedTask;
     }
 
+    // Retrieves matches belonging to the specified state,
+    // ordered by their scheduled start time.
     public async Task<IReadOnlyList<Match>> GetByStateAsync(string state)
     {
         return await DbSet
@@ -44,6 +48,8 @@ public class MatchRepository : RepositoryBase<Match>, IMatchRepository
             .ToListAsync();
     }
 
+    // Retrieves matches with the specified status,
+    // ordered by their scheduled start time.
     public async Task<IReadOnlyList<Match>> GetByStatusAsync(string status)
     {
         return await DbSet
@@ -53,13 +59,10 @@ public class MatchRepository : RepositoryBase<Match>, IMatchRepository
             .ToListAsync();
     }
 
+    // Retrieves matches for discovery using optional status, state,
+    // and geographic boundary filters.
     public async Task<IReadOnlyList<Match>> GetForDiscoveryAsync(
-        string? status,
-        string? state,
-        double? minLatitude,
-        double? maxLatitude,
-        double? minLongitude,
-        double? maxLongitude)
+        string? status, string? state, double? minLatitude, double? maxLatitude, double? minLongitude, double? maxLongitude)
     {
         IQueryable<Match> query = DbSet
             .AsNoTracking()
@@ -75,14 +78,14 @@ public class MatchRepository : RepositoryBase<Match>, IMatchRepository
             query = query.Where(
                 x => x.State != null && x.State == state);
         }
-
+        // Apply latitude boundaries when both limits are provided.
         if (minLatitude.HasValue && maxLatitude.HasValue)
         {
             query = query.Where(x =>
                 x.Latitude >= minLatitude.Value &&
                 x.Latitude <= maxLatitude.Value);
         }
-
+        // Apply longitude boundaries when both limits are provided.
         if (minLongitude.HasValue && maxLongitude.HasValue)
         {
             query = query.Where(x =>
@@ -95,10 +98,9 @@ public class MatchRepository : RepositoryBase<Match>, IMatchRepository
             .ToListAsync();
     }
 
-    public async Task<IReadOnlyList<Match>> GetNearestAsync(
-        double latitude,
-        double longitude,
-        int count)
+    // Retrieves a limited set of matches within an approximate
+    // geographic bounding box around the supplied coordinates.
+    public async Task<IReadOnlyList<Match>> GetNearestAsync(double latitude, double longitude, int count)
     {
         // A fast geographic pre-filter. Exact distance should be
         // calculated with the Haversine formula in the application layer.
@@ -119,9 +121,9 @@ public class MatchRepository : RepositoryBase<Match>, IMatchRepository
             .ToListAsync();
     }
 
-    public async Task<IReadOnlyList<Match>> GetByCreatorAsync(
-    Guid createdByUserId,
-    string? status)
+    // Retrieves matches created by a specific user,
+    // optionally filtering the results by match status.
+    public async Task<IReadOnlyList<Match>> GetByCreatorAsync(Guid createdByUserId, string? status)
     {
         IQueryable<Match> query = DbSet
             .AsNoTracking()
@@ -138,7 +140,8 @@ public class MatchRepository : RepositoryBase<Match>, IMatchRepository
             .ToListAsync();
     }
 
-
+    // Deletes a match and its dependent records in dependency order
+    // to avoid foreign-key constraint violations.
     public async Task DeleteAsync(Match match)
     {
         // Load dependent records so they can be deleted in a safe order.

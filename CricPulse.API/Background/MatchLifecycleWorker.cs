@@ -15,6 +15,7 @@ public class MatchLifecycleWorker : BackgroundService
         _logger = logger;
     }
 
+    // Periodically process scheduled match transitions and lifecycle cleanup.
     protected override async Task ExecuteAsync(
         CancellationToken stoppingToken)
     {
@@ -38,9 +39,17 @@ public class MatchLifecycleWorker : BackgroundService
                     "CricPulse match lifecycle processing failed.");
             }
 
-            await Task.Delay(
-                TimeSpan.FromMinutes(5),
-                stoppingToken);
+            try
+            {
+                await Task.Delay(
+                    TimeSpan.FromMinutes(5),
+                    stoppingToken);
+            }
+            catch (OperationCanceledException)
+                when (stoppingToken.IsCancellationRequested)
+            {
+                break;
+            }
         }
     }
 }

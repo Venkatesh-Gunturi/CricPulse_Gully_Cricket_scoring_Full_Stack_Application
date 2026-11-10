@@ -5,7 +5,10 @@ using CricPulse.Domain.Entities;
 using MatchEntity = CricPulse.Domain.Entities.Match;
 
 namespace CricPulse.Application.Services.Scoring;
-
+/// <summary>
+/// Handles match scoring operations, including innings setup,
+/// runs, extras, wickets, undo, and match completion.
+/// </summary>
 public class ScoringService : IScoringService
 {
     private readonly IMatchRepository _matchRepository;
@@ -37,7 +40,7 @@ public class ScoringService : IScoringService
         _matchStateUpdateService = matchStateUpdateService;
     }
 
-
+    // Retrieves the latest match state and broadcasts it to connected clients.
     private async Task<MatchStateDto> GetAndBroadcastMatchStateAsync(Guid matchId)
     {
         var state = await GetCurrentMatchStateAsync(matchId);
@@ -49,28 +52,16 @@ public class ScoringService : IScoringService
         return state;
     }
 
-    // ============================================================
-    // START MATCH
-    // ============================================================
-
-    public async Task<MatchStateDto> StartMatchAsync(
-        StartMatchDto dto)
+    // Starts an upcoming match after validating the organizer,
+    // match location, and team rosters. 
+    public async Task<MatchStateDto> StartMatchAsync(StartMatchDto dto)
     {
-        ValidateCoordinates(
-            dto.Latitude,
-            dto.Longitude);
+        ValidateCoordinates(dto.Latitude, dto.Longitude);
+        var match = await GetMatchAsync(dto.MatchId);
 
-        var match =
-            await GetMatchAsync(dto.MatchId);
-
-        ValidateOrganizer(
-            match,
-            dto.CreatedByUserId);
-
-        var existingLiveMatches =
-        await _matchRepository.GetByCreatorAsync(
-        dto.CreatedByUserId,
-        "Live");
+        ValidateOrganizer(match, dto.CreatedByUserId);
+        // Prevent the organizer from starting another match while one is already live.
+        var existingLiveMatches = await _matchRepository.GetByCreatorAsync(dto.CreatedByUserId, "Live");
 
         if (existingLiveMatches.Any(x => x.Id != match.Id))
         {
@@ -84,35 +75,20 @@ public class ScoringService : IScoringService
                 "Only an upcoming match can be started.");
         }
 
-
         ValidateMatchPlayers(match);
-
-        match.ActualStartLatitude =
-            dto.Latitude;
-
-        match.ActualStartLongitude =
-            dto.Longitude;
-
-        match.ActualStartedAt =
-            DateTime.UtcNow;
-
+        match.ActualStartLatitude = dto.Latitude;
+        match.ActualStartLongitude = dto.Longitude;
+        match.ActualStartedAt = DateTime.UtcNow;
         match.Status = "Live";
         match.UpdatedAt = DateTime.UtcNow;
 
         await _matchRepository.UpdateAsync(match);
-
         await _unitOfWork.SaveChangesAsync();
-
         return await _matchStateUpdateService.GetAndBroadcastMatchStateAsync(match.Id);
     }
 
-    // ============================================================
-    // TOSS
-    // ============================================================
-
-    public async Task<MatchStateDto> RecordTossAsync(
-        Guid matchId,
-        TossDto dto)
+    // Records the agreed toss winner and the team's decision to bat or bowl.     
+    public async Task<MatchStateDto> RecordTossAsync(Guid matchId, TossDto dto)
     {
         var match =
             await GetMatchAsync(matchId);
@@ -132,7 +108,7 @@ public class ScoringService : IScoringService
             throw new InvalidOperationException(
                 "The toss has already been agreed.");
         }
-
+        // Normalize the submitted toss values before storing them.
         var winner =
             NormalizeTeam(
                 dto.TossWinnerTeam);
@@ -153,13 +129,8 @@ public class ScoringService : IScoringService
         return await _matchStateUpdateService.GetAndBroadcastMatchStateAsync(match.Id);
     }
 
-    // ============================================================
-    // INNINGS SETUP
-    // ============================================================
-
-    public async Task<MatchStateDto> SetupInningsAsync(
-        Guid matchId,
-        SetupInningsDto dto)
+    // Creates the next innings with validated batting and bowling players.
+    public async Task<MatchStateDto> SetupInningsAsync(Guid matchId, SetupInningsDto dto)
     {
         var match =
             await GetMatchAsync(matchId);
@@ -203,7 +174,7 @@ public class ScoringService : IScoringService
             throw new InvalidOperationException(
                 "Both innings have already been created.");
         }
-
+        // Set the second-innings target to one more than the first-innings total.
         string battingTeam;
         string bowlingTeam;
         int? targetRuns = null;
@@ -340,13 +311,8 @@ public class ScoringService : IScoringService
         return await GetAndBroadcastMatchStateAsync(matchId);
     }
 
-    // ============================================================
-    // NORMAL RUNS 0 - 6
-    // ============================================================
-
-    public async Task<MatchStateDto> ScoreRunsAsync(
-        Guid inningsId,
-        ScoreRunDto dto)
+    // Records a normal delivery and its batter runs.
+    public async Task<MatchStateDto> ScoreRunsAsync(Guid inningsId, ScoreRunDto dto)
     {
         if (dto.Runs < 0 ||
             dto.Runs > 6)
@@ -389,14 +355,8 @@ public class ScoringService : IScoringService
         return await _matchStateUpdateService.GetAndBroadcastMatchStateAsync(match.Id);
     }
 
-    // ============================================================
-    // EXTRAS
-    // ============================================================
-
-
-    public async Task<MatchStateDto> ScoreExtraAsync(
-        Guid inningsId,
-        ScoreExtraDto dto)
+    // Records an extra delivery, including wides, no-balls, byes, and leg-byes.
+    public async Task<MatchStateDto> ScoreExtraAsync(Guid inningsId, ScoreExtraDto dto)
     {
         var innings = await GetLiveInningsAsync(inningsId);
         var match = await GetMatchAsync(innings.MatchId);
@@ -408,7 +368,7 @@ public class ScoringService : IScoringService
         {
             throw new ArgumentException("Extra type is required.");
         }
-
+        // Ensure the extra type is supported before applying its scoring rules.
         var extraType = dto.ExtraType.Trim().ToUpperInvariant();
 
         if (extraType is not ("WIDE" or "NO BALL" or "BYE" or "LEG BYE"))
@@ -536,20 +496,8 @@ public class ScoringService : IScoringService
         return await GetAndBroadcastMatchStateAsync(match.Id);
     }
 
-
-    // ============================================================
-    // EXTRA + RUN OUT
-    // ============================================================
-
-
-
-
-    private async Task<MatchStateDto> ScoreExtraRunOutAsync(
-        Innings innings,
-        MatchEntity match,
-        ScoreExtraDto dto,
-        string extraType,
-        bool isLegalDelivery)
+    // Handles an extra delivery that results in a run-out.
+    private async Task<MatchStateDto> ScoreExtraRunOutAsync(Innings innings, MatchEntity match, ScoreExtraDto dto, string extraType, bool isLegalDelivery)
     {
         if (!dto.DismissedMatchPlayerId.HasValue)
         {
@@ -727,7 +675,7 @@ public class ScoringService : IScoringService
         {
             innings.IsFreeHit = false;
         }
-
+        // Temporarily apply the delivery outcome to check whether the innings will finish.
         inningsFinished = IsInningsFinished(innings, match);
 
         if (inningsFinished)
@@ -752,17 +700,8 @@ public class ScoringService : IScoringService
         return await GetAndBroadcastMatchStateAsync(match.Id);
     }
 
-
-
-
-    // ============================================================
-    // WICKET
-    // ============================================================
-
-
-    public async Task<MatchStateDto> ScoreWicketAsync(
-        Guid inningsId,
-        ScoreWicketDto dto)
+    // Records a wicket and updates the innings state and batting lineup.
+    public async Task<MatchStateDto> ScoreWicketAsync(Guid inningsId, ScoreWicketDto dto)
     {
         var innings = await GetLiveInningsAsync(inningsId);
         var match = await GetMatchAsync(innings.MatchId);
@@ -791,7 +730,7 @@ public class ScoringService : IScoringService
         {
             throw new ArgumentException("Invalid wicket type.");
         }
-
+        // On a free hit, only a run-out dismissal is permitted.
         if (innings.IsFreeHit && wicketType != "RUN OUT")
         {
             throw new InvalidOperationException(
@@ -984,15 +923,8 @@ public class ScoringService : IScoringService
         return await GetAndBroadcastMatchStateAsync(match.Id);
     }
 
-
-    // ============================================================
-    // COMPLETE INNINGS
-    // ============================================================
-
-
-    public async Task<MatchStateDto> CompleteInningsAsync(
-        Guid inningsId,
-        CompleteInningsDto dto)
+    // Completes an innings after its configured end condition has been reached
+    public async Task<MatchStateDto> CompleteInningsAsync(Guid inningsId, CompleteInningsDto dto)
     {
         var innings = await _inningsRepository.GetByIdAsync(inningsId);
 
@@ -1047,27 +979,14 @@ public class ScoringService : IScoringService
         return await GetAndBroadcastMatchStateAsync(match.Id);
     }
 
-
-    // ============================================================
-    // CHANGE BOWLER
-    // ============================================================
-
-    public async Task<MatchStateDto> ChangeBowlerAsync(
-        Guid inningsId,
-        ChangeBowlerDto dto)
+    // Assigns a new bowler after a completed over.
+    public async Task<MatchStateDto> ChangeBowlerAsync(Guid inningsId, ChangeBowlerDto dto)
     {
-        var innings =
-            await GetLiveInningsAsync(
-                inningsId);
+        var innings = await GetLiveInningsAsync(inningsId);
+        var match = await GetMatchAsync(innings.MatchId);
 
-        var match =
-            await GetMatchAsync(
-                innings.MatchId);
-
-        ValidateOrganizer(
-            match,
-            dto.CreatedByUserId);
-
+        ValidateOrganizer(match, dto.CreatedByUserId);
+        // Prevent bowler changes while innings completion is awaiting confirmation.
         if (innings.CompletionPending)
         {
             throw new InvalidOperationException(
@@ -1081,10 +1000,7 @@ public class ScoringService : IScoringService
                 "Bowler can be changed only after an over is completed.");
         }
 
-        var newBowler =
-            GetMatchPlayer(
-                match,
-                dto.BowlerMatchPlayerId);
+        var newBowler = GetMatchPlayer(match, dto.BowlerMatchPlayerId);
 
         if (newBowler.Team != innings.BowlingTeam)
         {
@@ -1120,14 +1036,8 @@ public class ScoringService : IScoringService
         return await GetAndBroadcastMatchStateAsync(match.Id);
     }
 
-    // ============================================================
-    // UNDO
-    // ========================================
-    // ====================
-
-    public async Task<MatchStateDto> UndoLastBallAsync(
-        Guid inningsId,
-        Guid createdByUserId)
+    // Reverts the most recent delivery and restores the previously captured innings state.
+    public async Task<MatchStateDto> UndoLastBallAsync(Guid inningsId, Guid createdByUserId)
     {
         var innings =
             await _inningsRepository
@@ -1146,7 +1056,7 @@ public class ScoringService : IScoringService
             throw new InvalidOperationException(
                 "Cannot undo a ball after the innings has been completed.");
         }
-
+        // Remove the wicket record associated with the delivery being undone.
         var match =
             await GetMatchAsync(
                 innings.MatchId);
@@ -1230,15 +1140,8 @@ public class ScoringService : IScoringService
         return await GetAndBroadcastMatchStateAsync(match.Id);
     }
 
-    // ============================================================
-    // RECORD BALL
-    // ============================================================
-
-    private async Task RecordBallAsync(
-        Innings innings,
-        Ball ball,
-        bool preserveFreeHit,
-        bool? freeHitAfterBall = null)
+    // Records the delivery and updates the innings scoring state.
+    private async Task RecordBallAsync(Innings innings, Ball ball, bool preserveFreeHit, bool? freeHitAfterBall = null)
     {
         /*
          * IMPORTANT:
@@ -1300,7 +1203,7 @@ public class ScoringService : IScoringService
              */
             innings.IsFreeHit = false;
         }
-
+        // Mark completion as pending when this delivery finishes the innings.
         var match =
             await GetMatchAsync(
                 innings.MatchId);
@@ -1322,9 +1225,8 @@ public class ScoringService : IScoringService
 
         await _unitOfWork.SaveChangesAsync();
     }
-
-    private static int GetCompletedRunsForStrike(
-        Ball ball)
+    // Determines completed runs for calculating strike rotation.
+    private static int GetCompletedRunsForStrike(Ball ball)
     {
         /*
          * For normal balls:
@@ -1362,14 +1264,10 @@ public class ScoringService : IScoringService
         };
     }
 
-    // ============================================================
-    // PREVIOUS STATE
-    // ============================================================
-
-    private static void CapturePreviousState(
-        Innings innings,
-        Ball ball)
+    // Creates a ball record using the current innings and player state.
+    private static void CapturePreviousState(Innings innings, Ball ball)
     {
+        // Ensure all active players are configured before capturing the state.
         if (!innings.CurrentStrikerMatchPlayerId.HasValue ||
             !innings.CurrentNonStrikerMatchPlayerId.HasValue ||
             !innings.CurrentBowlerMatchPlayerId.HasValue)
@@ -1406,15 +1304,8 @@ public class ScoringService : IScoringService
             innings.IsFreeHit;
     }
 
-    // ============================================================
-    // NEW BATTER
-    // ============================================================
-
-    private static void ValidateNewBatter(
-     MatchEntity match,
-     Innings innings,
-     Guid dismissedPlayerId,
-     Guid newBatterId)
+    // Validates that the incoming batter belongs to the batting team and is not already on the field.
+    private static void ValidateNewBatter(MatchEntity match, Innings innings, Guid dismissedPlayerId, Guid newBatterId)
     {
         if (dismissedPlayerId == newBatterId)
         {
@@ -1440,10 +1331,8 @@ public class ScoringService : IScoringService
         }
     }
 
-    private static void ReplaceDismissedBatter(
-        Innings innings,
-        Guid dismissedPlayerId,
-        Guid newBatterId)
+    // Replaces the dismissed batter in their current batting position.
+    private static void ReplaceDismissedBatter(Innings innings, Guid dismissedPlayerId, Guid newBatterId)
     {
         if (innings.CurrentStrikerMatchPlayerId ==
             dismissedPlayerId)
@@ -1467,22 +1356,16 @@ public class ScoringService : IScoringService
             "Dismissed player is not one of the current batters.");
     }
 
-    // ============================================================
-    // STRIKE
-    // ============================================================
-
-    private static void ApplyStrikeAfterRuns(
-        Innings innings,
-        int runs)
+    // Rotates strike when the completed runs are odd.
+    private static void ApplyStrikeAfterRuns(Innings innings, int runs)
     {
         if (runs % 2 == 1)
         {
             RotateStrike(innings);
         }
     }
-
-    private static void RotateStrike(
-        Innings innings)
+    // Swaps the striker and non-striker positions.
+    private static void RotateStrike(Innings innings)
     {
         var striker =
             innings.CurrentStrikerMatchPlayerId;
@@ -1494,15 +1377,8 @@ public class ScoringService : IScoringService
             striker;
     }
 
-    // ============================================================
-    // DISMISSAL VALIDATION
-    // ============================================================
-
-    private static void ValidateWicketParticipants(
-        MatchEntity match,
-        Innings innings,
-        string wicketType,
-        ScoreWicketDto dto)
+    // Validates the required fielding players for caught, stumped, and run-out dismissals.
+    private static void ValidateWicketParticipants(MatchEntity match, Innings innings, string wicketType, ScoreWicketDto dto)
     {
         if (wicketType == "CAUGHT")
         {
@@ -1571,11 +1447,8 @@ public class ScoringService : IScoringService
         }
     }
 
-    private static void ValidateBowlingPlayer(
-        MatchEntity match,
-        Innings innings,
-        Guid playerId,
-        string error)
+    // Ensures the supplied player belongs to the bowling team in this match.
+    private static void ValidateBowlingPlayer(MatchEntity match, Innings innings, Guid playerId, string error)
     {
         var player =
             match.MatchPlayers.FirstOrDefault(
@@ -1588,13 +1461,8 @@ public class ScoringService : IScoringService
         }
     }
 
-    // ============================================================
-    // MATCH / PLAYER HELPERS
-    // ============================================================
-
-    private static MatchPlayer GetMatchPlayer(
-        MatchEntity match,
-        Guid id)
+    // Retrieves a player from the match roster or rejects an invalid player ID.
+    private static MatchPlayer GetMatchPlayer(MatchEntity match, Guid id)
     {
         var player =
             match.MatchPlayers.FirstOrDefault(
@@ -1608,10 +1476,8 @@ public class ScoringService : IScoringService
 
         return player;
     }
-
-    private static bool IsCurrentBatter(
-        Innings innings,
-        Guid playerId)
+    // Checks whether the supplied player is currently the striker or non-striker.
+    private static bool IsCurrentBatter(Innings innings, Guid playerId)
     {
         return
             innings.CurrentStrikerMatchPlayerId ==
@@ -1619,9 +1485,8 @@ public class ScoringService : IScoringService
             innings.CurrentNonStrikerMatchPlayerId ==
                 playerId;
     }
-
-    private static string GetFirstBattingTeam(
-        MatchEntity match)
+    // Determines the first batting team from the agreed toss result.
+    private static string GetFirstBattingTeam(MatchEntity match)
     {
         if (match.TossWinnerTeam is null ||
             match.TossDecision is null)
@@ -1640,8 +1505,8 @@ public class ScoringService : IScoringService
             : "TeamA";
     }
 
-    private static string NormalizeTeam(
-        string value)
+    // Converts supported team-name inputs into the standard TeamA or TeamB format.
+    private static string NormalizeTeam(string value)
     {
         return value
             .Trim()
@@ -1659,8 +1524,8 @@ public class ScoringService : IScoringService
         };
     }
 
-    private static string NormalizeDecision(
-        string value)
+    // Normalizes the toss decision into the standard BAT or BOWL format.
+    private static string NormalizeDecision(string value)
     {
         return value
             .Trim()
@@ -1678,9 +1543,8 @@ public class ScoringService : IScoringService
         };
     }
 
-    private static void ValidateOrganizer(
-        MatchEntity match,
-        Guid createdByUserId)
+    // Ensures that only the match creator can perform the requested operation.
+    private static void ValidateOrganizer(MatchEntity match, Guid createdByUserId)
     {
         if (match.CreatedByUserId !=
             createdByUserId)
@@ -1690,8 +1554,8 @@ public class ScoringService : IScoringService
         }
     }
 
-    private static void ValidateMatchPlayers(
-        MatchEntity match)
+    // Verifies that both teams have the required number of registered match players.
+    private static void ValidateMatchPlayers(MatchEntity match)
     {
         var teamA =
             match.MatchPlayers.Count(
@@ -1709,13 +1573,8 @@ public class ScoringService : IScoringService
         }
     }
 
-    // ============================================================
-    // INNINGS COMPLETION
-    // ============================================================
-
-    private static bool IsInningsFinished(
-        Innings innings,
-        MatchEntity match)
+    // Checks whether the innings has ended due to wickets, overs, or the chase target.
+    private static bool IsInningsFinished(Innings innings, MatchEntity match)
     {
         /*
          * All but one batter dismissed.
@@ -1748,13 +1607,8 @@ public class ScoringService : IScoringService
         return false;
     }
 
-    // ============================================================
-    // DISMISSED PLAYER CHECK
-    // ============================================================
-
-    private static bool HasPlayerBeenDismissed(
-        IEnumerable<Innings> inningsList,
-        Guid playerId)
+    // Checks the innings ball records to determine whether a player has already been dismissed.
+    private static bool HasPlayerBeenDismissed(IEnumerable<Innings> inningsList, Guid playerId)
     {
         foreach (var innings in inningsList)
         {
@@ -1775,9 +1629,8 @@ public class ScoringService : IScoringService
         return false;
     }
 
-    private static Task<bool> HasPlayerBeenDismissedAsync(
-        IEnumerable<Innings> inningsList,
-        Guid playerId)
+    // Provides an asynchronous wrapper around the dismissed-player check.
+    private static Task<bool> HasPlayerBeenDismissedAsync(IEnumerable<Innings> inningsList, Guid playerId)
     {
         return Task.FromResult(
             HasPlayerBeenDismissed(
@@ -1785,14 +1638,8 @@ public class ScoringService : IScoringService
                 playerId));
     }
 
-    // ============================================================
-    // MATCH COMPLETION
-    // ============================================================
-
-    private static void CompleteMatchIfRequired(
-         MatchEntity match,
-         Innings secondInnings,
-         IReadOnlyList<Innings> inningsList)
+    // Determines and records the match result after the second innings.
+    private static void CompleteMatchIfRequired(MatchEntity match, Innings secondInnings, IReadOnlyList<Innings> inningsList)
     {
         var firstInnings =
             inningsList.FirstOrDefault(
@@ -1844,21 +1691,16 @@ public class ScoringService : IScoringService
             DateTime.UtcNow;
     }
 
-    private static string GetTeamDisplayName(
-        MatchEntity match,
-        string team)
+    // Resolves the display name of a team using its standard team identifier.
+    private static string GetTeamDisplayName(MatchEntity match, string team)      
     {
         return team == "TeamA"
             ? match.TeamAName
             : match.TeamBName;
     }
 
-    // ============================================================
-    // MATCH RETRIEVAL
-    // ============================================================
-
-    private async Task<MatchEntity> GetMatchAsync(
-        Guid matchId)
+    // Retrieves a match by ID and throws an exception if it does not exist.
+    private async Task<MatchEntity> GetMatchAsync(Guid matchId)
     {
         var match =
             await _matchRepository
@@ -1873,8 +1715,8 @@ public class ScoringService : IScoringService
         return match;
     }
 
-    private async Task<Innings> GetLiveInningsAsync(
-        Guid inningsId)
+    // Retrieves an innings by ID and ensures that it is currently live.
+    private async Task<Innings> GetLiveInningsAsync(Guid inningsId)
     {
         var innings =
             await _inningsRepository
@@ -1895,8 +1737,8 @@ public class ScoringService : IScoringService
         return innings;
     }
 
-    private static void EnsureScoringAllowed(
-        Innings innings)
+    // Prevents further scoring while innings completion is pending.
+    private static void EnsureScoringAllowed(Innings innings)
     {
         if (innings.CompletionPending)
         {
@@ -1905,14 +1747,8 @@ public class ScoringService : IScoringService
         }
     }
 
-    // ============================================================
-    // BALL NOTATION
-    // ============================================================
-
-    private static string BuildExtraNotation(
-        string extraType,
-        int totalRuns,
-        bool isWicket = false)
+    // Builds the scorecard notation for an extra delivery, including any wicket.
+    private static string BuildExtraNotation(string extraType, int totalRuns, bool isWicket = false)
     {
         var prefix = extraType switch
         {
@@ -1935,12 +1771,8 @@ public class ScoringService : IScoringService
         return isWicket ? $"{notation} W" : notation;
     }
 
-    // ============================================================
-    // BALL CREATION
-    // ============================================================
-
-    private static Ball CreateBaseBall(
-        Innings innings)
+    // Creates a ball record using the current innings and player state.
+    private static Ball CreateBaseBall(Innings innings)
     {
         if (!innings.CurrentStrikerMatchPlayerId.HasValue ||
             !innings.CurrentNonStrikerMatchPlayerId.HasValue ||
@@ -1986,13 +1818,8 @@ public class ScoringService : IScoringService
         };
     }
 
-    // ============================================================
-    // COORDINATES
-    // ============================================================
-
-    private static void ValidateCoordinates(
-        double latitude,
-        double longitude)
+    // Validates that the match location coordinates fall within valid latitude and longitude ranges.
+    private static void ValidateCoordinates(double latitude, double longitude)
     {
         if (double.IsNaN(latitude) ||
             double.IsInfinity(latitude) ||
@@ -2011,12 +1838,8 @@ public class ScoringService : IScoringService
         }
     }
 
-    // ============================================================
-    // STATE
-    // ============================================================
-
-    private async Task<MatchStateDto> GetCurrentMatchStateAsync(
-        Guid matchId)
+    // Retrieves the current match state through the match state update service.
+    private async Task<MatchStateDto> GetCurrentMatchStateAsync(Guid matchId)
     {
         var match =
             await GetMatchAsync(
@@ -2026,10 +1849,8 @@ public class ScoringService : IScoringService
             .GetCurrentMatchStateAsync(matchId);
     }
 
-   
-
-    public async Task<MatchStateDto> GetMatchStateAsync(
-    Guid matchId)
+    // Retrieves the current match state without broadcasting an update.
+    public async Task<MatchStateDto> GetMatchStateAsync(Guid matchId)
     {
         return await GetCurrentMatchStateAsync(matchId);
     }

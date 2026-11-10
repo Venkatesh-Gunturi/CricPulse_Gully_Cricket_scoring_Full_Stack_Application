@@ -3,11 +3,13 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace CricPulse.Infrastructure.Configurations;
-
+// Defines database table mappings, constraints, and relationships for Ball entities.
 public class BallConfiguration : IEntityTypeConfiguration<Ball>
 {
+    // Configures Ball properties, foreign keys, delete behaviors, and indexes.
     public void Configure(EntityTypeBuilder<Ball> builder)
     {
+        // Keep innings deletion cascading to its balls.
         builder.ToTable("Balls");
 
         builder.HasKey(x => x.Id);
@@ -29,7 +31,7 @@ public class BallConfiguration : IEntityTypeConfiguration<Ball>
             .WithMany(x => x.Balls)
             .HasForeignKey(x => x.InningsId)
             .OnDelete(DeleteBehavior.Cascade);
-
+        // Prevent deletion of a MatchPlayer while a ball references it.
         builder.HasOne(x => x.StrikerMatchPlayer)
             .WithMany()
             .HasForeignKey(x => x.StrikerMatchPlayerId)
@@ -44,7 +46,7 @@ public class BallConfiguration : IEntityTypeConfiguration<Ball>
             .WithMany()
             .HasForeignKey(x => x.BowlerMatchPlayerId)
             .OnDelete(DeleteBehavior.Restrict);
-
+        // Improves queries that retrieve balls by innings, over, and ball number.
         builder.HasIndex(x => new
         {
             x.InningsId,

@@ -84,10 +84,10 @@
   z-index: 1100;
   width: 260px;
   padding: 8px;
-  border: 1px solid #e6ece8;
+  border: 1.5px solid var(--cp-gold);
   border-radius: 13px;
-  background: #fff;
-  box-shadow: 0 14px 35px rgb(18 61 48 / 13%);
+  background: #f6f8f6;
+  box-shadow: 0 14px 35px rgb(18 61 48 / 20%);
   animation: cp-profile-menu-enter 150ms ease-out;
 }
 
@@ -99,21 +99,23 @@
 }
 
 .cp-profile-menu-name {
-  overflow-wrap: anywhere;
-  color: #123d30;
-  font-size: 14px;
-  font-weight: 800;
+  font-family: Arial, sans-serif;
+  font-weight: 900 !important;
+  color: var(--cp-green);
+  font-size: 16px;
+  -webkit-text-stroke: 0.6px currentColor;
 }
 
 .cp-profile-menu-role {
   color: #6c7b73;
   font-size: 12px;
+
 }
 
 .cp-profile-menu-divider {
   height: 1px;
   margin: 5px 2px;
-  background: #e6ece8;
+  background: #ffe016;
 }
 
 .cp-profile-menu-item {
@@ -165,12 +167,19 @@
 
 @media (max-width: 767.98px) {
   .cp-profile-trigger {
-    gap: 0;
-    padding: 3px;
-    border: none;
-    background: transparent;
-  }
-
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 44px;
+  min-height: 44px;
+  gap: 0;
+  padding: 3px;
+  border: none;
+  background: transparent;
+}
+.cp-profile-menu-item {
+  min-height: 44px;
+}
   .cp-profile-trigger:hover,
   .cp-profile-trigger.is-open {
     background: #f1f6f2;

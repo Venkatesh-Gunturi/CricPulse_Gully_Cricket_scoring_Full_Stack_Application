@@ -2,13 +2,12 @@
 using Microsoft.EntityFrameworkCore;
 
 namespace CricPulse.Infrastructure.Repositories;
-
-public abstract class RepositoryBase<TEntity>
-    where TEntity : class
+// Provides shared Entity Framework Core operations for specific repositories.
+public abstract class RepositoryBase<TEntity> where TEntity : class
 {
     protected readonly CricPulseDbContext Context;
     protected readonly DbSet<TEntity> DbSet;
-
+    // Initializes the database context and the DbSet for the specified entity type.
     protected RepositoryBase(CricPulseDbContext context)
     {
         Context = context;

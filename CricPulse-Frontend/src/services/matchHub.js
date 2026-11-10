@@ -56,19 +56,6 @@ connection.onclose((error) => {
   console.error('[SignalR] Connection closed:', error);
 });
 
-  connection.onreconnected(async () => {
-    for (const matchId of joinedMatchIds) {
-      try {
-        await connection.invoke('JoinMatch', matchId);
-      } catch (error) {
-        console.error(
-          `Failed to rejoin match ${matchId}:`,
-          error
-        );
-      }
-    }
-  });
-
   return connection;
 };
 

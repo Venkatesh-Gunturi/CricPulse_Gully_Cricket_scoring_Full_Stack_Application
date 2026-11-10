@@ -10,13 +10,12 @@ using CricPulse.Infrastructure.Repositories;
 using CricPulse.Infrastructure.Security;
 using CricPulse.Infrastructure.Services.Location;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.AspNetCore.SignalR;
 using CricPulse.API.Hubs;
 using CricPulse.API.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container.
+// Register API controllers and SignalR services.
 
 builder.Services.AddControllers();
 builder.Services.AddSignalR();
@@ -80,13 +79,14 @@ builder.Services.AddHttpClient<
         client.DefaultRequestHeaders.UserAgent.ParseAdd(userAgent);
     });
 
-//CORS policy
+// Allow the React frontend to communicate with the API and SignalR hub.
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowCricPulseFrontend", policy =>
     {
         policy
-            .WithOrigins("http://localhost:5173")
+            .WithOrigins("http://localhost:5173",
+            "http://192.168.1.6:5173")
             .AllowAnyHeader()
             .AllowAnyMethod()
             .AllowCredentials();
@@ -105,7 +105,7 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
-app.UseHttpsRedirection();
+//app.UseHttpsRedirection();
 app.UseCors("AllowCricPulseFrontend");
 
 

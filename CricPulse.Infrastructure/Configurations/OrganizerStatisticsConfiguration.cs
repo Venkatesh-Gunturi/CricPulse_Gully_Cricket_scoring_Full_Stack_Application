@@ -3,9 +3,10 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace CricPulse.Infrastructure.Configurations;
-
+// Defines the database mapping and user relationship for organizer statistics.
 public class OrganizerStatisticsConfiguration : IEntityTypeConfiguration<OrganizerStatistics>
 {
+    // Configures the organizer statistics table and its one-to-one user relationship.
     public void Configure(EntityTypeBuilder<OrganizerStatistics> builder)
     {
         // Keep the existing SQL table name to preserve historical data.
