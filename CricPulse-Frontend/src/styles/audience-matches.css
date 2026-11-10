@@ -27,6 +27,39 @@
 .audience-matches-page .audience-section-divider { height:1px; margin:8px 0 18px; background:#e7ece4; }
 .audience-matches-page .audience-section-message { display:flex; align-items:center; justify-content:center; gap:10px; min-height:100px; padding:18px; border:1px dashed #dce6d9; border-radius:11px; color:#68766b; background:#fafcf9; font-size:.86rem; text-align:center; }
 .audience-matches-page .audience-section-error { border-color:#efd2ce; color:#a63d35; background:#fff8f7; }
+
+/* Keep error icon and message aligned consistently */
+.audience-matches-page .audience-section-error {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  text-align: left;
+}
+
+/* Keep the error icon in a fixed position */
+.audience-matches-page .audience-message-icon {
+  flex: 0 0 22px;
+  width: 22px;
+  height: 22px;
+  font-size: 22px;
+  align-self: flex-start;
+  margin-top: 2px;
+}
+
+/* Keep heading, description and button together */
+.audience-matches-page .audience-message-content {
+  flex: 0 1 auto;
+  min-width: 0;
+}
+
+/* Consistent error description spacing */
+.audience-matches-page .audience-message-content p {
+  margin: 5px 0 10px;
+  overflow-wrap: anywhere;
+}
+
 .audience-matches-page .audience-section-message p { margin:5px 0 10px; }
 .audience-matches-page .audience-section-message .umpire-secondary-button { margin-top:6px; }
 .audience-matches-page .audience-state-heading { align-items:center; }

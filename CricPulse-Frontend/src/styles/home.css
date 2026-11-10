@@ -288,9 +288,20 @@
 /* Stack cards only on narrow mobile screens */
 @media (max-width: 650px) {
   .home-hero {
-    min-height: 280px;
-    background-position: center;
-  }
+  width: 100%;
+  min-width: 0;
+  height: clamp(200px, 55vw, 280px);
+  min-height: unset;
+  background-position: center center;
+  background-size: cover;
+  background-repeat: no-repeat;
+  overflow: hidden;
+}
+.home-page {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: clip;
+}
 
   .home-hero::before {
     background: linear-gradient(
@@ -321,8 +332,8 @@
   }
 
   .home-feature-card {
-    min-height: 390px;
-  }
+  min-height: clamp(300px, 90vw, 380px);
+}
 
   .home-feature-content {
     padding: 1.5rem;
@@ -351,5 +362,25 @@
   .home-feature-image,
   .home-benefit {
     transition: none;
+  }
+}
+.home-feature-card:focus-visible {
+  outline: 3px solid #b18a2d;
+  outline-offset: 4px;
+}
+@media (max-width: 650px) {
+
+  .home-hero {
+    width: 100%;
+    max-width: 100%;
+    height: 250px;
+    min-height: 0;
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    background-size: 100% 100%;
+    background-position: center;
+    background-repeat: no-repeat;
+    overflow: hidden;
   }
 }

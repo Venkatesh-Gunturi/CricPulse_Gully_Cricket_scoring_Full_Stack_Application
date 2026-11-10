@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link, NavLink, useNavigate } from 'react-router-dom';
 import { FaBars, FaTimes, FaCircle } from 'react-icons/fa';
 import { GiCricketBat } from 'react-icons/gi';
@@ -10,7 +10,7 @@ import ProfileCapsule from './ProfileCapsule';
 
 function Navbar() {
   const navigate = useNavigate();
-
+ const navbarRef = useRef(null);
   const { user, setUser, role, setRole, logout } = useAuth();
 
   const [menuOpen, setMenuOpen] = useState(false);
@@ -25,7 +25,7 @@ function Navbar() {
   ];
 
   const closeMenu = () => setMenuOpen(false);
-
+ 
   const openModal = (modal, selectedMode = 'Player') => {
     closeMenu();
 
@@ -37,7 +37,24 @@ function Navbar() {
   };
 
   const closeModal = () => setActiveModal(null);
+useEffect(() => {
+  const handleOutsideClick = (event) => {
+    if (
+      navbarRef.current &&
+      !navbarRef.current.contains(event.target)
+    ) {
+      closeMenu();
+    }
+  };
 
+  document.addEventListener('mousedown', handleOutsideClick);
+  document.addEventListener('touchstart', handleOutsideClick);
+
+  return () => {
+    document.removeEventListener('mousedown', handleOutsideClick);
+    document.removeEventListener('touchstart', handleOutsideClick);
+  };
+}, []);
   const switchToRegister = () => {
     setActiveModal('register');
   };
@@ -84,7 +101,7 @@ const handleLoginSuccess = (authenticatedUser,selectedMode,rememberMe  ) => {
 
   return (
     <>
-      <header className="site-navbar sticky-top">
+      <header ref={navbarRef} className="site-navbar sticky-top">
         <nav className="container-fluid navbar-shell px-3">
             <div className="navbar-left">
             <button

@@ -4,6 +4,7 @@ import {
   FaMapMarkerAlt,
   FaRedo,
   FaSpinner,
+  FaExclamationCircle,
 } from 'react-icons/fa';
 
 import {
@@ -777,23 +778,29 @@ const liveBattingTeam = currentInnings
         </div>
       ) : nearbyError ? (
         <div className="audience-section-message audience-section-error">
-          <FaMapMarkerAlt />
-          <div>
-            <strong>
-              {locationBlocked
-                ? 'Location access required'
-                : 'Unable to load nearby matches'}
-            </strong>
-            <p>{nearbyError}</p>
-            <button
-              type="button"
-              className="umpire-secondary-button"
-              onClick={loadNearbyMatches}
-            >
-              <FaRedo /> Try Again
-            </button>
-          </div>
-        </div>
+  <FaExclamationCircle
+    className="audience-message-icon"
+    aria-hidden="true"
+  />
+
+  <div className="audience-message-content">
+    <strong>
+      {locationBlocked
+        ? 'Location access required'
+        : 'Unable to load nearby matches'}
+    </strong>
+
+    <p>{nearbyError}</p>
+
+    <button
+      type="button"
+      className="umpire-secondary-button"
+      onClick={loadNearbyMatches}
+    >
+      <FaRedo /> Try Again
+    </button>
+  </div>
+</div>
       ) : filteredNearbyMatches.length === 0 ? (
         <div className="audience-section-message">
           <FaMapMarkerAlt />
@@ -845,16 +852,25 @@ const liveBattingTeam = currentInnings
       </div>
 
       {statesError ? (
-        <div className="audience-section-message audience-section-error">
-          <span>{statesError}</span>
-          <button
-            type="button"
-            className="umpire-secondary-button"
-            onClick={loadStates}
-          >
-            <FaRedo /> Retry
-          </button>
-        </div>
+  <div className="audience-section-message audience-section-error">
+    <FaExclamationCircle
+      className="audience-message-icon"
+      aria-hidden="true"
+    />
+
+    <div className="audience-message-content">
+      <strong>Unable to load states</strong>
+      <p>{statesError}</p>
+
+      <button
+        type="button"
+        className="umpire-secondary-button"
+        onClick={loadStates}
+      >
+        <FaRedo /> Retry
+      </button>
+    </div>
+  </div>
       ) : !selectedState ? (
         <div className="audience-section-message">
           <FaMapMarkerAlt />
@@ -867,10 +883,18 @@ const liveBattingTeam = currentInnings
           <FaSpinner className="umpire-spin" />
           <span>Loading matches in {selectedState}...</span>
         </div>
-      ) : stateMatchesError ? (
-        <div className="audience-section-message audience-section-error">
-          {stateMatchesError}
-        </div>
+     ) : stateMatchesError ? (
+  <div className="audience-section-message audience-section-error">
+    <FaExclamationCircle
+      className="audience-message-icon"
+      aria-hidden="true"
+    />
+
+    <div className="audience-message-content">
+      <strong>Unable to load matches</strong>
+      <p>{stateMatchesError}</p>
+    </div>
+  </div>
       ) : stateMatches.length === 0 ? (
         <div className="audience-section-message">
           <FaMapMarkerAlt />
