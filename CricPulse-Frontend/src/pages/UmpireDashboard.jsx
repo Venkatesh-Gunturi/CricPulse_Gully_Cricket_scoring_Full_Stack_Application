@@ -904,12 +904,12 @@ const handleConfirmCancellation = async (cancellationData) => {
 
           </div>
           <p className="umpire-data-note text-primary">
-        *Your match statistics are stored separately from match history
-          and are retained even after match records are deleted.
+          *Your match statistics are stored separately from match history
+            and are retained even after match records are deleted.
           <br /><br/>
           *Finished and cancelled matches are automatically deleted after 7 days.
-          Upcoming matches are automatically cancelled 24 hours after their
-          scheduled time if they haven't been started.
+            Upcoming matches are automatically cancelled 24-hours after their
+            scheduled time if they haven't been started.
         </p>
         </div>
       </section>
