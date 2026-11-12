@@ -44,6 +44,7 @@ const lastPromptedOverRef = useRef(null);
   const [loading, setLoading] = useState(true);
   const [isScoring, setIsScoring] = useState(false);
   const [pageError, setPageError] = useState('');
+  const [undoMessage, setUndoMessage] = useState('');
 const [cancelError, setCancelError] = useState('');
 const [cancelSubmitting, setCancelSubmitting] = useState(false);
 const [showCancelModal, setShowCancelModal] = useState(false);
@@ -72,7 +73,7 @@ const [completionError, setCompletionError] = useState('');
     async function loadState() {
       setLoading(true);
       setPageError('');
-
+      setUndoMessage('');
       try {
         const state = await getMatchState(matchId);
 
@@ -272,6 +273,7 @@ async function handleScoreRun(runs) {
     );
 
     setMatchState(updatedState);
+    setUndoMessage('');
   } catch (error) {
     setPageError(
       error.response?.data?.message ||
@@ -410,9 +412,9 @@ async function handleUndo() {
       lastPromptedOverRef.current = null;
     }
     setShowBowlerModal(false);
-    setPageError(
-      'Last ball undone successfully. You can only undo one ball at a time, to undo you have to score new ball.'
-    );
+    setUndoMessage(
+  'Last ball undone successfully. You can only undo one ball at a time.'
+);
   } catch (error) {
     setPageError(
       error.response?.data?.message ||
@@ -791,7 +793,11 @@ async function handleConfirmCancellation(cancellationData) {
           onUndo={handleUndo}
         />
         
-        
+        {undoMessage && (
+  <p role="status" className="live-undo-success">
+    {undoMessage}
+  </p>
+)}
 
 <section className="live-section-card live-player-history">
   <div className="live-history-tabs" role="tablist" aria-label="Player history">

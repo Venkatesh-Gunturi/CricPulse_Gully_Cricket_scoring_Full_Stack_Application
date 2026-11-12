@@ -1,0 +1,238 @@
+
+/* ================================
+   CRICKET IQ PAGE
+================================ */
+
+.cricket-iq-page {
+  max-width: 1150px;
+  margin: 0 auto;
+  padding: 50px 24px;
+  color: #26352b;
+}
+
+/* Hero */
+.cricket-iq-hero {
+  padding: 55px 40px;
+  margin-bottom: 30px;
+  border-radius: 20px;
+  color: #ffffff;
+  background: linear-gradient(135deg, #104b2c, #23834b);
+  text-align: center;
+}
+
+.cricket-iq-hero h1 {
+  font-size: clamp(2.2rem, 5vw, 3.2rem);
+  font-weight: 800;
+  margin-bottom: 15px;
+}
+
+.cricket-iq-hero p {
+  max-width: 760px;
+  margin: 10px auto;
+  color: #e5f5e9;
+  line-height: 1.8;
+  font-size: 1.05rem;
+}
+
+/* Common sections */
+.cricket-iq-section,
+.cricket-iq-feedback {
+  padding: 32px;
+  margin-bottom: 28px;
+  background: #ffffff;
+  border: 1px solid #e5eee7;
+  border-radius: 16px;
+  box-shadow: 0 4px 18px rgba(20, 60, 35, 0.05);
+}
+
+.cricket-iq-section h2,
+.cricket-iq-feedback h2 {
+  color: #176b3a;
+  font-size: 1.55rem;
+  font-weight: 750;
+  margin-bottom: 16px;
+}
+
+.cricket-iq-section > p,
+.cricket-iq-feedback p {
+  color: #5b685f;
+  line-height: 1.8;
+  font-size: 1rem;
+}
+
+/* Rule cards */
+.cricket-iq-topics {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 20px;
+  margin-top: 25px;
+}
+
+.cricket-iq-topic {
+  padding: 24px;
+  background: #f8fbf8;
+  border: 1px solid #e4eee5;
+  border-left: 4px solid #23834b;
+  border-radius: 12px;
+  transition: transform 0.25s ease, box-shadow 0.25s ease;
+}
+
+.cricket-iq-topic:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 7px 18px rgba(20, 60, 35, 0.08);
+}
+
+.cricket-iq-topic h3 {
+  color: #176b3a;
+  font-size: 1.2rem;
+  font-weight: 750;
+  margin-bottom: 12px;
+}
+
+.cricket-iq-topic p {
+  color: #5b685f;
+  font-size: 0.96rem;
+  line-height: 1.75;
+  margin-bottom: 12px;
+}
+
+.cricket-iq-topic p:last-child {
+  margin-bottom: 0;
+}
+
+/* Official resources */
+.cricket-iq-resource-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  margin-top: 22px;
+}
+
+.cricket-iq-resource-links a {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 12px 20px;
+  color: #176b3a;
+  background: #edf7ef;
+  border: 1px solid #cfe5d3;
+  border-radius: 9px;
+  text-decoration: none;
+  font-weight: 650;
+  transition: background 0.2s ease, color 0.2s ease;
+}
+
+.cricket-iq-resource-links a:hover {
+  color: #ffffff;
+  background: #176b3a;
+}
+
+/* Feedback section */
+.cricket-iq-feedback {
+  text-align: center;
+  background: #f2f8f3;
+  border: 1px solid #dcebdd;
+}
+
+.cricket-iq-feedback p {
+  max-width: 750px;
+  margin: 10px auto;
+}
+
+.cricket-iq-contact-link {
+  display: inline-block;
+  margin-top: 18px;
+  padding: 13px 24px;
+  color: #ffffff;
+  background: #176b3a;
+  border-radius: 9px;
+  font-weight: 650;
+  text-decoration: none;
+  transition: background 0.2s ease, transform 0.2s ease;
+}
+
+.cricket-iq-contact-link:hover {
+  color: #ffffff;
+  background: #104b2c;
+  transform: translateY(-2px);
+}
+
+/* Tablet */
+@media (max-width: 768px) {
+  .cricket-iq-page {
+    padding: 35px 18px;
+  }
+
+  .cricket-iq-hero {
+    padding: 42px 24px;
+  }
+
+  .cricket-iq-section,
+  .cricket-iq-feedback {
+    padding: 25px 22px;
+  }
+
+  .cricket-iq-topics {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+}
+
+/* Mobile */
+@media (max-width: 480px) {
+  .cricket-iq-page {
+    padding: 25px 12px;
+  }
+
+  .cricket-iq-hero {
+    padding: 35px 18px;
+    border-radius: 14px;
+  }
+
+  .cricket-iq-hero p {
+    font-size: 0.95rem;
+  }
+
+  .cricket-iq-section,
+  .cricket-iq-feedback {
+    padding: 21px 17px;
+    border-radius: 13px;
+  }
+
+  .cricket-iq-section h2,
+  .cricket-iq-feedback h2 {
+    font-size: 1.3rem;
+  }
+
+  .cricket-iq-topic {
+    padding: 19px;
+  }
+
+  .cricket-iq-resource-links {
+    flex-direction: column;
+  }
+
+  .cricket-iq-resource-links a {
+    width: 100%;
+    text-align: center;
+  }
+
+  .cricket-iq-contact-link {
+    width: 100%;
+    text-align: center;
+  }
+}
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  .cricket-iq-topic,
+  .cricket-iq-resource-links a,
+  .cricket-iq-contact-link {
+    transition: none;
+  }
+
+  .cricket-iq-topic:hover,
+  .cricket-iq-contact-link:hover {
+    transform: none;
+  }
+}

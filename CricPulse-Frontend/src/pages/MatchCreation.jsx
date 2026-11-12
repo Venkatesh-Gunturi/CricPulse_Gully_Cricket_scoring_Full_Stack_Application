@@ -636,6 +636,26 @@ return `Players per team must be between ${MIN_PLAYERS} and ${MAX_PLAYERS}.`;
 if (stepToValidate === 4) return '';
 return '';
 };
+const scrollToFormSection = (sectionName, fieldSelector = null) => {
+  const section = document.querySelector(
+    `[data-form-section="${sectionName}"]`
+  );
+
+  const target = fieldSelector
+    ? section?.querySelector(fieldSelector)
+    : section;
+
+  if (!target) return;
+
+  target.scrollIntoView({
+    behavior: 'smooth',
+    block: 'center',
+  });
+
+  if (fieldSelector) {
+    target.focus({ preventScroll: true });
+  }
+};
 const handleSubmit = async (event) => {
 event.preventDefault();
 // Prevent duplicate submissions.
@@ -654,24 +674,65 @@ nextFieldErrors.scheduleTime = 'Match date and time must be in the future.';
 }
 setFieldErrors(nextFieldErrors);
 if (Object.keys(nextFieldErrors).length) {
-setError('Please correct the highlighted date and time fields.');
-return;
+  setError('Please correct the highlighted date and time fields.');
+
+  scrollToFormSection(
+    'schedule',
+    !scheduleDate ? 'input[type="date"]' : 'input[type="time"]'
+  );
+
+  return;
 }
 // Validate every form section before saving.
-const validationError = [1, 2, 3]
-.map(validateStep)
-.find(Boolean);
-if (validationError) {
-setError(
-`${validationError} Please use Back to correct the details.`
-);
-return;
+for (const step of [1, 2, 3]) {
+  const validationError = validateStep(step);
+
+  if (validationError) {
+    setError(
+      `${validationError} Please correct the highlighted section.`
+    );
+
+    if (step === 1) {
+      const selector = !form.name.trim()
+        ? '[name="name"]'
+        : !form.teamAName.trim()
+          ? '[name="teamAName"]'
+          : '[name="teamBName"]';
+
+      scrollToFormSection('details', selector);
+    }
+
+    if (step === 2) {
+  const selector = !form.scheduledAt
+    ? 'input[type="date"]'
+    : !form.venue.trim()
+      ? '[name="venue"]'
+      : !form.latitude || !form.longitude
+        ? '.match-location-panel'
+        : 'input[type="time"]';
+
+  scrollToFormSection('schedule', selector);
+}
+
+    if (step === 3) {
+      const selector =
+        Number(form.overs) < MIN_OVERS ||
+        Number(form.overs) > MAX_OVERS
+          ? '[name="overs"]'
+          : '[name="playersPerTeam"]';
+
+      scrollToFormSection('settings', selector);
+    }
+
+    return;
+  }
 }
 // Do not navigate away from Review if the roster is invalid.
 if (!validateRosterBeforeContinue()) {
 setError(
 'The player roster is incomplete or contains duplicate players. Check the highlighted player slots before saving.'
 );
+scrollToFormSection('roster');
 return;
 }
 setSaving(true);
@@ -891,9 +952,8 @@ event.preventDefault();
 }
 }}
 >
-{error && <div className="match-form-alert error" role="alert">{error}</div>}
 {true && (
-<section className="match-form-section match-form-section-details">
+<section className="match-form-section match-form-section-details"  data-form-section="details">
 <div className="match-form-section-title">
 <span className="match-form-icon"><FaUsers /></span>
 <div><h2>Match and teams</h2><p>Give your match and both teams a name.</p></div>
@@ -980,7 +1040,7 @@ setOpenLogoMenu(null);
 </section>
 )}
 {true && (
-<section className="match-form-section match-form-section-details">
+<section className="match-form-section match-form-section-details" data-form-section="schedule">
 <div className="match-form-section-title">
 <span className="match-form-icon"><FaCalendarAlt /></span>
 <div><h2>Schedule and venue</h2><p>Choose when and where the match will take place.</p></div>
@@ -1064,7 +1124,7 @@ required
 </section>
 )}
 {true && (
-<section className="match-form-section match-form-section-details">
+<section className="match-form-section match-form-section-details" data-form-section="settings">
 <div className="match-form-section-title">
 <span className="match-form-icon"><FaShieldAlt /></span>
 <div><h2>Match settings</h2><p>Choose match length and squad size.</p></div>
@@ -1091,7 +1151,7 @@ required
 </section>
 )}
 {true && (
-<section className="match-form-section">
+<section className="match-form-section" data-form-section="roster">
 <div className="match-form-section-title">
 <span className="match-form-icon"><FaUsers /></span>
 <div>
@@ -1111,6 +1171,11 @@ required
 </div>
 <p className="match-info-note">Clearing a player leaves the slot in place. Players are never shifted into another slot. The first slot of each team is the captain.</p>
 </section>
+)}
+{error && (
+  <div className="match-form-alert error" role="alert">
+    {error}
+  </div>
 )}
 <footer className="match-form-footer match-form-footer-single">
 <button

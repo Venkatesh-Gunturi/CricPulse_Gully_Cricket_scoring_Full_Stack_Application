@@ -573,24 +573,27 @@
 /* Match Info / First Innings tabs */
 
 .match-review-tabs {
-
   display: flex;
-
   gap: 8px;
-
   margin-top: 24px;
-
   padding: 7px;
-
   border: 1px solid #dce5dc;
-
   border-radius: 15px;
-
   background: #e9eee9;
-
+flex-wrap: nowrap;
+overflow-x: auto;
+scrollbar-width: none;
+-webkit-overflow-scrolling: touch;
 }
 
+.match-review-tabs::-webkit-scrollbar {
+  display: none;
+}
 
+.match-review-tabs button {
+  flex: 0 0 auto;
+  white-space: nowrap;
+}
 
 .match-review-tabs button {
 
@@ -1387,12 +1390,8 @@
 @media (max-width: 700px) {
 
   .match-review-page {
-
     padding: 20px 14px 32px;
-
   }
-
-
 
   .match-review-topbar {
 
@@ -1405,8 +1404,6 @@
     margin-bottom: 22px;
 
   }
-
-
 
   .match-review-back {
 
@@ -1485,14 +1482,14 @@
 
 
   .match-review-detail-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
 
-    grid-template-columns: 1fr;
-
-    gap: 10px;
-
-  }
-
-
+/* Keep Toss Details in a 2-column layout too */
+.match-review-toss .match-review-detail-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
 
   .match-review-detail {
 
@@ -1884,8 +1881,6 @@
 
   }
 
-
-
   .match-review-scoreline {
 
     gap: 8px;
@@ -2043,8 +2038,12 @@
   }
 
   .match-review-page > .match-review-result .match-review-awards {
-    grid-template-columns: 1fr;
-  }
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.match-review-page > .match-review-result .match-review-award-card:last-child {
+  grid-column: 1 / -1;
+}
 }
 .match-review-cancellation {
   margin: 20px 0;
@@ -2546,5 +2545,58 @@
   .match-review-status {
     padding: 4px 6px;
     font-size: 0.6rem;
+  }
+}
+/* Mobile Match Result: two highlights + full-width MVP */
+@media (max-width: 620px) {
+  .match-review-page .match-review-result .match-review-awards {
+    display: grid !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 10px;
+  }
+
+  .match-review-page .match-review-result .match-review-award-card {
+    min-width: 0;
+  }
+
+  .match-review-page .match-review-result .match-review-award-card:last-child {
+    grid-column: 1 / -1;
+  }
+}
+/* Mobile tabs: separate scrollable buttons */
+@media (max-width: 700px) {
+  .match-review-page .match-review-tabs {
+    display: flex;
+    flex-wrap: nowrap;
+    gap: 9px;
+    padding: 4px 2px 8px;
+    border: none;
+    border-radius: 0;
+    background: transparent;
+    overflow-x: auto;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .match-review-page .match-review-tabs::-webkit-scrollbar {
+    display: none;
+  }
+
+  .match-review-page .match-review-tabs button {
+    flex: 0 0 auto;
+    min-width: max-content;
+    padding: 10px 14px;
+    border: 1px solid #d5e0d7;
+    border-radius: 11px;
+    color: #0b3d2e;
+    background: #ffffff;
+    white-space: nowrap;
+    box-shadow: 0 2px 6px rgb(11 61 46 / 5%);
+  }
+
+  .match-review-page .match-review-tabs button.active {
+    color: #ffffff;
+    background: #0b3d2e;
+    border-color: #0b3d2e;
   }
 }

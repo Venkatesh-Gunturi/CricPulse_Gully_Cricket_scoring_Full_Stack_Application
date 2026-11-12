@@ -144,17 +144,11 @@ public class MatchController : ControllerBase
 
 
     [HttpPatch("{matchId:guid}/cancel")]
-    public async Task<IActionResult> CancelMatch(
-        Guid matchId,
-        [FromQuery] Guid createdByUserId,
-        [FromBody] CancelMatchDto dto)
+    public async Task<IActionResult> CancelMatch(Guid matchId, [FromQuery] Guid createdByUserId, [FromBody] CancelMatchDto dto)
     {
         try
         {
-            await _matchService.CancelMatchAsync(
-                matchId,
-                createdByUserId,
-                dto);
+            await _matchService.CancelMatchAsync( matchId,createdByUserId,dto);
 
             return Ok(new
             {
@@ -193,4 +187,13 @@ public class MatchController : ControllerBase
         return Ok(match);
     }
 
+    /// <summary>
+    /// Retrieves persistent statistics for an organizer (umpire).
+    /// </summary>
+    [HttpGet("organizer-statistics/{organizerUserId:guid}")]
+    public async Task<IActionResult> GetOrganizerStatistics(Guid organizerUserId)
+    {
+        var statistics = await _matchService.GetOrganizerStatisticsAsync(organizerUserId);
+        return Ok(statistics);
+    }
 }

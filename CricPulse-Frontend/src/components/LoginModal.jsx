@@ -114,13 +114,20 @@ const handleLoginSubmit = async (event) => {
   const loginIdentifier = loginData.emailOrMobile.trim();
 
   if (!loginIdentifier) {
-    nextErrors.emailOrMobile =
-      'Enter your email or mobile number.';
-  }
+  nextErrors.emailOrMobile = 'Enter your email or mobile number.';
+} else {
+  const isEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(loginIdentifier);
+  const isMobile = /^\d{10}$/.test(loginIdentifier);
 
-  if (!loginData.password) {
-    nextErrors.password = 'Enter your password.';
+  if (!isEmail && !isMobile) {
+    nextErrors.emailOrMobile =
+      'Enter a valid email address or 10-digit mobile number.';
   }
+}
+
+  if (!loginData.password.trim()) {
+  nextErrors.password = 'Enter your password.';
+}
 
   setErrors(nextErrors);
 
@@ -149,26 +156,36 @@ const handleLoginSubmit = async (event) => {
     // Close the modal after successful authentication.
     handleClose();
   } catch (error) {
-    const message = error.response?.data?.message;
+  const message = error.response?.data?.message || '';
+  const normalizedMessage = message.toLowerCase();
 
-    if (message) {
-      setApiError(message);
-    } else if (error.response?.status === 404) {
-      setApiError(
-        'Login endpoint not found. Please check the API configuration.'
-      );
-    } else if (error.response) {
-      setApiError(
-        'Login failed. Please check your credentials and try again.'
-      );
-    } else {
-      setApiError(
-        'Unable to connect to the server. Please try again.'
-      );
-    }
-  } finally {
-    setIsSubmitting(false);
+  if (
+    normalizedMessage.includes('password') ||
+    normalizedMessage.includes('credential')
+  ) {
+    setErrors((previous) => ({
+      ...previous,
+      password: message || 'Incorrect password. Please try again.',
+    }));
+  } else if (
+    normalizedMessage.includes('email') ||
+    normalizedMessage.includes('mobile') ||
+    normalizedMessage.includes('user')
+  ) {
+    setErrors((previous) => ({
+      ...previous,
+      emailOrMobile: message || 'Invalid email or mobile number.',
+    }));
+  } else if (error.response?.status === 404) {
+    setApiError('Login endpoint not found. Please check the API configuration.');
+  } else if (error.response) {
+    setApiError(message || 'Login failed. Please try again.');
+  } else {
+    setApiError('Unable to connect to the server. Please try again.');
   }
+} finally {
+  setIsSubmitting(false);
+}
 };
 
 

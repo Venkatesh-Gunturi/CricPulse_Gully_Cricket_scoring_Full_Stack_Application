@@ -53,9 +53,7 @@ public class AccountProfileController : ControllerBase
     }
 
     [HttpPut("{userId:guid}")]
-    public async Task<IActionResult> UpdateProfile(
-        Guid userId,
-        [FromBody] UpdateUserProfileDto dto)
+    public async Task<IActionResult> UpdateProfile(Guid userId, [FromBody] UpdateUserProfileDto dto)
     {
         try
         {

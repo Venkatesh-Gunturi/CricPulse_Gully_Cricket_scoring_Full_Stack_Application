@@ -1543,3 +1543,48 @@
     font-size: 12px;
   }
 }
+
+/* Mobile header: keep all three items in one row */
+@media (max-width: 680px) {
+  .live-scoring-header {
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .live-dashboard-button {
+    grid-column: 1;
+    grid-row: 1;
+    justify-self: start;
+    white-space: nowrap;
+  }
+
+  .live-header-center {
+    grid-column: 2;
+    grid-row: 1;
+    min-width: 0;
+    text-align: center;
+  }
+
+  .live-header-center h1 {
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+
+  .live-menu-wrap {
+    grid-column: 3;
+    grid-row: 1;
+    justify-self: end;
+  }
+}
+.live-undo-success {
+  margin: 12px 0;
+  padding: 12px 14px;
+  border: 1px solid rgba(45, 212, 130, 0.3);
+  border-radius: 10px;
+  color: #e7e9e8;
+  background: rgba(22, 163, 74, 0.1);
+  font-size: 0.70rem;
+  line-height: 1.5;
+}

@@ -15,21 +15,11 @@ const initialFormData = {
 };
 
 function getApiError(error) {
-  const data = error.response?.data;
-
-  if (typeof data?.message === 'string') return data.message;
-  if (typeof data?.title === 'string') return data.title;
-
-  if (data?.errors) {
-    const messages = Object.values(data.errors).flat();
-    if (messages.length) return messages.join(' ');
-  }
-
   if (!error.response) {
-    return 'Unable to reach the server. Check that the backend is running and the API URL is correct.';
+    return 'Unable to connect to the server. Please try again.';
   }
 
-  return 'Registration failed. Please try again.';
+  return 'Unknown error. Please try again.';
 }
 
 function RegisterModal({ show, onClose, onSwitchToLogin }) {
@@ -328,7 +318,7 @@ function RegisterModal({ show, onClose, onSwitchToLogin }) {
                 {isSubmitting ? 'Creating account...' : 'Create account'}
               </button>
             </form>
-
+            <p className="text-danger py-2 " style={{ fontSize: '12px' }}>*The mobile number and Email are not updatable after registration.</p>
             <div className="cp-modal-switch">
               Already have an account?{' '}
               <button

@@ -312,7 +312,14 @@ useEffect(() => {
   const [matchesLoading, setMatchesLoading] = useState(true);
 
   const [matchesError, setMatchesError] = useState('');
+const [organizerStats, setOrganizerStats] = useState({
+  matchesCreated: 0,
+  matchesSuccessfullyCompleted: 0,
+  matchesCancelled: 0,
+});
 
+const [statsLoading, setStatsLoading] = useState(true);
+const [statsError, setStatsError] = useState('');
 
 
   // Supports common user ID property names while AuthContext is in use.
@@ -413,7 +420,37 @@ const organizerUserId = getValue(
 
   }, [organizerUserId]);
 
+  
 
+const loadOrganizerStatistics = useCallback(async () => {
+  if (!organizerUserId) {
+    setStatsError('Organizer user ID is not available.');
+    setStatsLoading(false);
+    return;
+  }
+
+  setStatsLoading(true);
+  setStatsError('');
+
+  try {
+    const response = await apiClient.get(
+      `/Match/organizer-statistics/${organizerUserId}`
+    );
+
+    setOrganizerStats(response.data);
+  } catch (error) {
+    setStatsError(
+      error.response?.data?.message ||
+      'Unable to load organizer statistics.'
+    );
+  } finally {
+    setStatsLoading(false);
+  }
+}, [organizerUserId]);
+// Load persistent organizer statistics.
+useEffect(() => {
+  loadOrganizerStatistics();
+}, [loadOrganizerStatistics]);
 
   useEffect(() => {
 
@@ -843,18 +880,21 @@ const handleConfirmCancellation = async (cancellationData) => {
                 </div>
 
                 <div className="umpire-stat-value">
-                  {matchesLoading ? (
-                    <FaSpinner className="umpire-spin" aria-label="Loading statistics" />
-                  ) : matchesError ? (
-                    '—'
-                  ) : label === 'Created Matches' ? (
-                    matches.length
-                  ) : label === 'Organized Successfully' ? (
-                    counts.Finished ?? 0
-                  ) : (
-                    counts.Cancelled ?? 0
-                  )}
-                </div>
+  {statsLoading ? (
+    <FaSpinner
+      className="umpire-spin"
+      aria-label="Loading statistics"
+    />
+  ) : statsError ? (
+    '—'
+  ) : label === 'Created Matches' ? (
+    organizerStats.matchesCreated
+  ) : label === 'Organized Successfully' ? (
+    organizerStats.matchesSuccessfullyCompleted
+  ) : (
+    organizerStats.matchesCancelled
+  )}
+</div>
 
                 <h3>{label}</h3>
 
@@ -863,30 +903,24 @@ const handleConfirmCancellation = async (cancellationData) => {
             ))}
 
           </div>
-          <p className="umpire-data-note">
-            Statistics are calculated from the matches currently available
-            in your dashboard.
-          </p>
-
+          <p className="umpire-data-note text-primary">
+        *Your match statistics are stored separately from match history
+          and are retained even after match records are deleted.
+          <br /><br/>
+          *Finished and cancelled matches are automatically deleted after 7 days.
+          Upcoming matches are automatically cancelled 24 hours after their
+          scheduled time if they haven't been started.
+        </p>
         </div>
-
       </section>
 
       <section className="umpire-matches-section">
-
         <div className="umpire-section-heading">
-
           <div>
-
             <span className="umpire-eyebrow">YOUR MATCHES</span>
-
             <h2>My Matches</h2>
-
             <p>Manage and review the matches associated with you.</p>
-
           </div>
-
-
 
           <button
 

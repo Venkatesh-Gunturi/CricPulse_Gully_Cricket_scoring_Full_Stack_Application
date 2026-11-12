@@ -1538,7 +1538,21 @@ public class MatchService : IMatchService
             await _transactionManager.RollbackTransactionAsync();
             throw;
         }
-
     }
+    
+    /// Retrieves persistent statistics for a match organizer (umpire).
+    /// <param name="organizerUserId">The user ID of the organizer.</param>
+    /// <returns>Organizer statistics, defaulting to zero when no record exists.</returns>
+    public async Task<OrganizerStatisticsDto> GetOrganizerStatisticsAsync(Guid organizerUserId)
+    {
+        var statistics = await _organizerStatisticsRepository
+            .GetByUserIdAsync(organizerUserId);
 
+        return new OrganizerStatisticsDto
+        {
+            MatchesCreated = statistics?.MatchesCreated ?? 0,
+            MatchesSuccessfullyCompleted = statistics?.MatchesFinished ?? 0,
+            MatchesCancelled = statistics?.MatchesCancelled ?? 0
+        };
+    }
 }

@@ -16,20 +16,10 @@ public interface IMatchService
         Guid createdByUserId,
         string? status);
 
-    Task<MatchCreatedDto?> GetMatchByIdAsync(
-    Guid matchId,  
-    Guid createdByUserId);
-
-    Task<MatchCreatedDto> UpdateMatchAsync(
-        Guid matchId,
-        Guid createdByUserId,
-        UpdateMatchDto dto);
-
-    Task CancelMatchAsync(
-        Guid matchId,
-        Guid createdByUserId,
-        CancelMatchDto dto);
-
+    Task<MatchCreatedDto?> GetMatchByIdAsync(Guid matchId, Guid createdByUserId);
+    Task<MatchCreatedDto> UpdateMatchAsync(Guid matchId, Guid createdByUserId, UpdateMatchDto dto);
+    Task CancelMatchAsync(Guid matchId, Guid createdByUserId, CancelMatchDto dto);
     Task<PublicMatchDetailsDto?> GetPublicMatchByIdAsync(Guid matchId);
+    Task<OrganizerStatisticsDto> GetOrganizerStatisticsAsync(Guid organizerUserId);
 
 }

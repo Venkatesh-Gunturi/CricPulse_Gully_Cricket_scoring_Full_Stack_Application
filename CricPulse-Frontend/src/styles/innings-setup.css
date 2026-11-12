@@ -290,27 +290,39 @@
   text-align: center;
 }
 
+
 @media (max-width: 540px) {
   .innings-header {
-    grid-template-columns: 1fr auto;
-    gap: 10px;
-    padding: 14px 18px;
-  }
-
-  .innings-brand {
-    grid-column: 1;
-    grid-row: 1;
+    grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+    gap: 6px;
+    padding: 12px 10px;
   }
 
   .innings-back {
     grid-column: 1;
-    grid-row: 2;
+    grid-row: 1;
+    justify-self: start;
+    padding: 8px;
+    font-size: 0.68rem;
+  }
+
+  .innings-brand {
+    grid-column: 2;
+    grid-row: 1;
+    justify-self: center;
+    font-size: 0.8rem;
+    letter-spacing: 0.1em;
+    white-space: nowrap;
   }
 
   .innings-header-label {
-    grid-column: 2;
-    grid-row: 1 / span 2;
-    font-size: 0.62rem;
+    grid-column: 3;
+    grid-row: 1;
+    justify-self: end;
+    padding: 6px 7px;
+    font-size: 0.55rem;
+    letter-spacing: 0.06em;
+    white-space: nowrap;
   }
 
   .innings-setup-content {
@@ -318,18 +330,29 @@
   }
 
   .innings-teams {
-    grid-template-columns: 1fr;
-    gap: 12px;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
   }
 
   .innings-team-card {
-    padding: 20px;
+    padding: 12px;
+  }
+
+  .innings-team-label {
+    font-size: 0.56rem;
+    letter-spacing: 0.06em;
+  }
+
+  .innings-team-card h2 {
+    margin: 12px 0 14px;
+    font-size: 1rem;
   }
 
   .innings-selection-card {
     padding: 20px 16px;
   }
 }
+
 
 @media (prefers-reduced-motion: reduce) {
   .innings-button,

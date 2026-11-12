@@ -28,7 +28,6 @@ builder.Services.AddDbContext<CricPulseDbContext>(options =>
         builder.Configuration.GetConnectionString("DefaultConnection")));
 
 builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
-
 builder.Services.AddScoped<IUserAccountProfileService, UserAccountProfileService>();
 builder.Services.AddScoped<IUserRepository, UserRepository>();
 builder.Services.AddScoped<IPlayerStatisticsRepository, PlayerStatisticsRepository>();
@@ -86,7 +85,7 @@ builder.Services.AddCors(options =>
     {
         policy
             .WithOrigins("http://localhost:5173",
-            "http://192.168.1.6:5173")
+            "http://192.168.1.13:5173")
             .AllowAnyHeader()
             .AllowAnyMethod()
             .AllowCredentials();
@@ -95,7 +94,6 @@ builder.Services.AddCors(options =>
 
 
 var app = builder.Build();
-
 
 
 // Configure the HTTP request pipeline.
