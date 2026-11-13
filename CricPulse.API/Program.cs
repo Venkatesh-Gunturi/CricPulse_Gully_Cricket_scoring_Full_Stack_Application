@@ -88,6 +88,7 @@ builder.Services.AddCors(options =>
             .WithOrigins(
                 "http://localhost:5173",
                 "http://192.168.1.13:5173",
+                "http://localhost:5173",
                 "https://cricpulse-roan.vercel.app"
             )
             .AllowAnyHeader()
@@ -108,7 +109,7 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
-//app.UseHttpsRedirection();
+app.UseHttpsRedirection();
 app.UseCors("AllowCricPulseFrontend");
 
 
