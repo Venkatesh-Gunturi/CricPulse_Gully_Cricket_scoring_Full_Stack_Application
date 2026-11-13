@@ -31,17 +31,13 @@ import {
   FaBan,
   FaPlay,
 } from 'react-icons/fa';
-
-
-
 import { useAuth } from '../context/AuthContext';
-
 import apiClient from '../services/apiClient';
-
 import '../styles/umpire-dashboard.css';
 import '../styles/match-start-modal.css';
-const matchTabs = ['Upcoming', 'Live', 'Finished', 'Cancelled'];
 
+
+const matchTabs = ['Upcoming', 'Live', 'Finished', 'Cancelled'];
 
 function MatchCardTitle({ name }) {
   const titleRef = useRef(null);
