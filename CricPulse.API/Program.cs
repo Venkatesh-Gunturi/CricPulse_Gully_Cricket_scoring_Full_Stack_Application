@@ -79,18 +79,23 @@ builder.Services.AddHttpClient<
     });
 
 // Allow the React frontend to communicate with the API and SignalR hub.
+
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowCricPulseFrontend", policy =>
     {
         policy
-            .WithOrigins("http://localhost:5173",
-            "http://192.168.1.13:5173", "https://your-cricpulse-domain.vercel.app")
+            .WithOrigins(
+                "http://localhost:5173",
+                "http://192.168.1.13:5173",
+                "https://cricpulse-roan.vercel.app"
+            )
             .AllowAnyHeader()
             .AllowAnyMethod()
             .AllowCredentials();
     });
 });
+
 
 
 var app = builder.Build();
