@@ -85,7 +85,7 @@ builder.Services.AddCors(options =>
     {
         policy
             .WithOrigins("http://localhost:5173",
-            "http://192.168.1.13:5173")
+            "http://192.168.1.13:5173", "https://your-cricpulse-domain.vercel.app")
             .AllowAnyHeader()
             .AllowAnyMethod()
             .AllowCredentials();
