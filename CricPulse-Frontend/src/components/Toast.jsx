@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { FaCheckCircle, FaTimes } from 'react-icons/fa';
-import '../styles/toast.css';
+import '../styles/Toast.css';
 
 export default function Toast({ message, type = 'success', onClose, duration = 3000 }) {
   useEffect(() => {
