@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
+import { resolveProfileImageUrl } from '../services/profileImageUrl';
 import {
   FaArrowLeft,
   FaAward,
@@ -111,7 +112,9 @@ export default function AudiencePlayerProfile() {
   const lastName = read(profile, 'lastName', 'LastName') || '';
   const playerName = `${firstName} ${lastName}`.trim() || 'Player';
 
-  const imageUrl = read(profile, 'profileImageUrl', 'ProfileImageUrl');
+  const imageUrl = resolveProfileImageUrl(
+  read(profile, 'profileImageUrl', 'ProfileImageUrl')
+);
 
   const initials = playerName
     .split(/\s+/)
