@@ -837,7 +837,7 @@ const handleConfirmCancellation = async (cancellationData) => {
             <h2>{displayName || 'Umpire'}</h2>
             <p className="umpire-profile-phone">{user?.mobileNumber || 'Phone not added'}</p>
             <p className="umpire-profile-email">{user?.email || 'Umpire account'}</p>
-            <button type="button" onClick={() => navigate('/player/profile')}>
+            <button type="button" className="umpire-profile-edit-photo" onClick={() => navigate('/player/profile')}>
               Edit profile photo
             </button>
           </div>
