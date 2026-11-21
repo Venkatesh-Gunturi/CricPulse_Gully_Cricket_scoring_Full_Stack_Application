@@ -1067,10 +1067,10 @@
 .cp-player-update-button {
   flex-shrink: 0;
   padding: 10px 17px;
-  border: 1px solid #d6e5d9;
+  border: 1px solid var(--cp-gold);
   border-radius: 12px;
-  background: linear-gradient(135deg, #1c6545, #123d30);
-  color: #ffffff;
+  background: var(--cp-gold);
+  color: var(--cp-green);
   font: inherit;
   font-size: 0.85rem;
   font-weight: 700;
@@ -1130,8 +1130,8 @@
 }
 
 .cp-player-update-button {
-  background: linear-gradient(135deg, #1c6545, #123d30);
-  color: #ffffff;
+  background: var(--cp-gold);
+  color: var(--cp-green);
   box-shadow: 0 5px 13px rgb(18 61 48 / 15%);
 }
 

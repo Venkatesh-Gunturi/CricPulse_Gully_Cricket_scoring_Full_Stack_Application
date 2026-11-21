@@ -1,6 +1,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import '../styles/profile-capsule.css';
+import { resolveProfileImageUrl } from '../services/profileImageUrl';
 import {
   FaChevronDown,
   FaUser,
@@ -39,7 +40,7 @@ const currentRole = !isLoggedIn
     ? `${user.firstName || ''} ${user.lastName || ''}`.trim() || 'Player'
     : 'Guest';
 
-  const profileImage = user?.profileImageUrl;
+  const profileImage = resolveProfileImageUrl(user?.profileImageUrl);
 
   useEffect(() => {
     const handleOutsideClick = (event) => {

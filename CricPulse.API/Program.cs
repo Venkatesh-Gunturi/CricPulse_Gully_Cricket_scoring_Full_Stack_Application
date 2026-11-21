@@ -120,6 +120,6 @@ app.UseAuthorization();
 
 app.MapHub<MatchHub>("/hubs/match");
 
-app.MapControllers().RequireCors("AllowCricPulseFrontend");
+app.MapControllers();
 app.MapGet("/version", () => "build 2026-11-13-cors");
 app.Run();

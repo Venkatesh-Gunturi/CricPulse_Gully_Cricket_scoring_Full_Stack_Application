@@ -1,6 +1,7 @@
 
 import '../styles/match-cancellation-modal.css';
 import '../styles/match-start-modal.css';
+import { resolveProfileImageUrl } from '../services/profileImageUrl';
 import {
   useCallback,
   useEffect,
@@ -815,7 +816,7 @@ const handleConfirmCancellation = async (cancellationData) => {
           <div className="umpire-avatar">
             {user?.profileImageUrl ? (
               <img
-                src={user.profileImageUrl}
+                src={resolveProfileImageUrl(user.profileImageUrl)}
                 alt={`${displayName || 'Umpire'} profile`}
                 onError={(event) => {
                   event.currentTarget.style.display = 'none';
@@ -836,6 +837,9 @@ const handleConfirmCancellation = async (cancellationData) => {
             <h2>{displayName || 'Umpire'}</h2>
             <p className="umpire-profile-phone">{user?.mobileNumber || 'Phone not added'}</p>
             <p className="umpire-profile-email">{user?.email || 'Umpire account'}</p>
+            <button type="button" onClick={() => navigate('/player/profile')}>
+              Edit profile photo
+            </button>
           </div>
         </div>
 

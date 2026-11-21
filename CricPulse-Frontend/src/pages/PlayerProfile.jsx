@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState , useRef} from 'react';
+import { resolveProfileImageUrl } from '../services/profileImageUrl';
 import { useNavigate } from 'react-router-dom';
 import {
   FaArrowLeft,
@@ -91,7 +92,7 @@ function StatCard({ label, value, note }) {
 
 function PlayerProfile() {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, setUser } = useAuth();
 
   const [profileResponse, setProfileResponse] = useState(null);
   const [activeTab, setActiveTab] = useState('batting');
@@ -104,7 +105,6 @@ function PlayerProfile() {
   const [editForm, setEditForm] = useState({
     firstName: '',
     lastName: '',
-    profileImageUrl: '',
     dateOfBirth: '',
     gender: '',
     state: '',
@@ -113,6 +113,20 @@ function PlayerProfile() {
     bowlingStyle: '',
     playerRole: '',
   });
+  const photoInput = useRef(null);
+const [photo, setPhoto] = useState(null);
+const [previewUrl, setPreviewUrl] = useState(null);
+
+useEffect(() => {
+  if (!photo) {
+    setPreviewUrl(null);
+    return;
+  }
+
+  const url = URL.createObjectURL(photo);
+  setPreviewUrl(url);
+  return () => URL.revokeObjectURL(url);
+}, [photo]);
 
   useEffect(() => {
     let isMounted = true;
@@ -166,7 +180,9 @@ function PlayerProfile() {
   const firstName = read(player, 'firstName', 'FirstName') ?? '';
   const lastName = read(player, 'lastName', 'LastName') ?? '';
   const playerName = `${firstName} ${lastName}`.trim() || 'Player';
-  const imageUrl = read(player, 'profileImageUrl', 'ProfileImageUrl');
+  const imageUrl =
+  previewUrl ??
+  resolveProfileImageUrl(read(player, 'profileImageUrl', 'ProfileImageUrl'));
   const mobile = read(player, 'mobileNumber', 'MobileNumber');
   const email = read(player, 'email', 'Email');
   const dateOfBirth = read(player, 'dateOfBirth', 'DateOfBirth');
@@ -232,7 +248,6 @@ function PlayerProfile() {
     setEditForm({
       firstName: read(player, 'firstName', 'FirstName') ?? '',
       lastName: read(player, 'lastName', 'LastName') ?? '',
-      profileImageUrl: read(player, 'profileImageUrl', 'ProfileImageUrl') ?? '',
       dateOfBirth: toDateInputValue(dateOfBirth),
       gender: read(player, 'gender', 'Gender') ?? '',
       state: read(player, 'state', 'State') ?? '',
@@ -282,7 +297,7 @@ function PlayerProfile() {
       const payload = {
         firstName: editForm.firstName.trim(),
         lastName: editForm.lastName.trim() || null,
-        profileImageUrl: editForm.profileImageUrl.trim() || null,
+        
         dateOfBirth: editForm.dateOfBirth || null,
         gender: editForm.gender || null,
         state: editForm.state.trim() || null,
@@ -295,7 +310,17 @@ function PlayerProfile() {
         email,
       };
 
-      const response = await apiClient.put(`/AccountProfile/${userId}`, payload);
+      let body = payload;
+
+if (photo) {
+  body = new FormData();
+  body.append('profile', JSON.stringify(payload));
+  body.append('photo', photo);
+}
+
+const response = await apiClient.put(`/AccountProfile/${userId}`, body, {
+  headers: photo ? { 'Content-Type': undefined } : undefined,
+});
       const updatedProfile = response.data ?? {};
 
       setProfileResponse((previous) => ({
@@ -308,7 +333,13 @@ function PlayerProfile() {
           updatedProfile?.Statistics ??
           {},
       }));
-
+      if (photo) {
+        setUser((previous) => ({
+          ...previous,
+          profileImageUrl: read(updatedProfile, 'profileImageUrl', 'ProfileImageUrl'),
+        }));
+        setPhoto(null);
+      }
       setIsEditing(false);
       setSaveSuccess('Your profile has been updated successfully.');
     } catch (requestError) {
@@ -369,8 +400,45 @@ function PlayerProfile() {
                     {initials}
                   </div>
                 )}
-                <span className="cp-player-avatar-badge" aria-hidden="true"><FaBaseballBall /></span>
+               <button
+                  type="button"
+                  className="cp-player-avatar-badge"
+                  aria-label="Choose profile photo"
+                  onClick={() => photoInput.current.click()}
+                >
+                  +
+                </button>
+                <input
+                  ref={photoInput}
+                  type="file"
+                  accept="image/jpeg,image/png"
+                  onChange={(event) => {
+                    const selected = event.target.files?.[0];
+                    event.target.value = '';
+                    if (!selected) return;
+
+                    if (!isEditing) {
+                      handleEdit();
+                    }
+
+                    setPhoto(selected);
+                  }}
+                  hidden
+                />
               </div>
+              {isEditing && photo && (
+                <div className="mb-3">
+                  <p className="mb-2" role="status">Photo selected · Not saved yet</p>
+                  <button
+                    type="submit"
+                    form="player-profile-edit-form"
+                    className="cp-player-update-button"
+                    disabled={saving}
+                  >
+                    {saving ? 'Saving…' : 'Save Changes'}
+                  </button>
+                </div>
+              )}
               <h2>{playerName}</h2>
               <p className="cp-player-identity-caption">CricPulse Player</p>
               <div className="cp-player-contact-row">
@@ -409,7 +477,7 @@ function PlayerProfile() {
               )}
 
               {isEditing ? (
-                <form className="cp-player-edit-form" onSubmit={handleSaveProfile}>
+                <form className="cp-player-edit-form" id="player-profile-edit-form" onSubmit={handleSaveProfile}>
                   <div className="cp-player-details-grid">
                     <label className="cp-player-edit-field">
                       First Name *
@@ -479,10 +547,7 @@ function PlayerProfile() {
                         <option value="Wicket-Keeper">Wicket-Keeper</option>
                       </select>
                     </label>
-                    <label className="cp-player-edit-field cp-player-edit-full-width">
-                      Profile Image URL
-                      <input type="url" name="profileImageUrl" value={editForm.profileImageUrl} onChange={handleEditChange} placeholder="https://example.com/profile.jpg" />
-                    </label>
+                    
                   </div>
                   <div className="cp-player-edit-actions">
                     <button type="button" className="cp-player-cancel-button" onClick={handleCancelEdit} disabled={saving}>
