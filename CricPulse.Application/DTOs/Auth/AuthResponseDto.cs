@@ -3,7 +3,7 @@
 public class AuthResponseDto
 {
     public Guid UserId { get; set; }
-
+    public string? AccessToken { get; set; }
     public string FirstName { get; set; } = string.Empty;
 
     public string? LastName { get; set; }

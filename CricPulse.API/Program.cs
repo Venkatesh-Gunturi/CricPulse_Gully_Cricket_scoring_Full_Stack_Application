@@ -12,12 +12,18 @@ using CricPulse.Infrastructure.Services.Location;
 using Microsoft.EntityFrameworkCore;
 using CricPulse.API.Hubs;
 using CricPulse.API.Services;
+using Microsoft.AspNetCore.Authentication.BearerToken;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Register API controllers and SignalR services.
 
 builder.Services.AddControllers();
+
+builder.Services.AddAuthentication(BearerTokenDefaults.AuthenticationScheme)
+    .AddBearerToken();
+builder.Services.AddAuthorization();
+
 builder.Services.AddSignalR();
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
@@ -87,8 +93,6 @@ builder.Services.AddCors(options =>
         policy
             .WithOrigins(
                 "http://localhost:5173",
-                "http://192.168.1.13:5173",
-                "http://localhost:5173",
                 "https://cricpulse-roan.vercel.app"
             )
             .AllowAnyHeader()
@@ -111,11 +115,11 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 app.UseCors("AllowCricPulseFrontend");
-
+app.UseAuthorization();
 
 
 app.MapHub<MatchHub>("/hubs/match");
 
-app.MapControllers();
-
+app.MapControllers().RequireCors("AllowCricPulseFrontend");
+app.MapGet("/version", () => "build 2026-11-13-cors");
 app.Run();

@@ -1,6 +1,10 @@
 ﻿using CricPulse.Application.DTOs.Auth;
 using CricPulse.Application.Interfaces.Services;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authentication.BearerToken;
+using Microsoft.Extensions.Options;
+using System.Security.Claims;
 
 namespace CricPulse.API.Controllers;
 
@@ -38,11 +42,25 @@ public class AuthController : ControllerBase
     }
 
     [HttpPost("login")]
-    public async Task<IActionResult> Login(LoginDto dto)
+    public async Task<IActionResult> Login(
+        LoginDto dto,
+        [FromServices] IOptionsMonitor<BearerTokenOptions> bearerOptions)
     {
         try
         {
             var result = await _authService.LoginAsync(dto);
+            var scheme = BearerTokenDefaults.AuthenticationScheme;
+            var options = bearerOptions.Get(scheme);
+            var identity = new ClaimsIdentity(
+                new[] { new Claim(ClaimTypes.NameIdentifier, result.UserId.ToString()) },
+                scheme);
+            var properties = new AuthenticationProperties
+            {
+                ExpiresUtc = DateTimeOffset.UtcNow.Add(options.BearerTokenExpiration)
+            };
+            var ticket = new AuthenticationTicket(
+                new ClaimsPrincipal(identity), properties, scheme);
+            result.AccessToken = options.BearerTokenProtector.Protect(ticket);
             return Ok(result);
         }
         catch (ArgumentException ex)
@@ -55,9 +73,10 @@ public class AuthController : ControllerBase
         }
     }
 
+
     [HttpPost("forgot-password")]
     public async Task<IActionResult> ForgotPassword(
-        ForgotPasswordDto dto)
+         ForgotPasswordDto dto)
     {
         try
         {

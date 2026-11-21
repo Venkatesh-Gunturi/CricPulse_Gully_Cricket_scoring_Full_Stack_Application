@@ -119,7 +119,7 @@ public sealed class UserAccountProfileService : IUserAccountProfileService
         user.LastName = lastName;
         user.MobileNumber = mobileNumber;
         user.Email = email;
-        user.ProfileImageUrl = profileImageUrl;
+        user.ProfileImageUrl = profileImageUrl ?? user.ProfileImageUrl;
         // Validate optional cricket profile fields against the supported values.
         ValidateCricketDetails(dto);
         user.DateOfBirth = dto.DateOfBirth;
