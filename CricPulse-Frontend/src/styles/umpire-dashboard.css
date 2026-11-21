@@ -625,3 +625,14 @@
 .umpire-dashboard .my-match-actions .umpire-secondary-button:only-child {
     grid-column: 1 / -1;
 }
+.umpire-dashboard .umpire-profile-info .umpire-profile-edit-photo {
+  order: 4;
+  margin-top: 30px;
+  padding: 8px 14px;
+  border: 1px solid var(--cp-gold);
+  border-radius: 9px;
+  background: var(--cp-gold);
+  color: var(--cp-green);
+  font-weight: 700;
+  cursor: pointer;
+}
