@@ -276,8 +276,10 @@ useEffect(() => {
     'MatchStatus'
   ) ?? getValue(match, 'status', 'Status', 'matchStatus', 'MatchStatus');
 
-
-
+const nearbyMapsUrl = ['upcoming', 'live'].includes(getStatus(matchStatus))
+  ? location.state?.nearbyMapsUrl
+  : null;
+const nearbyDistanceKm = location.state?.nearbyDistanceKm;
   const innings = useMemo(() => {
     const result = getValue(matchState, 'innings', 'Innings');
 
@@ -991,6 +993,15 @@ const winner =
 
       {(!scoringStarted || activeTab === 'match-info') && (
         <>
+        {nearbyMapsUrl && Number.isFinite(nearbyDistanceKm) && (
+  <p className="match-review-nearby-notice">
+  This match is{' '}
+  <a href={nearbyMapsUrl} target="_blank" rel="noopener noreferrer">
+    "{nearbyDistanceKm.toFixed(1)} km away from you. Go to match location"  
+  </a>
+  {' '} to watch live, or ask the organizer if there’s a spot to join.
+</p>
+)}
       <section className="match-review-details">
         <div className="match-review-section-heading">
           <FaInfoCircle />
@@ -1018,6 +1029,7 @@ const winner =
                 getValue(match, 'venue', 'Venue', 'locationName', 'LocationName')
               )}
             </strong>
+            
           </div>
 
           <div className="match-review-detail">

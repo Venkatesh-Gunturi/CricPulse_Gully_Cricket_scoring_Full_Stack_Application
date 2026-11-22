@@ -539,7 +539,7 @@ useEffect(() => {
   }, [loadNearbyMatches, loadStateMatches, selectedState]);
 
   // Navigate to the existing public Match Review page.
-const handleMatchClick = (match) => {
+const handleMatchClick = (match,sectionType) => {
   const matchId = getValue(
     match,
     'matchId',
@@ -554,6 +554,12 @@ const handleMatchClick = (match) => {
     state: {
       viewMode: 'audience',
       returnTo: '/matches',
+      nearbyMapsUrl:
+  sectionType === 'nearby' ? getValue(match, 'mapsUrl', 'MapsUrl') : null,
+  nearbyDistanceKm:
+  sectionType === 'nearby'
+    ? getValue(match, 'distanceKm', 'DistanceKm')
+    : null,
       returnState: {
         selectedStatus,
       },
@@ -643,11 +649,11 @@ const liveBattingTeam = currentInnings
         role="link"
         tabIndex={0}
         aria-label={`View ${name}`}
-        onClick={() => handleMatchClick(match)}
+        onClick={() => handleMatchClick(match,sectionType)}
         onKeyDown={(event) => {
           if (event.key === 'Enter' || event.key === ' ') {
             event.preventDefault();
-            handleMatchClick(match);
+            handleMatchClick(match,sectionType);
           }
         }}
       >

@@ -6,6 +6,8 @@
 # .NET build files
 **/bin/
 **/obj/
+profile-photos/
+publish/
 
 # React dependencies and build files
 node_modules/

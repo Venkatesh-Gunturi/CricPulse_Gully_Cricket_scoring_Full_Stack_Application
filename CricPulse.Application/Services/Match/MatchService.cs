@@ -960,7 +960,7 @@ public class MatchService : IMatchService
                     State = match.State,
                     Latitude = showLocation ? match.Latitude : null,
                     Longitude = showLocation ? match.Longitude : null,
-                    MapsUrl = showLocation
+                    MapsUrl = showLocation && x.Distance.HasValue
                         ? $"https://www.google.com/maps/dir/?api=1&destination={lat},{lon}"
                         : null,
                     DistanceKm = x.Distance is null

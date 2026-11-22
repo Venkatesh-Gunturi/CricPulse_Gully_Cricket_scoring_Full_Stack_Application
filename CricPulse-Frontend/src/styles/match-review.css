@@ -2600,3 +2600,18 @@ scrollbar-width: none;
     border-color: #0b3d2e;
   }
 }
+.match-review-page .match-review-nearby-notice {
+  margin: 0 0 0.75rem;
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--cp-gold);
+  border-radius: 0.65rem;
+  background: #fff8e5;
+  color: var(--cp-green);
+  font-size: 0.875rem;
+}
+
+.match-review-page .match-review-nearby-notice a {
+  color: inherit;
+  font-weight: 700;
+  text-decoration: underline;
+}

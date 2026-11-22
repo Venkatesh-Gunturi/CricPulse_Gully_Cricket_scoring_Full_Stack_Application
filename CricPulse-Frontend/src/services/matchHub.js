@@ -36,13 +36,12 @@ export const createMatchHubConnection = () => {
   console.warn('[SignalR] Reconnecting...', error);
 });
 
-connection.onreconnected(async (connectionId) => {
-  console.log('[SignalR] Reconnected:', connectionId);
+connection.onreconnected(async () => {
 
   for (const matchId of joinedMatchIds) {
     try {
       await connection.invoke('JoinMatch', matchId);
-      console.log('[SignalR] Rejoined match:', matchId);
+      
     } catch (error) {
       console.error(
         `[SignalR] Failed to rejoin match ${matchId}:`,
