@@ -91,7 +91,7 @@ and how to undo the last ball in CricPulse.
 ## Project Structure
 
 | Folder | Purpose |
-|------------------|
+|----|----|
 | `CricPulse-Frontend/` | React interface for spectators, players, and umpires |
 | `CricPulse.API/` | HTTP endpoints, authentication, and the SignalR hub |
 | `CricPulse.Application/` | Match, scoring, and profile workflows |
